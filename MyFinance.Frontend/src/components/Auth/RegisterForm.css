@@ -1,0 +1,113 @@
+﻿/* Estilos específicos para o formulário de cadastro */
+.register-form {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem; /* Espaçamento ligeiramente menor entre os campos */
+}
+
+    .register-form h2 {
+        margin-top: 0;
+        margin-bottom: 0.8rem; /* Espaço abaixo do título */
+        color: #334155;
+        font-size: 1.75rem;
+        font-weight: 600;
+        text-align: center;
+    }
+
+    /* Grupo Label + Input (reutilizando estilo do login, se preferir, importe LoginForm.css ou copie as regras) */
+    .register-form .form-group {
+        margin-bottom: 0;
+        text-align: left;
+    }
+
+        .register-form .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #64748b;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .register-form .form-group input {
+            width: 100%;
+            padding: 0.85rem 1rem;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            background-color: #f8fafc;
+            color: #334155;
+            font-size: 1rem;
+            box-sizing: border-box;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+            .register-form .form-group input:focus {
+                outline: none;
+                border-color: #3b82f6;
+                box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+            }
+
+            .register-form .form-group input::placeholder {
+                color: #94a3b8;
+            }
+
+    /* Botão de Cadastro */
+    .register-form .register-button {
+        width: 100%;
+        padding: 0.9rem;
+        margin-top: 0.8rem; /* Espaço acima do botão */
+        border: none;
+        border-radius: 8px;
+        background-color: #10b981; /* Verde como cor primária para cadastro */
+        color: white;
+        font-size: 1.05rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background-color 0.2s ease, transform 0.1s ease;
+    }
+
+        .register-form .register-button:hover {
+            background-color: #059669; /* Verde mais escuro */
+        }
+
+        .register-form .register-button:active {
+            transform: scale(0.98);
+        }
+
+    /* Mensagem de Erro (reutilizando estilo do login) */
+    .register-form .error-message {
+        color: #ef4444;
+        background-color: #fee2e2;
+        padding: 0.8rem;
+        border-radius: 6px;
+        border: 1px solid #fca5a5;
+        margin-top: -0.5rem;
+        margin-bottom: -0.2rem; /* Ajuste fino */
+        font-size: 0.9rem;
+        text-align: center;
+    }
+
+    /* Links abaixo */
+    .register-form .register-links {
+        margin-top: 1rem; /* Espaço acima dos links */
+        font-size: 0.9rem;
+        color: #64748b;
+        text-align: center;
+    }
+
+        .register-form .register-links p {
+            margin: 0.6rem 0;
+        }
+
+        .register-form .register-links a {
+            color: #3b82f6; /* Link azul padrão */
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+            .register-form .register-links a:hover {
+                text-decoration: underline;
+                color: #2563eb;
+            }
+
+

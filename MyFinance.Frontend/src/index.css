@@ -1,0 +1,27 @@
+/* src/index.css (Exemplo Mínimo) */
+html, body, #root {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    box-sizing: border-box; /* Boa prática incluir */
+}
+
+*, *:before, *:after {
+    box-sizing: inherit; /* Herda o box-sizing */
+}
+
+
+body {
+    background-color: #eef2f7; /* Ou a cor de fundo que preferir */
+    color: #333;
+}
+
+#root {
+    width: 100%;
+    min-height: 100%;
+    display: flex; /* Importante para o flex-grow do container da página funcionar */
+    flex-direction: column;
+}
+
+/* Outros estilos globais mínimos (links, etc.) */

@@ -1,0 +1,125 @@
+﻿/* Estilos específicos para o formulário de login */
+.login-form {
+    width: 100%; /* Ocupa a largura do container pai (o card) */
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem; /* Espaçamento entre os grupos de formulário e botão */
+}
+
+    .login-form h2 {
+        margin-top: 0;
+        margin-bottom: 0.5rem; /* Menos espaço abaixo do título interno */
+        color: #334155;
+        font-size: 1.75rem;
+        font-weight: 600;
+        text-align: center;
+    }
+
+    /* Grupo Label + Input */
+    .login-form .form-group {
+        margin-bottom: 0; /* Remove margem inferior, pois o gap do flex container cuida disso */
+        text-align: left;
+    }
+
+        .login-form .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #64748b;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .login-form .form-group input {
+            width: 100%;
+            padding: 0.85rem 1rem;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px; /* Bordas arredondadas */
+            background-color: #f8fafc;
+            color: #334155;
+            font-size: 1rem;
+            box-sizing: border-box;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+            .login-form .form-group input:focus {
+                outline: none;
+                border-color: #3b82f6;
+                box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+            }
+
+            .login-form .form-group input::placeholder {
+                color: #94a3b8;
+            }
+
+    /* Botão de Login */
+    .login-form .login-button {
+        width: 100%;
+        padding: 0.9rem;
+        /* margin-top: 1rem; */ /* Removido, o gap cuida disso */
+        border: none;
+        border-radius: 8px; /* Bordas arredondadas */
+        background-color: #3b82f6;
+        color: white;
+        font-size: 1.05rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background-color 0.2s ease, transform 0.1s ease;
+    }
+
+        .login-form .login-button:hover {
+            background-color: #2563eb;
+        }
+
+        .login-form .login-button:active {
+            transform: scale(0.98);
+        }
+
+    /* Mensagem de Erro */
+    .login-form .error-message {
+        color: #ef4444;
+        background-color: #fee2e2;
+        padding: 0.8rem;
+        border-radius: 6px;
+        border: 1px solid #fca5a5;
+        margin-top: -0.5rem; /* Aproxima a msg de erro do campo acima */
+        margin-bottom: -0.5rem; /* Reduz espaço extra */
+        font-size: 0.9rem;
+        text-align: center;
+    }
+
+    /* Links abaixo */
+    .login-form .login-links {
+        /* margin-top: 2rem; */ /* Removido, o gap cuida disso */
+        font-size: 0.9rem;
+        color: #64748b;
+        text-align: center; /* Centraliza os links */
+    }
+
+        .login-form .login-links p {
+            margin: 0.6rem 0;
+        }
+
+        .login-form .login-links a {
+            color: #3b82f6;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+            .login-form .login-links a:hover {
+                text-decoration: underline;
+                color: #2563eb;
+            }
+
+    /* Mensagem de Sucesso */
+    .login-form .success-message {
+        color: #059669; /* Verde */
+        background-color: #d1fae5; /* Fundo verde bem claro */
+        padding: 0.8rem;
+        border-radius: 6px;
+        border: 1px solid #6ee7b7; /* Borda verde clara */
+        margin-top: -0.5rem;
+        margin-bottom: -0.5rem;
+        font-size: 0.9rem;
+        text-align: center;
+    }
+

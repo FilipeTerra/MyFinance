@@ -1,0 +1,63 @@
+# Visual Studio / .NET Core
+## Arquivos gerados pelo processo de build
+[Bb]in/
+[Oo]bj/
+
+## Arquivos de configuração de usuário específicos da máquina
+*.user
+*.userosscache
+*.sln.docstates
+
+## Arquivos do Visual Studio
+.vs/
+*.suo
+*.vshost.*
+*.unityproj
+*.dbmdl
+.vsconfig
+
+## Arquivos de log e cache
+*.log
+*.tlog
+*.psess
+*.vsp
+*.vspx
+*.pyc
+*.pyo
+
+## Arquivos do EF Core
+*.efbundle
+
+# Node.js / React (Vite)
+## Dependências
+node_modules/
+
+## Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+## Arquivos de build de produção
+dist
+.output
+dist-ssr
+
+## Arquivos de cache e temporários
+.npm
+.eslintcache
+.vite-node-cache
+*.tsbuildinfo
+
+## Variáveis de ambiente locais (NUNCA versione segredos!)
+.env.local
+.env.*.local
+
+# Configurações de IDE e Sistema Operacional
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
