@@ -1,9 +1,9 @@
 using Microsoft.EntityFrameworkCore;
-using MyFinance.Infrastructure; // Para acessar o ApplicationDbContext
-using MyFinance.Application.Interfaces.Services; // Para IAuthService, IUserRepository
-using MyFinance.Application.Interfaces.Repositories; // Para IAuthService, IUserRepository
-using MyFinance.Application.Services;   // Para AuthService
-using MyFinance.Infrastructure.Repositories; // Para UserRepository
+using MyFinance.Infrastructure; 
+using MyFinance.Application.Interfaces.Services;
+using MyFinance.Application.Interfaces.Repositories; 
+using MyFinance.Application.Services;   
+using MyFinance.Infrastructure.Repositories; 
 using Microsoft.AspNetCore.Authentication.JwtBearer; // Para JwtBearerDefaults
 using Microsoft.IdentityModel.Tokens; // Para TokenValidationParameters, SymmetricSecurityKey
 using System.Text;
@@ -31,7 +31,6 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowReactApp", policyBuilder =>
     {
-        // PERMITINDO AMBAS AS ORIGENS (HTTP E HTTPS) PARA localhost:5173
         policyBuilder.WithOrigins("http://localhost:5173", "https://localhost:5173")
                .AllowAnyHeader()
                .AllowAnyMethod();
@@ -66,6 +65,8 @@ builder.Services.AddAuthentication(options =>
 // Registrar serviços e repositórios para Injeção de Dependência
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IAccountRepository, AccountRepository>();
+builder.Services.AddScoped<IAccountService, AccountService>();
 
 // --- Construção do App ---
 var app = builder.Build();
