@@ -89,6 +89,13 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 
+
+app.Use(async (context, next) =>
+{
+    context.Response.Headers.Add("Content-Type", "application/json; charset=utf-8");
+    await next();
+});
+
 // Mapear as rotas para os Controllers
 app.MapControllers();
 

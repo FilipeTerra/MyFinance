@@ -1,7 +1,7 @@
 ﻿import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import './LoginForm.css'; // Estilos específicos do formulário
-import authService, { AxiosError, type ApiErrorResponse } from '../../services/Api';
+import {authService, AxiosError, tokenManager, type ApiErrorResponse } from '../../services/Api';
 
 export function LoginForm() {
     const [email, setEmail] = useState('');
@@ -45,8 +45,10 @@ export function LoginForm() {
             localStorage.setItem('authToken', token);
             localStorage.setItem('userName', userName); // Salva o nome para usar no dashboard
 
+            tokenManager.setAuthToken(token); // Configura o token no Axios
+
             // Redirecionar para a página principal (Dashboard)
-            navigate('/dashboard');
+            navigate('/home');
 
         } catch (err) {
             // CRITÉRIO DE ACEITAÇÃO: Se o email ou senha estiverem incorretos...

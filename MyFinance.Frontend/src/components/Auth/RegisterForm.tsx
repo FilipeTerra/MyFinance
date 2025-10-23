@@ -1,7 +1,7 @@
 ﻿import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './RegisterForm.css';
-import authService, { AxiosError, type ApiErrorResponse } from '../../services/Api';
+import { authService, AxiosError, type ApiErrorResponse } from '../../services/Api';
 
 export function RegisterForm() {
     const [name, setName] = useState('');

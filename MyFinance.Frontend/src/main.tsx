@@ -8,6 +8,8 @@ import './index.css'; // Seus estilos globais
 // Importe suas páginas (ajuste os caminhos se necessário)
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
+import { HomePage } from "./pages/HomePage";
+import { ProtectedRoute } from "./components/Auth/ProtectedRoute";
 
 const rootElement = document.getElementById('root');
 if (!rootElement) throw new Error('Failed to find the root element');
@@ -18,10 +20,23 @@ root.render(
     <StrictMode>
         <BrowserRouter>
             <Routes>
-                <Route path="/" element={<Navigate to="/login" replace />} />
+                {/* Rotas Públicas */}
                 <Route path="/login" element={<LoginPage />} />
-                <Route path="/register" element={<RegisterPage/>} />
-            </Routes>
+                <Route path="/register" element={<RegisterPage />} />
+
+                {/* Rotas Protegidas */}
+                <Route element={<ProtectedRoute />}> {/* <-- Envolve as rotas protegidas */}
+                    <Route path="/home" element={<HomePage />} />
+
+                    {/* Redireciona a raiz "/" para a home se estiver logado */}
+                    <Route path="/" element={<Navigate to="/home" replace />} />
+                </Route>
+
+                {/* Rota Padrão (se nenhuma outra corresponder - opcional) */}
+                {/* Pode redirecionar para login ou mostrar um 404 */}
+                <Route path="*" element={<Navigate to="/login" replace />} />
+
+            </Routes>   
         </BrowserRouter>
     </StrictMode>,
 );

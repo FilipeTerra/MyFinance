@@ -1,0 +1,74 @@
+.app-header {
+    display: flex; /* Alinha itens horizontalmente */
+    align-items: center; /* Centraliza verticalmente */
+    justify-content: space-between; /* Espaça os elementos (logo | nav | user) */
+    padding: 0.8rem 2rem; /* Espaçamento interno (vertical | horizontal) */
+    background-color: #ffffff; /* Fundo branco */
+    border-bottom: 1px solid #e2e8f0; /* Linha divisória cinza clara */
+    width: 100%;
+    box-sizing: border-box; /* Garante que padding não aumente a largura */
+    position: sticky; /* Mantém o header fixo no topo ao rolar */
+    top: 0;
+    z-index: 10; /* Garante que fique acima de outros conteúdos */
+}
+
+.header-logo {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #3b82f6; /* Azul primário */
+    /* Se quiser que o logo seja um link para home: */
+    /* text-decoration: none; */
+}
+
+.header-nav {
+    display: flex; /* Alinha os links horizontalmente */
+    gap: 2rem; /* Espaçamento entre os links */
+}
+
+.header-link {
+    text-decoration: none;
+    color: #4b5563; /* Cinza escuro para links inativos */
+    font-weight: 500;
+    font-size: 1rem;
+    padding-bottom: 0.3rem; /* Espaço para a borda inferior */
+    border-bottom: 2px solid transparent; /* Borda invisível por padrão */
+    transition: color 0.2s ease, border-color 0.2s ease; /* Transição suave */
+}
+
+    .header-link:hover {
+        color: #1d4ed8; /* Azul mais escuro no hover */
+    }
+
+    .header-link.active {
+        color: #3b82f6; /* Azul primário para link ativo */
+        border-bottom-color: #3b82f6; /* Mostra a borda inferior azul */
+        font-weight: 600; /* Pode destacar o ativo com negrito */
+    }
+
+.header-user {
+    display: flex; /* Alinha "Olá, User" e "Sair" */
+    align-items: center; /* Centraliza verticalmente */
+    gap: 1rem; /* Espaço entre o nome e o botão */
+}
+
+.user-greeting {
+    color: #374151; /* Cinza mais escuro para o texto */
+    font-size: 0.95rem;
+}
+
+.logout-button {
+    background-color: #f3f4f6; /* Fundo cinza bem claro */
+    border: 1px solid #e5e7eb; /* Borda cinza clara */
+    color: #ef4444; /* Vermelho para 'Sair' */
+    padding: 0.5rem 0.9rem;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+    .logout-button:hover {
+        background-color: #fee2e2; /* Fundo vermelho claro no hover */
+        border-color: #fca5a5; /* Borda vermelha clara no hover */
+    }
