@@ -67,6 +67,8 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IAccountRepository, AccountRepository>();
 builder.Services.AddScoped<IAccountService, AccountService>();
+builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();
+builder.Services.AddScoped<ITransactionService, TransactionService>();
 
 // --- Construção do App ---
 var app = builder.Build();
@@ -92,7 +94,7 @@ app.UseAuthorization();
 
 app.Use(async (context, next) =>
 {
-    context.Response.Headers.Add("Content-Type", "application/json; charset=utf-8");
+    context.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
     await next();
 });
 

@@ -10,6 +10,7 @@ namespace MyFinance.Infrastructure
 
         public DbSet<User> Users { get; set; }
         public DbSet<Account> Accounts { get; set; }
+        public DbSet<Transaction> Transactions { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -37,10 +38,39 @@ namespace MyFinance.Infrastructure
                           v => (AccountType)Enum.Parse(typeof(AccountType), v));
             });
 
-            // BÔNUS: Adiciona uma restrição de "Email Único" que faltou na 1ª migration
+            
             modelBuilder.Entity<User>(entity =>
             {
                 entity.HasIndex(u => u.Email).IsUnique();
+            });
+
+            modelBuilder.Entity<Transaction>(entity =>
+            {
+                // Define a relação: 1 Conta (Account) pode ter MUITAS Transações (Transactions)
+                // A chave estrangeira é AccountId
+                entity.HasOne(t => t.Account)
+                      .WithMany() // Account não precisa ter uma lista de Transactions por enquanto
+                      .HasForeignKey(t => t.AccountId)
+                      // IMPORTANTE: Evita ciclos ou múltiplos caminhos de cascade.
+                      // A deleção já está configurada como Cascade no lado do User -> Account.
+                      // Se Account for deletada, as Transactions irão junto.
+                      // Se tentarmos deletar uma Transaction diretamente, não afeta a Account.
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                // Configura a propriedade 'Amount' para ser do tipo 'decimal'
+                entity.Property(t => t.Amount)
+                      .HasColumnType("decimal(18,2)");
+
+                // Configura o Enum 'Type' para ser salvo como string no BD
+                entity.Property(t => t.Type)
+                      .HasConversion(
+                          v => v.ToString(),
+                          v => (TransactionType)Enum.Parse(typeof(TransactionType), v));
+
+                // Configura a propriedade Date para ser apenas Date no banco (sem hora)
+                // Opcional, mas pode ser útil dependendo do SGBD e consultas
+                entity.Property(t => t.Date)
+                      .HasColumnType("date");
             });
         }
     }
