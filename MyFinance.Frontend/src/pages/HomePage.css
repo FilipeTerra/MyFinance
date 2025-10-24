@@ -31,3 +31,9 @@
     font-size: 1rem;
     text-align: center;
 }
+
+.homepage-actions {
+    display: flex;
+    justify-content: flex-end; /* Isso alinha o item (botão) no final do container (à direita) */
+    margin-bottom: 1.5rem; /* Mantém o espaço que o botão tinha abaixo dele */
+}

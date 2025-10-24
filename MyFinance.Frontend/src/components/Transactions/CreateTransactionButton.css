@@ -1,0 +1,16 @@
+/* src/components/Transactions/CreateTransactionButton.css */
+.create-transaction-button {
+    background-color: #3b82f6;
+    color: white;
+    border: none;
+    padding: 0.8rem 1.5rem;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+    .create-transaction-button:hover {
+        background-color: #2563eb;
+    }

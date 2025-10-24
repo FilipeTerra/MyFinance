@@ -5,7 +5,9 @@ import type { AccountResponseDto } from '../types/AccountResponseDto';
 import type { TransactionResponseDto } from '../types/TransactionResponseDto';
 import { TransactionFilter } from '../components/Transactions/TransactionFilter';
 import { TransactionList } from '../components/Transactions/TransactionList';
-import './HomePage.css'; // (Novo CSS)
+import { CreateTransactionButton } from '../components/Transactions/CreateTransactionButton';
+import { TransactionModal } from '../components/Transactions/TransactionModal';
+import './HomePage.css'; 
 
 // Definindo a interface para o estado dos filtros
 interface FiltersState {
@@ -20,6 +22,7 @@ interface FiltersState {
 export function HomePage() {
     // Estado para a lista de contas (para o dropdown)
     const [accounts, setAccounts] = useState<AccountResponseDto[]>([]);
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
     // Estado para a lista de transaçíµes (o resultado)
     const [transactions, setTransactions] = useState<TransactionResponseDto[]>([]);
@@ -98,6 +101,11 @@ export function HomePage() {
                 {/* Exibe erro, se houver */}
                 {error && <div className="error-message">{error}</div>}
 
+                {/* Botão para criar transação */}
+                <div className="homepage-actions">
+                    <CreateTransactionButton onClick={() => setIsModalOpen(true)} />
+                </div>
+
                 {/* Seleção de Filtros */}
                 {isLoadingAccounts ? (
                     <p>Carregando contas...</p>
@@ -115,6 +123,12 @@ export function HomePage() {
                     isLoading={isLoadingTransactions}
                 />
             </main>
+            {/* Modal para criar transação */}
+            <TransactionModal
+                accounts={accounts}
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+            />
         </div>
     );
 }

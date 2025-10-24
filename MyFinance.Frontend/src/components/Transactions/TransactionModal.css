@@ -1,0 +1,94 @@
+/* src/components/Transactions/TransactionModal.css */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: white;
+    padding: 2rem;
+    border-radius: 8px;
+    width: 100%;
+    max-width: 500px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+    .modal-content h2 {
+        margin-top: 0;
+        margin-bottom: 1.5rem;
+        color: #1e293b;
+    }
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+    .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        color: #64748b;
+        font-weight: 500;
+    }
+
+    .form-group input,
+    .form-group select {
+        width: 100%;
+        padding: 0.7rem 0.8rem;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        background-color: #f8fafc;
+        color: #334155;
+        font-size: 1rem;
+    }
+
+.new-category-group {
+    display: flex;
+    gap: 0.5rem;
+}
+
+    .new-category-group input {
+        flex-grow: 1;
+    }
+
+    .new-category-group button {
+        padding: 0.7rem 1rem;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        background-color: #f1f5f9;
+        cursor: pointer;
+    }
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 2rem;
+}
+
+.cancel-button,
+.save-button {
+    padding: 0.7rem 1.5rem;
+    border: none;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.cancel-button {
+    background-color: #f1f5f9;
+    color: #475569;
+}
+
+.save-button {
+    background-color: #3b82f6;
+    color: white;
+}
