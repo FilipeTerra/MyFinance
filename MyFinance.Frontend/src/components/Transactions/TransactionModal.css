@@ -92,3 +92,104 @@
     background-color: #3b82f6;
     color: white;
 }
+
+/* Estilos para o Seletor de Tipo*/
+.type-selector {
+    display: flex;
+    gap: 1.5rem;
+    padding: 0.5rem 0;
+}
+
+    .type-selector label {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        cursor: pointer;
+        font-weight: 500;
+        color: #334155; /* Cor do texto do label */
+        margin-bottom: 0; /* Reseta a margem do form-group label */
+    }
+
+    .type-selector input[type="radio"] {
+        width: 1.2em;
+        height: 1.2em;
+        margin: 0;
+        accent-color: #3b82f6; /* Cor do radio button */
+    }
+
+
+/* Estilos para o Grupo de Conta com Botão */
+.form-group-with-button {
+    display: flex;
+    align-items: flex-end; /* Alinha o botão na base do input */
+    gap: 0.5rem;
+}
+
+    .form-group-with-button .input-wrapper {
+        flex-grow: 1; /* Faz o select ocupar o espaço disponível */
+    }
+
+        /* Garante que o label e o select dentro do wrapper funcionem */
+        .form-group-with-button .input-wrapper label {
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+
+        .form-group-with-button .input-wrapper select {
+            width: 100%;
+        }
+
+.add-new-button {
+    background-color: #10b981; /* Verde */
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 1.5rem; /* Tamanho do "+" */
+    font-weight: 600;
+    cursor: pointer;
+    width: 42.5px; /* Largura fixa */
+    height: 42.5px; /* Altura fixa (para bater com o input/select) */
+    padding: 0;
+    line-height: 42.5px; /* Centraliza o "+" verticalmente */
+    text-align: center;
+    transition: background-color 0.2s ease;
+    flex-shrink: 0; /* Impede que o botão encolha */
+}
+
+    .add-new-button:hover {
+        background-color: #059669; /* Verde mais escuro */
+    }
+
+
+.form-group input.input-error,
+.form-group select.input-error,
+.input-wrapper select.input-error { /* Adicionado para os selects dentro do wrapper */
+    border-color: #ef4444 !important; /* Vermelho - Borda */
+    border-width: 1px; /* Garante que a borda tenha espessura */
+}
+
+    /* Opcional: Adiciona um brilho vermelho sutil no foco para reforçar */
+    .form-group input.input-error:focus,
+    .form-group select.input-error:focus,
+    .input-wrapper select.input-error:focus {
+        box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.3) !important;
+        outline: none; /* Remove o outline padrão do navegador no foco */
+    }
+
+/* Estilo para a mensagem de erro abaixo do campo (mantido) */
+.field-error-message {
+    display: block;
+    color: #ef4444;
+    font-size: 0.8rem;
+    margin-top: 0.3rem;
+    text-align: left;
+}
+
+/* Ajuste para o erro dentro do input-wrapper (mantido) */
+.input-wrapper .field-error-message {
+    display: block;
+    color: #ef4444;
+    font-size: 0.8rem;
+    margin-top: 0.3rem;
+    text-align: left;
+}
