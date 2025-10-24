@@ -27,6 +27,6 @@ public class UpdateTransactionRequestDto
 	[Required(ErrorMessage = "A Conta é obrigatória.")]
 	public Guid AccountId { get; set; }
 
-	// --- Futuro ---
-	// public Guid? CategoryId { get; set; } // Pode ser alterado para null ou outra categoria
+	[Required(ErrorMessage = "A Categoria é obrigatória.")]
+	public Guid CategoryId { get; set; }
 }

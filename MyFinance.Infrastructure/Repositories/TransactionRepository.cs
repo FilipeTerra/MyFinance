@@ -24,6 +24,7 @@ public class TransactionRepository : ITransactionRepository
         // depois verifica se a conta pertence ao usuário.
         return await _context.Transactions
             .Include(t => t.Account) // Inclui os dados da conta relacionada
+            .Include(t => t.Category) // Inclui os dados da categoria relacionada
             .FirstOrDefaultAsync(t => t.Id == id && t.Account.UserId == userId);
     }
 
@@ -44,6 +45,7 @@ public class TransactionRepository : ITransactionRepository
             .OrderByDescending(t => t.Date)
             .ThenByDescending(t => t.CreatedAt)
             .Include(t => t.Account)
+            .Include(t => t.Category)
             .ToListAsync();
     }
 

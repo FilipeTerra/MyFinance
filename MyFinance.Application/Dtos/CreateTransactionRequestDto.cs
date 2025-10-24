@@ -26,6 +26,6 @@ public class CreateTransactionRequestDto
     [Required(ErrorMessage = "A Conta é obrigatória.")]
     public Guid AccountId { get; set; }
 
-    // --- Futuro ---
-    // public Guid? CategoryId { get; set; } // Opcional ao criar
+    [Required(ErrorMessage = "A Categoria é obrigatória.")]
+    public Guid CategoryId { get; set; }
 }

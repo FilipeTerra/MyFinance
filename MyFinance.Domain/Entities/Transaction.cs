@@ -1,4 +1,5 @@
-using MyFinance.Domain.Enums; // Importa o Enum TransactionType
+using MyFinance.Domain.Enums;
+using MyFinance.Domain.Entities;
 using System;
 
 namespace MyFinance.Domain.Entities;
@@ -25,12 +26,19 @@ public class Transaction
     public Guid AccountId { get; set; }
 
     /// <summary>
-    /// Propriedade de Navegação para o EF Core.
-    /// Uma transação pertence a UMA conta.
+    /// Propriedade de Navegação para o EF Core. Uma transação pertence a UMA conta.
     /// </summary>
     public Account Account { get; set; } = null!;
 
-    // --- Relacionamento (Futuro) com Category ---
-    // public Guid? CategoryId { get; set; } // Pode ser nulo inicialmente
-    // public Category? Category { get; set; } 
+    // --- Relacionamento com Category ---
+    /// <summary>
+    /// Chave Estrangeira (FK) para a tabela Categories.
+    /// </summary>
+    public Guid CategoryId { get; set; } // Agora é obrigatória
+
+    /// <summary>
+    /// Propriedade de Navegação para o EF Core.
+    /// Uma transação pertence a UMA categoria.
+    /// </summary>
+    public Category Category { get; set; } = null!;
 }

@@ -13,23 +13,31 @@ public class TransactionService : ITransactionService
 {
     private readonly ITransactionRepository _transactionRepository;
     private readonly IAccountRepository _accountRepository; // Necessário para validar a conta
+    private readonly ICategoryRepository _categoryRepository;
 
-    public TransactionService(ITransactionRepository transactionRepository, IAccountRepository accountRepository)
+    public TransactionService(ITransactionRepository transactionRepository, IAccountRepository accountRepository, ICategoryRepository categoryRepository)
     {
         _transactionRepository = transactionRepository;
         _accountRepository = accountRepository;
+        _categoryRepository = categoryRepository;
     }
 
     public async Task<ServiceResponse<TransactionResponseDto>> CreateTransactionAsync(CreateTransactionRequestDto dto, Guid userId)
     {
-        // 1. Validar se a conta pertence ao usuário
+        // Validar se a conta pertence ao usuário
         var account = await _accountRepository.GetByIdAsync(dto.AccountId, userId);
         if (account == null)
         {
             return new ServiceResponse<TransactionResponseDto> { Success = false, ErrorMessage = "Conta não encontrada ou não pertence ao usuário." };
         }
 
-        // 2. Criar a entidade Transação
+        var category = await _categoryRepository.GetByIdAsync(dto.CategoryId, userId);
+        if (category == null)
+        {
+            return new ServiceResponse<TransactionResponseDto> { Success = false, ErrorMessage = "Categoria não encontrada ou não pertence ao usuário." };
+        }
+
+        // Criar a entidade Transação
         var newTransaction = new Transaction
         {
             Id = Guid.NewGuid(),
@@ -38,15 +46,15 @@ public class TransactionService : ITransactionService
             Type = dto.Type,
             Date = dto.Date.ToUniversalTime(), // Armazenar em UTC
             AccountId = dto.AccountId,
-            CreatedAt = DateTime.UtcNow
-            // CategoryId = dto.CategoryId // (Futuro)
+            CreatedAt = DateTime.UtcNow,
+            CategoryId = dto.CategoryId
         };
 
-        // 3. Salvar no banco
+        // Salvar no banco
         await _transactionRepository.AddAsync(newTransaction);
         await _transactionRepository.SaveChangesAsync();
 
-        // 4. Mapear para DTO de resposta (incluindo nome da conta)
+        // Mapear para DTO de resposta (incluindo nome da conta)
         // Precisamos recarregar a transação com a conta para o mapeamento
         var savedTransaction = await _transactionRepository.GetByIdAsync(newTransaction.Id, userId);
         var responseDto = MapTransactionToResponseDto(savedTransaction!); // Usamos ! pois acabamos de criar
@@ -79,14 +87,14 @@ public class TransactionService : ITransactionService
 
     public async Task<ServiceResponse<TransactionResponseDto>> UpdateTransactionAsync(Guid transactionId, UpdateTransactionRequestDto dto, Guid userId)
     {
-        // 1. Buscar a transação existente (já valida o usuário)
+        // Buscar a transação existente (já valida o usuário)
         var transaction = await _transactionRepository.GetByIdAsync(transactionId, userId);
         if (transaction == null)
         {
             return new ServiceResponse<TransactionResponseDto> { Success = false, ErrorMessage = "Transação não encontrada ou não pertence ao usuário." };
         }
 
-        // 2. Validar a nova conta (caso tenha sido alterada)
+        // Validar a nova conta (caso tenha sido alterada)
         if (transaction.AccountId != dto.AccountId)
         {
             var newAccount = await _accountRepository.GetByIdAsync(dto.AccountId, userId);
@@ -96,19 +104,28 @@ public class TransactionService : ITransactionService
             }
         }
 
-        // 3. Atualizar os dados da entidade
+        if (transaction.CategoryId != dto.CategoryId)
+        {
+            var newCategory = await _categoryRepository.GetByIdAsync(dto.CategoryId, userId);
+            if (newCategory == null)
+            {
+                return new ServiceResponse<TransactionResponseDto> { Success = false, ErrorMessage = "Nova categoria não encontrada ou não pertence ao usuário." };
+            }
+        }
+
+        // Atualizar os dados da entidade
         transaction.Description = dto.Description;
         transaction.Amount = dto.Amount;
         transaction.Type = dto.Type;
         transaction.Date = dto.Date.ToUniversalTime();
         transaction.AccountId = dto.AccountId;
-        // transaction.CategoryId = dto.CategoryId; // (Futuro)
+        transaction.CategoryId = dto.CategoryId;
 
-        // 4. Salvar
+        // Salvar
         _transactionRepository.Update(transaction);
         await _transactionRepository.SaveChangesAsync();
 
-        // 5. Mapear e retornar (recarregando para pegar a Account atualizada se mudou)
+        // Mapear e retornar (recarregando para pegar a Account atualizada se mudou)
         var updatedTransaction = await _transactionRepository.GetByIdAsync(transaction.Id, userId);
         var responseDto = MapTransactionToResponseDto(updatedTransaction!);
 
@@ -117,14 +134,14 @@ public class TransactionService : ITransactionService
 
     public async Task<ServiceResponse<bool>> DeleteTransactionAsync(Guid transactionId, Guid userId)
     {
-        // 1. Buscar a transação (já valida o usuário)
+        // Buscar a transação (já valida o usuário)
         var transaction = await _transactionRepository.GetByIdAsync(transactionId, userId);
         if (transaction == null)
         {
             return new ServiceResponse<bool> { Success = false, ErrorMessage = "Transação não encontrada ou não pertence ao usuário." };
         }
 
-        // 2. Deletar
+        // Deletar
         _transactionRepository.Delete(transaction);
         await _transactionRepository.SaveChangesAsync();
 
@@ -146,9 +163,9 @@ public class TransactionService : ITransactionService
             Date = transaction.Date,
             CreatedAt = transaction.CreatedAt,
             AccountId = transaction.AccountId,
-            AccountName = transaction.Account?.Name ?? "Conta não encontrada" // Usa o objeto Account carregado
-            // CategoryId = transaction.CategoryId, // (Futuro)
-            // CategoryName = transaction.Category?.Name // (Futuro)
+            AccountName = transaction.Account?.Name ?? "Conta não encontrada", // Usa o objeto Account carregado
+            CategoryId = transaction.CategoryId,
+            CategoryName = transaction.Category?.Name ?? "Sem categoria"
         };
     }
 }
