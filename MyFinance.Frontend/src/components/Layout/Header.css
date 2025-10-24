@@ -1,28 +1,28 @@
 .app-header {
     display: flex; /* Alinha itens horizontalmente */
     align-items: center; /* Centraliza verticalmente */
-    justify-content: space-between; /* EspaÁa os elementos (logo | nav | user) */
-    padding: 0.8rem 2rem; /* EspaÁamento interno (vertical | horizontal) */
+    justify-content: space-between; /* Espa√ßa os elementos (logo | nav | user) */
+    padding: 0.8rem 2rem; /* Espa√ßamento interno (vertical | horizontal) */
     background-color: #ffffff; /* Fundo branco */
-    border-bottom: 1px solid #e2e8f0; /* Linha divisÛria cinza clara */
+    border-bottom: 1px solid #e2e8f0; /* Linha divis√≥ria cinza clara */
     width: 100%;
-    box-sizing: border-box; /* Garante que padding n„o aumente a largura */
-    position: sticky; /* MantÈm o header fixo no topo ao rolar */
+    box-sizing: border-box; /* Garante que padding n√£o aumente a largura */
+    position: sticky; /* Mant√©m o header fixo no topo ao rolar */
     top: 0;
-    z-index: 10; /* Garante que fique acima de outros conte˙dos */
+    z-index: 10; /* Garante que fique acima de outros conte√≠¬∫dos */
 }
 
 .header-logo {
     font-size: 1.6rem;
     font-weight: 700;
-    color: #3b82f6; /* Azul prim·rio */
+    color: #3b82f6; /* Azul prim√°rio */
     /* Se quiser que o logo seja um link para home: */
     /* text-decoration: none; */
 }
 
 .header-nav {
     display: flex; /* Alinha os links horizontalmente */
-    gap: 2rem; /* EspaÁamento entre os links */
+    gap: 2rem; /* Espa√ßamento entre os links */
 }
 
 .header-link {
@@ -30,9 +30,9 @@
     color: #4b5563; /* Cinza escuro para links inativos */
     font-weight: 500;
     font-size: 1rem;
-    padding-bottom: 0.3rem; /* EspaÁo para a borda inferior */
-    border-bottom: 2px solid transparent; /* Borda invisÌvel por padr„o */
-    transition: color 0.2s ease, border-color 0.2s ease; /* TransiÁ„o suave */
+    padding-bottom: 0.3rem; /* Espa√ßo para a borda inferior */
+    border-bottom: 2px solid transparent; /* Borda invis√≠¬≠vel por padr√£o */
+    transition: color 0.2s ease, border-color 0.2s ease; /* Transi√ß√£o suave */
 }
 
     .header-link:hover {
@@ -40,15 +40,15 @@
     }
 
     .header-link.active {
-        color: #3b82f6; /* Azul prim·rio para link ativo */
+        color: #3b82f6; /* Azul prim√°rio para link ativo */
         border-bottom-color: #3b82f6; /* Mostra a borda inferior azul */
         font-weight: 600; /* Pode destacar o ativo com negrito */
     }
 
 .header-user {
-    display: flex; /* Alinha "Ol·, User" e "Sair" */
+    display: flex; /* Alinha "Ol√°, User" e "Sair" */
     align-items: center; /* Centraliza verticalmente */
-    gap: 1rem; /* EspaÁo entre o nome e o bot„o */
+    gap: 1rem; /* Espa√ßo entre o nome e o bot√£o */
 }
 
 .user-greeting {

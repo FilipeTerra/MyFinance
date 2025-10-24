@@ -4,20 +4,19 @@ import './Header.css'; // Criaremos este CSS a seguir
 
 export function Header() {
     const navigate = useNavigate();
-    // Pega o nome do usu·rio do localStorage, com um fallback
-    const userName = localStorage.getItem('userName') || 'Usu·rio';
+    // Pega o nome do usu√°rio do localStorage, com um fallback
+    const userName = localStorage.getItem('userName') || 'Usu√°rio';
 
     const handleLogout = () => {
         localStorage.removeItem('authToken');
         localStorage.removeItem('userName');
         tokenManager.clearAuthToken(); // Limpa o token do Axios
-        navigate('/login'); // Redireciona para a p·gina de login
+        navigate('/login'); // Redireciona para a p√°gina de login
     };
 
     return (
         <header className="app-header">
             <div className="header-logo">
-                {/* VocÍ pode adicionar um link para a home aqui se quiser */}
                 MyFinance
             </div>
             <nav className="header-nav">
@@ -42,7 +41,7 @@ export function Header() {
                 </NavLink>
             </nav>
             <div className="header-user">
-                <span className="user-greeting">Ol·, {userName}</span>
+                <span className="user-greeting">Ol√°, {userName}</span>
                 <button onClick={handleLogout} className="logout-button">
                     Sair
                 </button>

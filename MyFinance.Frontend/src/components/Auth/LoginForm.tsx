@@ -1,6 +1,6 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import './LoginForm.css'; // Estilos específicos do formulário
+import './LoginForm.css'; // Estilos especí­ficos do formulário
 import {authService, AxiosError, tokenManager, type ApiErrorResponse } from '../../services/Api';
 
 export function LoginForm() {
@@ -58,7 +58,7 @@ export function LoginForm() {
             if (apiErrorMessage) {
                 setError(apiErrorMessage); // Ex: "Email ou senha inválidos."
             } else if (axiosError.request) {
-                setError('Não foi possível conectar ao servidor. Verifique sua conexão.');
+                setError('Não foi possí­vel conectar ao servidor. Verifique sua conexão.');
             } else {
                 setError('Erro inesperado. Tente novamente.');
             }
@@ -70,7 +70,7 @@ export function LoginForm() {
     return (
         // O formulário em si, sem o card externo
         <form onSubmit={handleSubmit} className="login-form" noValidate>
-            <h2>Acesse sua Conta</h2> {/* Título dentro do form */}
+            <h2>Acesse sua Conta</h2> {/* Tí­tulo dentro do form */}
             {/* Mensagem de Sucesso (vinda do registro) */}
             {successMessage && <p className="success-message">{successMessage}</p>}
 

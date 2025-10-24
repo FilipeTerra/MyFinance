@@ -1,9 +1,9 @@
-﻿import { RegisterForm } from '../components/Auth/RegisterForm'; // Importa o componente do formulário
-import './RegisterPage.css'; // Importa os estilos da PÁGINA de registro
+import { RegisterForm } from '../components/Auth/RegisterForm'; // Importa o componente do formulário
+import './RegisterPage.css'; // Importa os estilos da PíGINA de registro
 
 export function RegisterPage() {
     return (
-        // Container da PÁGINA para centralização
+        // Container da PíGINA para centralização
         <div className="register-page-container">
             {/* O Card que envolve o formulário */}
             <div className="register-page-card">

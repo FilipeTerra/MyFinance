@@ -1,0 +1,94 @@
+.transaction-list-container {
+    background: #fff;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.list-message {
+    text-align: center;
+    padding: 2rem;
+    color: #64748b;
+    font-size: 1rem;
+}
+
+.transaction-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+    .transaction-table th,
+    .transaction-table td {
+        padding: 0.9rem 0.6rem;
+        text-align: left;
+        border-bottom: 1px solid #eef2f7;
+        font-size: 0.95rem;
+        color: #334155;
+    }
+
+    .transaction-table th {
+        color: #64748b;
+        font-weight: 600;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+    }
+
+/* Cores para Receita/Despesa */
+.tx-amount.income {
+    color: #059669; /* Verde */
+    font-weight: 500;
+}
+
+.tx-amount.expense {
+    color: #ef4444; /* Vermelho */
+    font-weight: 500;
+}
+
+.tx-type {
+    padding: 0.2rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    background-color: #f1f5f9;
+}
+
+    .tx-type.income {
+        background-color: #d1fae5;
+        color: #065f46;
+    }
+
+    .tx-type.expense {
+        background-color: #fee2e2;
+        color: #b91c1c;
+    }
+
+.tx-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.action-btn {
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 0.9rem;
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+}
+
+.edit-btn {
+    color: #3b82f6;
+}
+
+    .edit-btn:hover {
+        background-color: #eff6ff;
+    }
+
+.delete-btn {
+    color: #ef4444;
+}
+
+    .delete-btn:hover {
+        background-color: #fee2e2;
+    }

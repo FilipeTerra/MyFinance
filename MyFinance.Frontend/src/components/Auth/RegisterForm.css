@@ -1,4 +1,4 @@
-﻿/* Estilos específicos para o formulário de cadastro */
+/* Estilos especí­ficos para o formulário de cadastro */
 .register-form {
     width: 100%;
     display: flex;
@@ -8,7 +8,7 @@
 
     .register-form h2 {
         margin-top: 0;
-        margin-bottom: 0.8rem; /* Espaço abaixo do título */
+        margin-bottom: 0.8rem; /* Espaço abaixo do tí­tulo */
         color: #334155;
         font-size: 1.75rem;
         font-weight: 600;

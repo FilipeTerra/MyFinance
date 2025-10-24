@@ -1,10 +1,10 @@
-﻿/* Container da PÁGINA - Usa Flexbox para centralizar */
+/* Container da PíGINA - Usa Flexbox para centralizar */
 .login-page-container {
     display: flex; /* Ativa flexbox */
     justify-content: center; /* Centraliza horizontalmente */
     align-items: center; /* Centraliza verticalmente */
     width: 100%;
-    min-height: 100%; /* Ocupa toda a altura disponível no #root */
+    min-height: 100%; /* Ocupa toda a altura disponí­vel no #root */
     padding: 1rem; /* Espaçamento das bordas em telas pequenas */
     box-sizing: border-box;
     background-color: #eef2f7; /* Fundo cinza bem claro */

@@ -1,0 +1,67 @@
+.transaction-filter-form {
+    background: #fff;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    display: flex;
+    flex-wrap: wrap; /* Permite que os itens quebrem a linha */
+    gap: 1rem; /* Espaço entre os grupos */
+    align-items: flex-end; /* Alinha os botíµes com a base dos inputs */
+    margin-bottom: 2rem;
+}
+
+    .transaction-filter-form h4 {
+        width: 100%; /* Ocupa a linha inteira */
+        margin-top: 0;
+        margin-bottom: 0.5rem;
+        color: #334155;
+    }
+
+.filter-group {
+    flex: 1; /* Faz com que os grupos cresçam para preencher o espaço */
+    min-width: 150px; /* Largura mí­nima antes de quebrar a linha */
+    display: flex;
+    flex-direction: column;
+}
+
+    .filter-group label {
+        display: block;
+        margin-bottom: 0.4rem;
+        color: #64748b;
+        font-weight: 500;
+        font-size: 0.85rem;
+    }
+
+    .filter-group input,
+    .filter-group select {
+        width: 100%;
+        padding: 0.7rem 0.8rem;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        background-color: #f8fafc;
+        color: #334155;
+        font-size: 0.95rem;
+        box-sizing: border-box;
+    }
+
+.filter-button {
+    padding: 0.7rem 1.2rem;
+    border: none;
+    border-radius: 6px;
+    background-color: #3b82f6;
+    color: white;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    height: 40px; /* Altura fixa para alinhar */
+}
+
+    .filter-button:hover {
+        background-color: #2563eb;
+    }
+
+    .filter-button:disabled {
+        background-color: #94a3b8;
+        cursor: not-allowed;
+    }

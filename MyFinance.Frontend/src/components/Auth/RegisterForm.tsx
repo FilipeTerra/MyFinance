@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './RegisterForm.css';
 import { authService, AxiosError, type ApiErrorResponse } from '../../services/Api';
@@ -47,7 +47,7 @@ export function RegisterForm() {
             if (apiErrorMessage) {
                 setError(apiErrorMessage); // Ex: "Este email já está cadastrado."
             } else if (axiosError.request) {
-                setError('Não foi possível conectar ao servidor.');
+                setError('Não foi possí­vel conectar ao servidor.');
             } else {
                 setError('Erro inesperado. Tente novamente.');
             }
@@ -58,7 +58,7 @@ export function RegisterForm() {
 
     return (
         <form onSubmit={handleSubmit} className="register-form" noValidate>
-            <h2>Crie sua Conta</h2> {/* Título */}
+            <h2>Crie sua Conta</h2> {/* Tí­tulo */}
 
             {/* Exibição de mensagens de erro */}
             {error && <p className="error-message">{error}</p>}
@@ -91,7 +91,7 @@ export function RegisterForm() {
                 <input
                     type="password" id="register-password" value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    required placeholder="Mínimo 6 caracteres" aria-label="Senha"
+                    required placeholder="Mí­nimo 6 caracteres" aria-label="Senha"
                     minLength={6} disabled={isLoading}
                 />
             </div>

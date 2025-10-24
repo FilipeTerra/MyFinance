@@ -1,0 +1,33 @@
+.homepage-container {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background-color: #f1f5f9; /* Fundo cinza bem claro para a página */
+}
+
+.homepage-content {
+    width: 100%;
+    max-width: 1200px; /* Largura máxima do conteíºdo */
+    margin: 0 auto; /* Centraliza */
+    padding: 2rem;
+    box-sizing: border-box;
+}
+
+    .homepage-content h2 {
+        margin-top: 0;
+        color: #1e293b;
+        font-size: 1.8rem;
+        margin-bottom: 1.5rem;
+    }
+
+/* Mensagem de erro geral da página */
+.error-message {
+    color: #ef4444;
+    background-color: #fee2e2;
+    padding: 1rem;
+    border-radius: 6px;
+    border: 1px solid #fca5a5;
+    margin-bottom: 1.5rem;
+    font-size: 1rem;
+    text-align: center;
+}

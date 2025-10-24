@@ -1,4 +1,4 @@
-﻿/* Estilos específicos para o formulário de login */
+/* Estilos especí­ficos para o formulário de login */
 .login-form {
     width: 100%; /* Ocupa a largura do container pai (o card) */
     display: flex;
@@ -8,7 +8,7 @@
 
     .login-form h2 {
         margin-top: 0;
-        margin-bottom: 0.5rem; /* Menos espaço abaixo do título interno */
+        margin-bottom: 0.5rem; /* Menos espaço abaixo do tí­tulo interno */
         color: #334155;
         font-size: 1.75rem;
         font-weight: 600;
