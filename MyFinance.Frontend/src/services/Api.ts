@@ -59,6 +59,7 @@ const accountService = {
 };
 
 // Interface para os parâmetros do filtro
+// A interface TransactionFilterParams já corresponde ao TransactionSearchRequestDto do backend
 export interface TransactionFilterParams {
     accountId: string;
     searchText?: string;
@@ -69,22 +70,24 @@ export interface TransactionFilterParams {
 }
 
 const transactionService = {
-    // Rota GET /api/transactions/account/{accountId}?searchText=...&page=...
     getTransactions: (params: TransactionFilterParams) => {
-        const { accountId, ...filters } = params;
+        const filters = params;
 
         // Constrói os query params
+        // O backend espera accountId, searchText, date, amount, page, pageSize
         const queryParams = new URLSearchParams({
+            accountId: filters.accountId, // AccountId agora é um query param obrigatório
             page: (filters.page || 1).toString(),
             pageSize: (filters.pageSize || 20).toString(),
         });
 
+        // Adiciona os filtros opcionais
         if (filters.searchText) queryParams.append('searchText', filters.searchText);
         if (filters.date) queryParams.append('date', filters.date);
-        if (filters.amount) queryParams.append('amount', filters.amount.toString());
+        if (filters.amount !== undefined && filters.amount !== null) queryParams.append('amount', filters.amount.toString()); // Garante que amount=0 seja enviado se digitado
 
-        // O endpoint do backend esperado é: GET /api/transactions/account/{accountId}?[QUERY_PARAMS]
-        return apiClient.get<TransactionResponseDto[]>(`/transactions/account/${accountId}`, { params: queryParams });
+        // O endpoint do backend esperado agora é: GET /api/transactions/search?[QUERY_PARAMS]
+        return apiClient.get<TransactionResponseDto[]>('/transactions/search', { params: queryParams });
     },
 };
 

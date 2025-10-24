@@ -34,4 +34,9 @@ public interface ITransactionService
     /// Exclui uma transação.
     /// </summary>
     Task<ServiceResponse<bool>> DeleteTransactionAsync(Guid transactionId, Guid userId);
+
+    /// <summary>
+    /// Busca transações de forma dinâmica com base nos filtros.
+    /// </summary>
+    Task<ServiceResponse<IEnumerable<TransactionResponseDto>>> SearchTransactionsAsync(Guid userId, TransactionSearchRequestDto filters);
 }

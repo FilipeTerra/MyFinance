@@ -80,6 +80,25 @@ public class TransactionsController : ControllerBase
         return Ok(response.Data);
     }
 
+    [HttpGet("search")]
+    public async Task<IActionResult> SearchTransactions([FromQuery] TransactionSearchRequestDto filters)
+    {
+        // O [FromQuery] mapeia os parâmetros da URL (ex: ?accountId=...) para o objeto DTO.
+        if (!ModelState.IsValid)
+        {
+            // Retorna 400 Bad Request se o AccountId não for fornecido,
+            // conforme a validação [Required] no DTO.
+            return BadRequest(ModelState);
+        }
+
+        var userId = GetUserIdFromToken();
+        var response = await _transactionService.SearchTransactionsAsync(userId, filters);
+
+        // O serviço sempre retorna uma lista (Data nunca é nulo),
+        // mesmo que esteja vazia.
+        return Ok(response.Data);
+    }
+
     // PUT /api/transactions/{id}
     [HttpPut("{id:guid}")]
     public async Task<IActionResult> UpdateTransaction(Guid id, [FromBody] UpdateTransactionRequestDto requestDto)

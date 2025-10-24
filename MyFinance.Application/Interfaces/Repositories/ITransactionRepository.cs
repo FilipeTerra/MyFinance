@@ -2,6 +2,7 @@ using MyFinance.Domain.Entities;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using MyFinance.Application.Dtos;
 
 namespace MyFinance.Application.Interfaces.Repositories;
 
@@ -42,4 +43,9 @@ public interface ITransactionRepository
     /// Salva todas as mudanças pendentes (Add, Update, Delete) no banco de dados.
     /// </summary>
     Task<bool> SaveChangesAsync();
+
+    /// <summary>
+    /// Busca transações com base em um conjunto de filtros dinâmicos.
+    /// </summary>
+    Task<IEnumerable<Transaction>> GetByFilterAsync(Guid userId, TransactionSearchRequestDto filters);
 }

@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using MyFinance.Application.Dtos;
 
 namespace MyFinance.Infrastructure.Repositories;
 
@@ -47,6 +48,51 @@ public class TransactionRepository : ITransactionRepository
             .Include(t => t.Account)
             .Include(t => t.Category)
             .ToListAsync();
+    }
+
+    public async Task<IEnumerable<Transaction>> GetByFilterAsync(Guid userId, TransactionSearchRequestDto filters)
+    {
+        // Garante que a conta pertence ao usuário E que estamos buscando na conta correta
+        var query = _context.Transactions
+            .Where(t => t.Account.UserId == userId && t.AccountId == filters.AccountId);
+
+        // Filtro de Descrição Textual
+        if (!string.IsNullOrWhiteSpace(filters.SearchText))
+        {
+            // Usando EF.Functions.ILike para busca case-insensitive (específico do PostgreSQL)
+            // Se usar SQL Server, seria t.Description.Contains(filters.SearchText)
+            // Para ser mais genérico e case-insensitive:
+            string searchTextLower = filters.SearchText.ToLower();
+            query = query.Where(t => t.Description.ToLower().Contains(searchTextLower));
+        }
+
+        // Filtro de Valor
+        if (filters.Amount.HasValue)
+        {
+            query = query.Where(t => t.Amount == filters.Amount.Value);
+        }
+
+        // Filtro de Data
+        if (filters.Date.HasValue)
+        {
+            // O banco armazena como 'date' (sem hora)
+            var dateToFilter = filters.Date.Value.Date;
+            query = query.Where(t => t.Date == dateToFilter);
+        }
+
+        // Incluir entidades relacionadas (essencial para o Mapeamento)
+        query = query.Include(t => t.Account)
+                     .Include(t => t.Category);
+
+        // Ordenar (igual ao GetAllByAccountIdAsync)
+        query = query.OrderByDescending(t => t.Date)
+                     .ThenByDescending(t => t.CreatedAt);
+
+        // Paginação (Opcional, mas recomendado. O DTO já suporta)
+        query = query.Skip((filters.Page - 1) * filters.PageSize)
+                     .Take(filters.PageSize);
+
+        return await query.ToListAsync();
     }
 
     public async Task AddAsync(Transaction transaction)

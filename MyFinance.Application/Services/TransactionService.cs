@@ -168,4 +168,14 @@ public class TransactionService : ITransactionService
             CategoryName = transaction.Category?.Name ?? "Sem categoria"
         };
     }
+
+    public async Task<ServiceResponse<IEnumerable<TransactionResponseDto>>> SearchTransactionsAsync(Guid userId, TransactionSearchRequestDto filters)
+    {
+        // Chama o novo método do repositório
+        var transactions = await _transactionRepository.GetByFilterAsync(userId, filters);
+
+        var responseDtos = transactions.Select(MapTransactionToResponseDto).ToList();
+
+        return new ServiceResponse<IEnumerable<TransactionResponseDto>> { Data = responseDtos };
+    }
 }
