@@ -75,7 +75,7 @@
 
 .cancel-button,
 .save-button {
-    padding: 0.7rem 1.5rem;
+    padding: 0.6rem 1.4rem;
     border: none;
     border-radius: 6px;
     font-size: 1rem;
@@ -118,15 +118,15 @@
     }
 
 
-/* Estilos para o Grupo de Conta com Botão */
+/* Estilos para o Grupo de Conta com Botï¿½o */
 .form-group-with-button {
     display: flex;
-    align-items: flex-end; /* Alinha o botão na base do input */
+    align-items: flex-end; /* Alinha o botï¿½o na base do input */
     gap: 0.5rem;
 }
 
     .form-group-with-button .input-wrapper {
-        flex-grow: 1; /* Faz o select ocupar o espaço disponível */
+        flex-grow: 1; /* Faz o select ocupar o espaï¿½o disponï¿½vel */
     }
 
         /* Garante que o label e o select dentro do wrapper funcionem */
@@ -153,7 +153,7 @@
     line-height: 42.5px; /* Centraliza o "+" verticalmente */
     text-align: center;
     transition: background-color 0.2s ease;
-    flex-shrink: 0; /* Impede que o botão encolha */
+    flex-shrink: 0; /* Impede que o botï¿½o encolha */
 }
 
     .add-new-button:hover {
@@ -168,12 +168,12 @@
     border-width: 1px; /* Garante que a borda tenha espessura */
 }
 
-    /* Opcional: Adiciona um brilho vermelho sutil no foco para reforçar */
+    /* Opcional: Adiciona um brilho vermelho sutil no foco para reforï¿½ar */
     .form-group input.input-error:focus,
     .form-group select.input-error:focus,
     .input-wrapper select.input-error:focus {
         box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.3) !important;
-        outline: none; /* Remove o outline padrão do navegador no foco */
+        outline: none; /* Remove o outline padrï¿½o do navegador no foco */
     }
 
 /* Estilo para a mensagem de erro abaixo do campo (mantido) */
@@ -192,4 +192,40 @@
     font-size: 0.8rem;
     margin-top: 0.3rem;
     text-align: left;
+}
+
+/* Estilos para o formulï¿½rio de criaï¿½ï¿½o de conta dentro do modal */
+.create-account-form {
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 1.5rem;
+    margin-top: 1rem; /* Espaï¿½o acima do formulï¿½rio de conta */
+    margin-bottom: 1rem; /* Espaï¿½o abaixo antes do prï¿½ximo campo (categoria) */
+    background-color: #f8fafc; /* Um fundo levemente diferente */
+}
+
+.create-account-form h4 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    color: #475569;
+    font-size: 1.1rem;
+}
+
+.create-account-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.8rem;
+    margin-top: 1.5rem; /* Espaï¿½o acima dos botï¿½es Salvar/Cancelar Conta */
+}
+
+.create-category-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.8rem;
+    margin-top: 1.5rem; /* Espaï¿½o acima dos botï¿½es Salvar/Cancelar Conta */
+}
+
+/* Ajuste opcional para o botï¿½o '+' nï¿½o ficar estranho quando o form aparecer */
+.account-section {
+    position: relative; /* Para contexto, se necessï¿½rio */
 }
