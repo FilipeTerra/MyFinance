@@ -5,6 +5,7 @@ import type { LoginResponseDto } from '../types/LoginResponseDto';
 import type { AccountResponseDto } from '../types/AccountResponseDto';
 import type { TransactionResponseDto } from '../types/TransactionResponseDto';
 import type { TransactionRequestDto } from '../types/TransactionRequestDto';
+import type { CategoryResponseDto } from '../types/CategoryResponseDto';
 import type { AccountRequestDto } from '../types/AccountRequestDto';
 import type { CategoryRequestDto } from '../types/CategoryRequestDto';
 
@@ -62,10 +63,12 @@ const accountService = {
 };
 
 const categoryService = {
+    getAll: () => {
+        return apiClient.get<CategoryResponseDto[]>('/categories');
+    },
     create: (data: CategoryRequestDto) => {
-        return apiClient.post<{ id: string, name: string }>('/categories', data);
+        return apiClient.post<CategoryResponseDto>('/categories', data);
     }
-    // Futuramente: getAllCategories, etc.
 };
 
 // Interface para os parâmetros do filtro

@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Header } from '../components/Layout/Header';
-// <<< ADICIONADO: Importar accountService para criação de conta >>>
-import { accountService, transactionService, AxiosError, type ApiErrorResponse } from '../services/Api';
-import type { AccountResponseDto } from '../types/AccountResponseDto';
 import type { TransactionResponseDto } from '../types/TransactionResponseDto';
 import { TransactionFilter } from '../components/Transactions/TransactionFilter';
 import { TransactionList } from '../components/Transactions/TransactionList';
 import { CreateTransactionButton } from '../components/Transactions/CreateTransactionButton';
 import { TransactionModal } from '../components/Transactions/TransactionModal';
 import './HomePage.css';
+import { accountService, categoryService, transactionService, AxiosError, type ApiErrorResponse } from '../services/Api';
+import type { AccountResponseDto } from '../types/AccountResponseDto';
+import type { CategoryResponseDto } from '../types/CategoryResponseDto';
 
 // Interface para o estado dos filtros (sem alterações)
 interface FiltersState {
@@ -29,23 +29,30 @@ export function HomePage() {
     const [isLoadingAccounts, setIsLoadingAccounts] = useState(true);
     const [isLoadingTransactions, setIsLoadingTransactions] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [categories, setCategories] = useState<CategoryResponseDto[]>([]);
 
     // Buscar as contas do usuário ao carregar a página (sem alterações)
     useEffect(() => {
-        const fetchAccounts = async () => {
+        const loadInitialData = async () => {
+            setIsLoadingAccounts(true);
             try {
-                setError(null);
-                setIsLoadingAccounts(true);
-                const response = await accountService.getAllAccounts();
-                setAccounts(response.data);
-            } catch (err) {
-                const axiosError = err as AxiosError<ApiErrorResponse>;
-                setError(axiosError.response?.data?.message || 'Erro ao buscar contas.');
+                // Busca Contas e Categorias em paralelo
+                const [accountsRes, categoriesRes] = await Promise.all([
+                    accountService.getAllAccounts(),
+                    categoryService.getAll()
+                ]);
+
+                setAccounts(accountsRes.data);
+                setCategories(categoriesRes.data); // Salva as categorias
+            } catch (error) {
+                console.error("Erro ao carregar dados:", error);
+                // Aqui você pode setar um estado de erro se tiver
             } finally {
                 setIsLoadingAccounts(false);
             }
         };
-        fetchAccounts();
+
+        loadInitialData();
     }, []);
 
     // Buscar as transações QUANDO os filtros mudarem (sem alterações)
@@ -73,13 +80,16 @@ export function HomePage() {
 
     }, [activeFilters]);
 
-    // Função chamada pelo componente TransactionFilter (sem alterações)
     const handleFilterChange = (filters: any) => {
         setActiveFilters({
             ...filters,
             page: 1,
             pageSize: 20
         });
+    };
+
+    const handleCategoryCreated = (newCategory: CategoryResponseDto) => {
+        setCategories(prev => [...prev, newCategory]);
     };
 
     // <<< ADICIONADO: Função para lidar com a criação de uma nova conta vinda do Modal >>>
@@ -136,13 +146,12 @@ export function HomePage() {
 
             {/* Modal para criar transação */}
             <TransactionModal
-                accounts={accounts} // Passa a lista atualizada
+                accounts={accounts}
+                categories={categories} // Passa a lista
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
-                // <<< Passa a função handleAccountCreated >>>
                 onAccountCreated={handleAccountCreated}
-            // <<< Passaria a função para atualizar transações >>>
-            // onTransactionCreated={handleTransactionCreated}
+                onCategoryCreated={handleCategoryCreated} // Passa a função de atualização
             />
         </div>
     );
