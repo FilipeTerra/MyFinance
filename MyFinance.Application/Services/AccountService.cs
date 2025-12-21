@@ -27,7 +27,7 @@ public class AccountService : IAccountService
             Type = dto.Type,
             InitialBalance = dto.InitialBalance,
             CreatedAt = DateTime.UtcNow,
-            UserId = userId // O UserId vem do token (seguro), não do DTO
+            UserId = userId // O UserId vem do token (seguro), nï¿½o do DTO
         };
 
         await _accountRepository.AddAsync(newAccount);
@@ -57,14 +57,13 @@ public class AccountService : IAccountService
             return new ServiceResponse<AccountResponseDto>
             {
                 Success = false,
-                ErrorMessage = "Conta não encontrada ou não pertence ao usuário."
+                ErrorMessage = "Conta nï¿½o encontrada ou nï¿½o pertence ao usuï¿½rio."
             };
         }
 
         // Atualiza os campos permitidos
         account.Name = dto.Name;
         account.Type = dto.Type;
-        // O Saldo Inicial NÃO é atualizado (regra de negócio)
 
         _accountRepository.Update(account);
         await _accountRepository.SaveChangesAsync();
@@ -82,15 +81,15 @@ public class AccountService : IAccountService
             return new ServiceResponse<bool>
             {
                 Success = false,
-                ErrorMessage = "Conta não encontrada ou não pertence ao usuário."
+                ErrorMessage = "Conta nï¿½o encontrada ou nï¿½o pertence ao usuï¿½rio."
             };
         }
 
-        // REGRA DE NEGÓCIO (AC 4.3): Não excluir conta com transações
-        // TODO: Adicionar verificação com TransactionRepository quando ele existir
+        // REGRA DE NEGï¿½CIO (AC 4.3): Nï¿½o excluir conta com transaï¿½ï¿½es
+        // TODO: Adicionar verificaï¿½ï¿½o com TransactionRepository quando ele existir
         // if (await _transactionRepository.HasTransactionsAsync(accountId))
         // {
-        //    return new ServiceResponse<bool> { Success = false, ErrorMessage = "Não é possível excluir contas com transações." };
+        //    return new ServiceResponse<bool> { Success = false, ErrorMessage = "Nï¿½o ï¿½ possï¿½vel excluir contas com transaï¿½ï¿½es." };
         // }
 
         _accountRepository.Delete(account);
@@ -99,7 +98,7 @@ public class AccountService : IAccountService
         return new ServiceResponse<bool> { Data = true };
     }
 
-    // --- Método Auxiliar de Mapeamento ---
+    // --- Mï¿½todo Auxiliar de Mapeamento ---
     private AccountResponseDto MapAccountToResponseDto(Account account)
     {
         return new AccountResponseDto
@@ -110,8 +109,8 @@ public class AccountService : IAccountService
             TypeName = account.Type.ToString(), // Converte Enum para String
             InitialBalance = account.InitialBalance,
 
-            // NOTA: CurrentBalance por enquanto é só o InitialBalance.
-            // Isso será atualizado quando tivermos transações.
+            // NOTA: CurrentBalance por enquanto ï¿½ sï¿½ o InitialBalance.
+            // Isso serï¿½ atualizado quando tivermos transaï¿½ï¿½es.
             CurrentBalance = account.InitialBalance,
 
             UserId = account.UserId

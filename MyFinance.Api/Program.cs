@@ -10,7 +10,7 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// --- Configuração dos Serviços ---
+// --- Configuraï¿½ï¿½o dos Serviï¿½os ---
 
 // Ler a Connection String do appsettings.Development.json
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
@@ -19,7 +19,7 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(connectionString));
 
-// Registrar os serviços dos Controllers
+// Registrar os serviï¿½os dos Controllers
 builder.Services.AddControllers();
 
 // Configurar o Swagger/OpenAPI
@@ -31,17 +31,17 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowReactApp", policyBuilder =>
     {
-        policyBuilder.WithOrigins("http://localhost:5173", "https://localhost:5173")
+        policyBuilder.WithOrigins("http://localhost:5173")
                .AllowAnyHeader()
                .AllowAnyMethod();
     });
 });
 
-// Ler configurações do JWT do appsettings
+// Ler configuraï¿½ï¿½es do JWT do appsettings
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
-var secretKey = jwtSettings["Secret"] ?? throw new ArgumentNullException("JwtSettings:Secret", "Chave secreta JWT não configurada.");
+var secretKey = jwtSettings["Secret"] ?? throw new ArgumentNullException("JwtSettings:Secret", "Chave secreta JWT nï¿½o configurada.");
 
-// Configurar Autenticação JWT Bearer
+// Configurar Autenticaï¿½ï¿½o JWT Bearer
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -53,16 +53,16 @@ builder.Services.AddAuthentication(options =>
     {
         ValidateIssuer = true,
         ValidateAudience = true,
-        ValidateLifetime = true, // Verifica se o token não expirou
+        ValidateLifetime = true, // Verifica se o token nï¿½o expirou
         ValidateIssuerSigningKey = true,
         ValidIssuer = jwtSettings["Issuer"],
         ValidAudience = jwtSettings["Audience"],
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
-        ClockSkew = TimeSpan.Zero // Remove a tolerância padrão de 5 minutos na expiração
+        ClockSkew = TimeSpan.Zero // Remove a tolerï¿½ncia padrï¿½o de 5 minutos na expiraï¿½ï¿½o
     };
 });
 
-// Registrar serviços e repositórios para Injeção de Dependência
+// Registrar serviï¿½os e repositï¿½rios para Injeï¿½ï¿½o de Dependï¿½ncia
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IAccountRepository, AccountRepository>();
@@ -72,10 +72,10 @@ builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 
-// --- Construção do App ---
+// --- Construï¿½ï¿½o do App ---
 var app = builder.Build();
 
-// --- Configuração do Pipeline HTTP ---
+// --- Configuraï¿½ï¿½o do Pipeline HTTP ---
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -87,7 +87,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-// Habilitar a política CORS que definimos
+// Habilitar a polï¿½tica CORS que definimos
 app.UseCors("AllowReactApp");
 app.UseHttpsRedirection();
 app.UseAuthentication();

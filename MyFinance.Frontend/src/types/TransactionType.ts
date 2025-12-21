@@ -1,8 +1,10 @@
 /**
- * Define os tipos de transaçíµes financeiras (Entrada ou Saí­da).
- * Corresponde ao enum TransactionType.cs no backend.
+ * Define os tipos de transações financeiras (Entrada ou Saída).
+ * Substitui o enum tradicional por objeto constante para compatibilidade.
  */
-export enum TransactionType {
-    Income = 1, // Receita
-    Expense = 2 // Despesa
-}
+export const TransactionType = {
+    Income: 1, // Receita
+    Expense: 2 // Despesa
+} as const;
+
+export type TransactionType = (typeof TransactionType)[keyof typeof TransactionType];

@@ -4,11 +4,12 @@ import type { LoginRequestDto } from '../types/LoginRequestDto';
 import type { LoginResponseDto } from '../types/LoginResponseDto';
 import type { AccountResponseDto } from '../types/AccountResponseDto';
 import type { TransactionResponseDto } from '../types/TransactionResponseDto';
+import type { TransactionRequestDto } from '../types/TransactionRequestDto';
+import type { AccountRequestDto } from '../types/AccountRequestDto';
+import type { CategoryRequestDto } from '../types/CategoryRequestDto';
 
-// Define a URL base da sua API .NET
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-// Cria uma instância do Axios
 const apiClient = axios.create({
     baseURL: API_BASE_URL,
     headers: {
@@ -21,7 +22,6 @@ export interface ApiErrorResponse {
     errors?: Record<string, string[]>;
 }
 
-// --- Funçíµes de gerenciamento do Token ---
 const tokenManager = {
     setAuthToken: (token: string | null) => {
         if (token) {
@@ -37,7 +37,7 @@ const tokenManager = {
     }
 };
 
-// Funçíµes para os endpoints de autenticação
+// Funções para os endpoints de autenticação
 const authService = {
     register: (data: RegisterRequestDto) => {
         return apiClient.post('/auth/register', data);
@@ -56,6 +56,16 @@ const accountService = {
     getAllAccounts: () => {
         return apiClient.get<AccountResponseDto[]>('/accounts');
     },
+    create: (data: AccountRequestDto) => {
+        return apiClient.post<AccountResponseDto>('/accounts', data);
+    }
+};
+
+const categoryService = {
+    create: (data: CategoryRequestDto) => {
+        return apiClient.post<{ id: string, name: string }>('/categories', data);
+    }
+    // Futuramente: getAllCategories, etc.
 };
 
 // Interface para os parâmetros do filtro
@@ -89,11 +99,15 @@ const transactionService = {
         // O endpoint do backend esperado agora é: GET /api/transactions/search?[QUERY_PARAMS]
         return apiClient.get<TransactionResponseDto[]>('/transactions/search', { params: queryParams });
     },
+    create: (data: TransactionRequestDto) => {
+        return apiClient.post<TransactionResponseDto>('/transactions', data);
+    }
 };
 
 export {
     authService,
     accountService,
+    categoryService,
     transactionService,
     tokenManager,
     AxiosError

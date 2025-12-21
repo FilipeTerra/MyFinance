@@ -1,9 +1,13 @@
 ﻿import React, { useState, useEffect } from 'react';
 import type { AccountResponseDto } from '../../types/AccountResponseDto';
 import { TransactionType } from '../../types/TransactionType';
-import { AccountType } from '../../types/AccountType'; // <<< ADICIONADO: Importar AccountType
+import { AccountType } from '../../types/AccountType';
 import './TransactionModal.css';
 import { AccountField } from '../Accounts/AccountForm';
+import { useForm } from 'react-hook-form'; // Controller ajuda com inputs complexos
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { useTransactionFormLogic } from '../../hooks/useTransactionFormLogic';
 
 interface TransactionModalProps {
     accounts: AccountResponseDto[];
@@ -14,104 +18,119 @@ interface TransactionModalProps {
     onAccountCreated: (newAccount: AccountResponseDto) => void;
 }
 
-interface FormErrors {
-    description?: string;
-    amount?: string;
-    accountId?: string;
-    categoryId?: string;
-    general?: string;
-    newAccountName?: string;
-    newAccountType?: string;
-    newAccountBalance?: string;
-    newAccountGeneral?: string;
-}
-
-// <<< Interface para o estado da nova conta
 interface NewAccountState {
     name: string;
     type: AccountType | ''; // Começa vazio
     initialBalance: string;
 }
 
-export function TransactionModal({ accounts, isOpen, onClose, onAccountCreated }: TransactionModalProps) { // <<< ALTERADO: Recebe onAccountCreated
-    // Estados da Transação (existentes)
-    const [description, setDescription] = useState('');
-    const [amount, setAmount] = useState('');
-    const [type, setType] = useState<TransactionType>(TransactionType.Expense);
-    const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-    const [accountId, setAccountId] = useState('');
-    const [categoryId, setCategoryId] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
-    const [errors, setErrors] = useState<FormErrors>({});
-    const [isCreatingCategory, setIsCreatingCategory] = useState(false);
-    const [newCategory, setNewCategory] = useState('');
-    // <<< Estados para o modo de criação de conta
-    const [isCreatingAccount, setIsCreatingAccount] = useState(false);
-    const [newAccountData, setNewAccountData] = useState<NewAccountState>({
-        name: '',
-        type: '',
-        initialBalance: ''
-    });
-    const [isSavingAccount, setIsSavingAccount] = useState(false); // Loading específico para salvar conta
+const transactionSchema = z.object({
+    description: z.string().min(1, 'A Descrição é obrigatória.'),
+    amount: z.string().min(1, 'O Valor é obrigatório.')
+        .refine((val) => {
+            const num = parseFloat(val.replace(/\./g, '').replace(',', '.'));
+            return !isNaN(num) && num > 0;
+        }, 'O Valor deve ser maior que zero.'),
+    type: z.nativeEnum(TransactionType),
+    date: z.string().min(1, 'A Data é obrigatória.'), // Pode adicionar validação de data futura/passada se quiser
+    accountId: z.string().min(1, 'A Conta é obrigatória.'),
+    categoryId: z.string().min(1, 'A Categoria é obrigatória.'),
+});
 
-    // Limpa o formulário ao fechar/abrir o modal
+interface ManualFormErrors {
+    [key: string]: string | undefined;
+}
+
+// Inferir o tipo do formulário a partir do schema
+type TransactionFormData = z.infer<typeof transactionSchema>;
+
+export function TransactionModal({ accounts, isOpen, onClose, onAccountCreated }: TransactionModalProps) {
+    const [isCreatingCategory, setIsCreatingCategory] = useState(false);
+    const [isCreatingAccount, setIsCreatingAccount] = useState(false);
+    const [newCategory, setNewCategory] = useState('');
+    const [newAccountData, setNewAccountData] = useState<NewAccountState>({name: '', type: '',initialBalance: ''});
+    const [manualErrors, setManualErrors] = useState<ManualFormErrors>({});
+    const { 
+        createTransaction, 
+        createAccount, 
+        createCategory, 
+        isLoading, // Um único loading para tudo (mais simples)
+        error: apiError, // Erros vindos da API
+        setError 
+    } = useTransactionFormLogic();
+
+    // Configuração do React Hook Form
+    const {
+        register,
+        handleSubmit,
+        setValue,
+        reset,
+        watch,
+        formState: { errors }
+    } = useForm<TransactionFormData>({
+        resolver: zodResolver(transactionSchema),
+        defaultValues: {
+            description: '',
+            amount: '',
+            type: TransactionType.Expense,
+            date: new Date().toISOString().split('T')[0],
+            accountId: '',
+            categoryId: ''
+        }
+    });
+
+    const currentAccountId = watch('accountId');
+    const currentAmount = watch('amount'); 
+
     useEffect(() => {
         if (isOpen) {
-            setDescription('');
-            setAmount('');
-            setType(TransactionType.Expense);
-            setDate(new Date().toISOString().split('T')[0]);
-            setAccountId('');
-            setCategoryId('');
-            setIsCreatingAccount(false); // Reseta modo de criação de conta
-            setNewAccountData({ name: '', type: '', initialBalance: '' }); // Limpa dados da nova conta
-            setErrors({});
-            setIsLoading(false);
-            setIsSavingAccount(false);
+            reset({ // Reseta o form para os valores iniciais
+                description: '',
+                amount: '',
+                type: TransactionType.Expense,
+                date: new Date().toISOString().split('T')[0],
+                accountId: '',
+                categoryId: ''
+            });
+            setIsCreatingAccount(false);
+            setNewAccountData({ name: '', type: '', initialBalance: '' });
+            setError(null);
         }
-    }, [isOpen]);
-
+    }, [isOpen, reset]);
 
     if (!isOpen) {
         return null;
     }
 
     const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>, field: 'transaction' | 'newAccount') => {
-        // Limpa erros específicos ao digitar
         if (field === 'transaction') {
-            setErrors(prev => ({ ...prev, amount: undefined, general: undefined }));
         } else {
-            setErrors(prev => ({ ...prev, newAccountBalance: undefined, newAccountGeneral: undefined }));
+            setManualErrors(prev => ({ ...prev, newAccountBalance: undefined, newAccountGeneral: undefined }));
         }
 
         const value = e.target.value;
-        let digits = value.replace(/\D/g, ''); // Remove tudo que não for dígito
+        let digits = value.replace(/\D/g, '');
+        
         if (digits === '') {
-            field === 'transaction' ? setAmount('') : setNewAccountData(prev => ({ ...prev, initialBalance: '' }));
+            if (field === 'transaction') {
+                setValue('amount', '', { shouldValidate: true }); // USA O RHF
+            } else {
+                setNewAccountData(prev => ({ ...prev, initialBalance: '' }));
+            }
             return;
         }
 
-        // Remove zeros à esquerda (exceto se for o único dígito)
-        if (digits.length > 1) {
-            digits = digits.replace(/^0+/, '');
-        }
-
-        // Adiciona zeros à esquerda se necessário para ter pelo menos 3 dígitos (para R$ 0,XX)
-        while (digits.length < 3) {
-            digits = '0' + digits;
-        }
+        if (digits.length > 1) digits = digits.replace(/^0+/, '');
+        while (digits.length < 3) digits = '0' + digits;
 
         const decimalIndex = digits.length - 2;
         const integerPart = digits.slice(0, decimalIndex);
         const decimalPart = digits.slice(decimalIndex);
-
-        // Adiciona separador de milhar
         const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-
         const formattedValue = formattedInteger + ',' + decimalPart;
 
         if (field === 'transaction') {
-            setAmount(formattedValue);
+            setValue('amount', formattedValue, { shouldValidate: true }); // USA O RHF
         } else {
             setNewAccountData(prev => ({ ...prev, initialBalance: formattedValue }));
         }
@@ -120,8 +139,8 @@ export function TransactionModal({ accounts, isOpen, onClose, onAccountCreated }
 
     // <<< Handler para salvar a nova conta
     const handleSaveNewAccount = async () => {
-        setErrors({}); // Limpa erros gerais
-        const validationErrors: FormErrors = {};
+        setManualErrors({}); // Limpa erros gerais
+        const validationErrors: ManualFormErrors = {};
 
         if (!newAccountData.name.trim()) {
             validationErrors.newAccountName = 'O Nome da conta é obrigatório.';
@@ -140,7 +159,7 @@ export function TransactionModal({ accounts, isOpen, onClose, onAccountCreated }
         }
 
         if (Object.keys(validationErrors).length > 0) {
-            setErrors(validationErrors);
+            setManualErrors(validationErrors);
             return;
         }
 
@@ -151,41 +170,22 @@ export function TransactionModal({ accounts, isOpen, onClose, onAccountCreated }
         };
 
         console.log("Simulando salvar nova conta:", accountDto);
-        setIsSavingAccount(true);
-        setErrors(prev => ({ ...prev, newAccountGeneral: undefined })); // Limpa erro geral da conta
+        setManualErrors(prev => ({ ...prev, newAccountGeneral: undefined })); // Limpa erro geral da conta
 
         try {
-            // ----- SIMULAÇÃO DA API -----
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            const fakeNewAccount: AccountResponseDto = {
-                id: `new-${Date.now()}`, // ID temporário
-                name: accountDto.name,
-                type: accountDto.type,
-                typeName: AccountType[accountDto.type],
-                initialBalance: accountDto.initialBalance,
-                currentBalance: accountDto.initialBalance, // Inicialmente igual
-                userId: 'fake-user-id'
-            };
-            console.log("Conta criada (simulado):", fakeNewAccount);
-            // ----- FIM SIMULAÇÃO -----
-
-            // Chama a função passada por props para atualizar a lista na HomePage
-            onAccountCreated(fakeNewAccount);
-
-            // Seleciona a nova conta no dropdown de transação
-            setAccountId(fakeNewAccount.id);
-
-            // Volta para o modo de seleção de conta
+            // CHAMADA REAL VIA HOOK
+            const newAccount = await createAccount(accountDto);
+            
+            // Sucesso
+            onAccountCreated(newAccount);
+            setValue('accountId', newAccount.id, { shouldValidate: true });
             setIsCreatingAccount(false);
-            setNewAccountData({ name: '', type: '', initialBalance: '' }); // Limpa o form da conta
-
+            setNewAccountData({ name: '', type: '', initialBalance: '' });
 
         } catch (err) {
-            // Exemplo de como setar um erro geral vindo da API da conta
-            console.error("Erro simulado ao criar conta:", err);
-            setErrors({ newAccountGeneral: "Erro ao criar conta (simulado)." });
-        } finally {
-            setIsSavingAccount(false);
+            // O erro genérico fica no 'apiError' do hook, mas se quiser algo específico:
+            console.error(err);
+            setManualErrors({ newAccountGeneral: "Não foi possível criar a conta." });
         }
     };
 
@@ -202,76 +202,51 @@ export function TransactionModal({ accounts, isOpen, onClose, onAccountCreated }
 
     const handleSaveNewCategory = async () => {
         if (!newCategory.trim()) {
-            setErrors(prev => ({ ...prev, categoryId: 'O nome da categoria é obrigatório.' }));
+            setManualErrors(prev => ({ ...prev, categoryId: 'O nome da categoria é obrigatório.' }));
             return;
         }
-        setIsLoading(true);
-        console.log("Simulando criação de categoria:", newCategory);
-        // TODO: Chamar categoryService.createCategory(...)
-        // Após sucesso:
-        // 1. Atualizar a lista de 'categories' (precisa ser buscada)
-        // 2. setCategoryId(novaCategoria.id)
-        // 3. handleCancelCreateCategory()
-        await new Promise(resolve => setTimeout(resolve, 500)); // Simulação
-        setIsLoading(false);
-        setIsCreatingCategory(false); // Fechar modo de criação
-        setNewCategory('');
+        try {
+            const createdCategory = await createCategory({ name: newCategory });
+            
+            // TODO: Aqui você precisaria atualizar a lista de categorias (se tivesse um state para isso)
+            // Por enquanto, apenas selecionamos visualmente ou limpamos
+            console.log("Categoria criada:", createdCategory);
+            
+            setIsCreatingCategory(false);
+            setNewCategory('');
+            
+            // Se você quiser setar o ID no formulário (assumindo que o select suporta esse ID):
+            setValue('categoryId', createdCategory.id, { shouldValidate: true });
+
+        } catch (err) {
+             console.error(err);
+        }
     };
     // --- Fim das Funções de Categoria ---
 
-    const handleSubmitTransaction = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setErrors({}); // Limpa todos os erros antes de validar
-
-        const validationErrors: FormErrors = {};
-
-        if (!description.trim()) validationErrors.description = 'A Descrição é obrigatória.';
-        if (!accountId) validationErrors.accountId = 'A Conta é obrigatória.'; // Validar se accountId existe agora é crucial
-        if (!categoryId) validationErrors.categoryId = 'A Categoria é obrigatória.';
-
-        // Validar valor da transação
-        const amountValue = amount.trim();
-        let amountAsNumber = NaN;
-        if (amountValue === '') {
-            validationErrors.amount = 'O Valor é obrigatório.';
-        } else {
-            amountAsNumber = parseFloat(amountValue.replace(/\./g, '').replace(',', '.'));
-            if (isNaN(amountAsNumber)) {
-                validationErrors.amount = 'Valor inválido.';
-            } else if (amountAsNumber <= 0) {
-                validationErrors.amount = 'O Valor deve ser maior que zero.';
-            }
-        }
-
-
-        if (Object.keys(validationErrors).length > 0) {
-            setErrors(validationErrors);
-            return;
-        }
+    const onSubmit = async (data: TransactionFormData) => {
+        const amountAsNumber = parseFloat(data.amount.replace(/\./g, '').replace(',', '.'));
 
         const transactionDto = {
-            description,
+            description: data.description,
             amount: amountAsNumber,
-            type,
-            date: new Date(date).toISOString(), // Enviar como ISO string pode ser mais robusto
-            accountId,
-            categoryId,
+            type: data.type,
+            date: new Date(data.date).toISOString(),
+            accountId: data.accountId,
+            categoryId: data.categoryId,
         };
 
-        console.log("Enviando Transação para a API:", transactionDto);
-        setIsLoading(true);
-
         try {
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            console.log("Transação criada com sucesso (simulado).");
-            onClose(); // Fecha o modal
-            // TODO: Chamar onTransactionCreated se existir para atualizar lista de transações
-
+            // CHAMADA REAL
+            await createTransaction(transactionDto);
+            
+            // Sucesso
+            onClose(); 
+            // Dica: Aqui seria ideal chamar uma prop onTransactionCreated() para atualizar a lista na tela de trás
+            
         } catch (err) {
-            setErrors({ general: "Erro ao salvar transação (simulado)." });
-            console.error("Erro simulado:", err);
-        } finally {
-            setIsLoading(false);
+            console.error("Erro ao salvar transação:", err);
+            // O hook já preenche 'apiError' com a mensagem do backend
         }
     };
 
@@ -279,19 +254,28 @@ export function TransactionModal({ accounts, isOpen, onClose, onAccountCreated }
         <div className="modal-overlay">
             <div className="modal-content">
                 <h2>Nova Transação</h2>
-                {errors.general && <div className="modal-error-message">{errors.general}</div>}
+                {apiError && <div className="modal-error-message">{apiError}</div>}
 
                 {/* Formulário principal da transação */}
-                <form onSubmit={handleSubmitTransaction}>
-                    {/* Tipo da Transação */}
+                <form onSubmit={handleSubmit(onSubmit)}> {/* Tipo da Transação */}
                     <div className="form-group">
                         <label>Tipo da Transação</label>
-                        <div className="type-selector">
+                          <div className="type-selector">
                             <label>
-                                <input type="radio" name="transactionType" value={TransactionType.Expense} checked={type === TransactionType.Expense} onChange={() => setType(TransactionType.Expense)} disabled={isLoading || isSavingAccount} /> Despesa
+                                <input 
+                                    type="radio" 
+                                    value={TransactionType.Expense} 
+                                    {...register('type')} // REGISTRA NO RHF
+                                    disabled={isLoading} 
+                                /> Despesa
                             </label>
                             <label>
-                                <input type="radio" name="transactionType" value={TransactionType.Income} checked={type === TransactionType.Income} onChange={() => setType(TransactionType.Income)} disabled={isLoading || isSavingAccount} /> Receita
+                                <input 
+                                    type="radio" 
+                                    value={TransactionType.Income} 
+                                    {...register('type')} // REGISTRA NO RHF
+                                    disabled={isLoading} 
+                                /> Receita
                             </label>
                         </div>
                     </div>
@@ -300,54 +284,58 @@ export function TransactionModal({ accounts, isOpen, onClose, onAccountCreated }
                     <div className="form-group">
                         <label htmlFor="description">Descrição</label>
                         <input
-                            type="text" id="description" value={description}
-                            onChange={(e) => {
-                                setDescription(e.target.value);
-                                setErrors(prev => ({ ...prev, description: undefined, general: undefined }));
-                            }}
-                            placeholder="Ex: Almoço" disabled={isLoading || isSavingAccount}
+                            type="text"
+                            id="description"
+                            {...register('description')} // Conecta ao RHF
+                            placeholder="Ex: Almoço"
+                            disabled={isLoading}
                             className={errors.description ? 'input-error' : ''}
                         />
-                        {errors.description && <span className="field-error-message">{errors.description}</span>}
+                        {errors.description && <span className="field-error-message">{errors.description.message}</span>}
                     </div>
 
                     {/* Valor */}
                     <div className="form-group">
                         <label htmlFor="amount">Valor (R$)</label>
                         <input
-                            type="text" id="amount" value={amount}
+                            type="text" 
+                            id="amount" 
+                            {...register('amount')} 
                             onChange={(e) => handleAmountChange(e, 'transaction')}
-                            placeholder="0,00" inputMode="decimal" disabled={isLoading || isSavingAccount}
+                            value={currentAmount || ''} 
+                            placeholder="0,00" 
+                            inputMode="decimal" 
+                            disabled={isLoading}
                             className={errors.amount ? 'input-error' : ''}
                         />
-                        {errors.amount && <span className="field-error-message">{errors.amount}</span>}
+                        {errors.amount && <span className="field-error-message">{errors.amount.message}</span>}
                     </div>
 
                     {/* Data */}
                     <div className="form-group">
                         <label htmlFor="date">Data</label>
                         <input
-                            type="date" id="date" value={date} onChange={(e) => setDate(e.target.value)} disabled={isLoading || isSavingAccount}
+                            type="date"
+                            id="date"
+                            {...register('date')}
+                            disabled={isLoading}
                         />
+                        {errors.date && <span className="field-error-message">{errors.date.message}</span>}
                     </div>
 
                     {/* Seção da Conta: Dropdown OU Formulário de Criação */}
                     <AccountField
                         accounts={accounts}
-                        accountId={accountId}
+                        accountId={currentAccountId} // Vem do watch('accountId')
                         parentIsLoading={isLoading}
-                        parentErrors={{ accountId: errors.accountId }}
+                        parentErrors={{ accountId: errors.accountId?.message }} // Adapta a prop de erro
                         
-                        // Callback para atualizar o ID da conta no Modal
                         onAccountIdChange={(newId) => {
-                            setAccountId(newId);
-                            // Limpa o erro de "conta obrigatória" ao selecionar uma
-                            setErrors(prev => ({ ...prev, accountId: undefined, general: undefined }));
+                            setValue('accountId', newId, { shouldValidate: true });
                         }}
 
-                        // Callback para quando uma conta for criada
                         onAccountCreated={handleSaveNewAccount}
-                    /> {/* Fim da account-section */}
+                    />{/* Fim da account-section */}
 
 
                     {/* Categoria */}
@@ -357,20 +345,17 @@ export function TransactionModal({ accounts, isOpen, onClose, onAccountCreated }
                                 <div className="input-wrapper">
                                     <label htmlFor="category">Categoria</label>
                                     <select
-                                        id="category" value={categoryId}
-                                        onChange={(e) => {
-                                            setCategoryId(e.target.value);
-                                            setErrors(prev => ({ ...prev, categoryId: undefined, general: undefined }));
-                                        }}
+                                        id="category"
+                                        {...register('categoryId')} // RHF Gerencia o value e onChange
                                         disabled={isLoading}
                                         className={errors.categoryId ? 'input-error' : ''}
                                     >
                                         <option value="" disabled>Selecione uma categoria</option>
-                                        {/* TODO: Carregar categorias dinamicamente */}
                                         <option value="temp1">Alimentação (Exemplo)</option>
                                         <option value="temp2">Transporte (Exemplo)</option>
                                     </select>
-                                    {errors.categoryId && <span className="field-error-message">{errors.categoryId}</span>}
+                                    {/* .message AQUI */}
+                                    {errors.categoryId && <span className="field-error-message">{errors.categoryId.message}</span>}
                                 </div>
                                 <button
                                     type="button" className="add-new-button" aria-label="Criar nova categoria"
@@ -388,13 +373,13 @@ export function TransactionModal({ accounts, isOpen, onClose, onAccountCreated }
                                         value={newCategory}
                                         onChange={(e) => {
                                             setNewCategory(e.target.value);
-                                            setErrors(prev => ({ ...prev, categoryId: undefined }));
+                                            setManualErrors(prev => ({ ...prev, categoryId: undefined }));
                                         }}
-                                        className={errors.categoryId ? 'input-error' : ''}
+                                        className={manualErrors.categoryId ? 'input-error' : ''}
                                         disabled={isLoading}
                                         style={{ width: '100%' }}
                                     />
-                                    {errors.categoryId && <span className="field-error-message" style={{ display: 'block' }}>{errors.categoryId}</span>}
+                                    {manualErrors.categoryId && <span className="field-error-message">{manualErrors.categoryId}</span>}
                                 </div>
                                 <div className="create-category-actions">
                                     <button type="button" onClick={() => setIsCreatingCategory(false)} disabled={isCreatingAccount || isLoading} className="cancel-button">Cancelar</button>
