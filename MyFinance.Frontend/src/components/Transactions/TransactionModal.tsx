@@ -26,7 +26,7 @@ const transactionSchema = z.object({
             const num = parseFloat(val.replace(/\./g, '').replace(',', '.'));
             return !isNaN(num) && num > 0;
         }, 'O Valor deve ser maior que zero.'),
-    type: z.nativeEnum(TransactionType),
+    type: z.preprocess((val) => Number(val), z.nativeEnum(TransactionType)),
     date: z.string().min(1, 'A Data é obrigatória.'), // Pode adicionar validação de data futura/passada se quiser
     accountId: z.string().min(1, 'A Conta é obrigatória.'),
     categoryId: z.string().min(1, 'A Categoria é obrigatória.'),
@@ -58,12 +58,12 @@ export function TransactionModal({
         reset,
         watch,
         formState: { errors }
-    } = useForm<TransactionFormData>({
+    } = useForm({
         resolver: zodResolver(transactionSchema),
         defaultValues: {
             description: '',
             amount: '',
-            type: TransactionType.Expense,
+            type: TransactionType.Expense, // Valor numérico (2)
             date: new Date().toISOString().split('T')[0],
             accountId: '',
             categoryId: ''
@@ -71,6 +71,11 @@ export function TransactionModal({
     });
 
     const currentAmount = watch('amount'); 
+
+    useEffect(() => {
+        register('accountId');
+        register('categoryId');
+    }, [register]);
 
     useEffect(() => {
     if (isOpen) {
@@ -143,7 +148,7 @@ export function TransactionModal({
                 {apiError && <div className="modal-error-message">{apiError}</div>}
 
                 {/* Formulário principal da transação */}
-                <form onSubmit={handleSubmit(onSubmit)}> {/* Tipo da Transação */}
+                <form onSubmit={handleSubmit(onSubmit, (errors) => console.log("Erros de validação:", errors))}>
                     <div className="form-group">
                         <label>Tipo da Transação</label>
                           <div className="type-selector">
@@ -151,7 +156,7 @@ export function TransactionModal({
                                 <input 
                                     type="radio" 
                                     value={TransactionType.Expense} 
-                                    {...register('type')} // REGISTRA NO RHF
+                                    {...register('type', { valueAsNumber: true })} // REGISTRA NO RHF
                                     disabled={isLoading} 
                                 /> Despesa
                             </label>
@@ -159,7 +164,7 @@ export function TransactionModal({
                                 <input 
                                     type="radio" 
                                     value={TransactionType.Income} 
-                                    {...register('type')} // REGISTRA NO RHF
+                                    {...register('type', { valueAsNumber: true })} // REGISTRA NO RHF
                                     disabled={isLoading} 
                                 /> Receita
                             </label>
@@ -218,7 +223,6 @@ export function TransactionModal({
                         errorMessage={errors.accountId?.message}
                         disabled={isLoading}
                     />
-
 
                     {/* Categoria */}
                     <CategorySelectField
