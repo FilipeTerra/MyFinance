@@ -10,6 +10,7 @@ import { CreateTransactionButton } from '../components/Transactions/CreateTransa
 import { TransactionModal } from '../components/Transactions/TransactionModal';
 import { accountService, categoryService, transactionService, AxiosError, type ApiErrorResponse } from '../services/Api';
 import { CreateAccountButton } from '../components/Accounts/CreateAccountButton';
+import { ConfirmationModal } from '../components/Shared/ConfirmationModal';
 
 // Componentes de Conta
 import { AccountCard } from '../components/Accounts/AccountCard';
@@ -36,6 +37,8 @@ export function HomePage() {
     const [error, setError] = useState<string | null>(null);
     const [categories, setCategories] = useState<CategoryResponseDto[]>([]);
     const [transactionToEdit, setTransactionToEdit] = useState<TransactionResponseDto | null>(null);
+    const [isDeleteAccountModalOpen, setIsDeleteAccountModalOpen] = useState(false);
+    const [accountToDeleteId, setAccountToDeleteId] = useState<string | null>(null);
 
     // <<< ESTADOS PARA CONTA >>>
     const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
@@ -170,28 +173,32 @@ export function HomePage() {
     };
 
     // Exclusão de conta
-    const handleDeleteAccount = async (id: string) => {
-        if (!confirm('Tem certeza que deseja excluir esta conta? Todas as transações vinculadas a ela serão perdidas permanentemente.')) {
-            return;
-        }
+    const handleDeleteAccount = (id: string) => {
+        setAccountToDeleteId(id);        // Guarda o ID da conta
+        setIsDeleteAccountModalOpen(true); // Abre o modal de confirmação
+    };
+
+    const handleConfirmDeleteAccount = async () => {
+        if (!accountToDeleteId) return;
 
         try {
-            await accountService.delete(id);
+            await accountService.delete(accountToDeleteId);
             
-            // Remove da lista visual
-            setAccounts(prev => prev.filter(acc => acc.id !== id));
+            setAccounts(prev => prev.filter(acc => acc.id !== accountToDeleteId));
             
-            // Se a conta excluída estava selecionada no filtro, limpa o filtro
-            if (activeFilters?.accountId === id) {
+            if (activeFilters?.accountId === accountToDeleteId) {
                 setActiveFilters(prev => prev ? { ...prev, accountId: '' } : null);
-                setTransactions([]); // Limpa a lista de transações pois o filtro sumiu
+                setTransactions([]);
             }
             
-            alert('Conta excluída com sucesso!');
+            setIsDeleteAccountModalOpen(false);
+            setAccountToDeleteId(null);
+            
         } catch (err) {
             console.error("Erro ao excluir conta:", err);
             const axiosError = err as AxiosError<ApiErrorResponse>;
-            alert(axiosError.response?.data?.message || 'Erro ao excluir conta. Verifique se existem transações.');
+            alert(axiosError.response?.data?.message || 'Erro ao excluir conta. Verifique se existem transações vinculadas.');
+            setIsDeleteAccountModalOpen(false); 
         }
     };
 
@@ -249,6 +256,17 @@ export function HomePage() {
                 onAccountCreated={handleAccountCreatedFromTransaction}
                 onCategoryCreated={handleCategoryCreated}
                 transactionToEdit={transactionToEdit}
+            />
+
+            <ConfirmationModal
+                isOpen={isDeleteAccountModalOpen}
+                onClose={() => setIsDeleteAccountModalOpen(false)}
+                onConfirm={handleConfirmDeleteAccount}
+                title="Excluir Conta"
+                description="Tem certeza que deseja excluir esta conta? Todas as transações vinculadas a ela também serão perdidas permanentemente."
+                confirmText="Excluir"
+                cancelText="Cancelar"
+                variant="danger"
             />
 
             {/* <<< Modal de Conta >>> */}
