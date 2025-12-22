@@ -28,7 +28,6 @@ export function AccountSelectField({
 }: AccountSelectFieldProps) {
     const [isCreating, setIsCreating] = useState(false);
     
-    // Estado interno apenas para o form de criação
     const [newAccountData, setNewAccountData] = useState<NewAccountState>({
         name: '',
         type: '',
@@ -37,7 +36,6 @@ export function AccountSelectField({
 
     const { createAccount, isLoading, error, setError } = useTransactionFormLogic();
 
-    // Máscara de Moeda (igual a que você já tinha)
     const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
         let digits = value.replace(/\D/g, '');
@@ -54,12 +52,10 @@ export function AccountSelectField({
         const formattedValue = digits.slice(0, decimalIndex) + ',' + digits.slice(decimalIndex);
         
         setNewAccountData(prev => ({ ...prev, initialBalance: formattedValue }));
-        // Se o usuário digitar, limpamos o erro
         if (error) setError(null);
     };
 
     const handleSaveClick = async () => {
-        // 1. Validação Manual Simples
         if (!newAccountData.name.trim()) {
             setError('O nome da conta é obrigatório.');
             return;
@@ -69,28 +65,24 @@ export function AccountSelectField({
             return;
         }
         
-        // Conversão do saldo
         let balanceAsNumber = 0;
         if (newAccountData.initialBalance) {
             balanceAsNumber = parseFloat(newAccountData.initialBalance.replace(/\./g, '').replace(',', '.'));
         }
 
         try {
-            // 2. Chamada à API via Hook
             const newAccount = await createAccount({
                 name: newAccountData.name,
                 type: Number(newAccountData.type) as AccountType,
                 initialBalance: balanceAsNumber
             });
 
-            // 3. Sucesso
-            onAccountCreated(newAccount); // Atualiza lista global
-            onChange(newAccount.id);      // Seleciona a nova conta
-            handleCancel();               // Reseta e fecha o modo criação
+            onAccountCreated(newAccount);
+            onChange(newAccount.id);
+            handleCancel(); 
 
         } catch (err) {
             console.error(err);
-            // O erro já está no state 'error' do hook
         }
     };
 
@@ -100,36 +92,41 @@ export function AccountSelectField({
         setError(null);
     };
 
-    // --- RENDERIZAÇÃO ---
-
-    // Modo Criação (Formulário Embutido)
+    // --- MODO CRIAÇÃO: Bloco Padronizado ---
     if (isCreating) {
         return (
-            <div className="create-item-container">
+            <div className="create-account-form">
                 <h4>Nova Conta</h4>
                 
-                {/* Nome */}
+                {/* Nome da Conta */}
                 <div className="form-group">
+                    <label htmlFor="newAccountName">Nome</label>
                     <input
+                        id="newAccountName"
                         type="text"
-                        placeholder="Nome da Conta (ex: Nubank)"
+                        placeholder="Ex: Nubank, Carteira..."
                         value={newAccountData.name}
-                        onChange={(e) => setNewAccountData(prev => ({...prev, name: e.target.value}))}
+                        onChange={(e) => {
+                            setNewAccountData(prev => ({...prev, name: e.target.value}));
+                            if(error) setError(null);
+                        }}
                         disabled={isLoading}
                         className={error ? 'input-error' : ''}
+                        autoFocus
                     />
                 </div>
 
-                {/* Tipo e Saldo lado a lado */}
-                <div className="form-row-inline">
-                    <div className="form-group" style={{ flex: 1 }}>
+                {/* Linha com Tipo e Saldo lado a lado */}
+                <div className="form-row">
+                    <div className="form-group">
+                        <label htmlFor="newAccountType">Tipo</label>
                         <select
+                            id="newAccountType"
                             value={newAccountData.type}
                             onChange={(e) => setNewAccountData(prev => ({...prev, type: Number(e.target.value) as AccountType}))}
                             disabled={isLoading}
                         >
-                            <option value="" disabled>Tipo</option>
-                            {/* Assumindo que AccountType é um objeto/enum. Ajuste conforme sua definição real de tipos */}
+                            <option value="" disabled>Selecione...</option>
                             <option value={AccountType.Carteira}>Carteira</option>
                             <option value={AccountType.ContaCorrente}>Conta Corrente</option>
                             <option value={AccountType.Poupanca}>Poupança</option>
@@ -139,10 +136,12 @@ export function AccountSelectField({
                         </select>
                     </div>
 
-                    <div className="form-group" style={{ flex: 1 }}>
+                    <div className="form-group">
+                        <label htmlFor="newAccountBalance">Saldo Inicial</label>
                         <input
+                            id="newAccountBalance"
                             type="text"
-                            placeholder="R$ 0,00"
+                            placeholder="0,00"
                             value={newAccountData.initialBalance}
                             onChange={handleAmountChange}
                             inputMode="decimal"
@@ -151,21 +150,31 @@ export function AccountSelectField({
                     </div>
                 </div>
 
-                {error && <div className="field-error-message" style={{marginBottom: '10px'}}>{error}</div>}
+                {error && <span className="field-error-message">{error}</span>}
 
-                <div className="action-buttons-inline">
-                    <button type="button" onClick={handleCancel} className="cancel-button-small" disabled={isLoading}>
+                <div className="create-account-actions">
+                    <button 
+                        type="button" 
+                        onClick={handleCancel} 
+                        className="cancel-button" 
+                        disabled={isLoading}
+                    >
                         Cancelar
                     </button>
-                    <button type="button" onClick={handleSaveClick} className="save-button-small" disabled={isLoading}>
-                        {isLoading ? '...' : 'Salvar Conta'}
+                    <button 
+                        type="button" 
+                        onClick={handleSaveClick} 
+                        className="save-button" 
+                        disabled={isLoading}
+                    >
+                        {isLoading ? 'Salvando...' : 'Salvar Conta'}
                     </button>
                 </div>
             </div>
         );
     }
 
-    // Modo Seleção (Select Normal)
+    // --- MODO SELEÇÃO (Padrão) ---
     return (
         <div className="form-group form-group-with-button">
             <div className="input-wrapper">
@@ -183,6 +192,7 @@ export function AccountSelectField({
                             {acc.name}
                         </option>
                     ))}
+                    {accounts.length === 0 && <option value="" disabled>Nenhuma conta disponível</option>}
                 </select>
                 {errorMessage && <span className="field-error-message">{errorMessage}</span>}
             </div>

@@ -229,3 +229,51 @@
 .account-section {
     position: relative; /* Para contexto, se necess�rio */
 }
+
+.create-account-form,
+.create-category-form {
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    background-color: #f8fafc; /* Fundo cinza claro */
+    animation: fadeIn 0.2s ease-in-out;
+}
+
+    .create-account-form h4,
+    .create-category-form h4 {
+        margin-top: 0;
+        margin-bottom: 1rem;
+        color: #475569;
+        font-size: 1.1rem;
+        font-weight: 600;
+    }
+
+/* Layout lado a lado para campos menores */
+.form-row {
+    display: flex;
+    gap: 1rem;
+}
+
+    .form-row .form-group {
+        flex: 1; /* Faz os campos ocuparem larguras iguais */
+    }
+
+.create-account-actions,
+.create-category-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.8rem;
+    margin-top: 1.5rem;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

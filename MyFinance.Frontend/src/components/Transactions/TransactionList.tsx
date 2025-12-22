@@ -33,7 +33,7 @@ export function TransactionList({ transactions, isLoading, onDelete, onEdit }: T
     };
 
     if (isLoading) return <div className="list-message">Carregando transações...</div>;
-    if (transactions.length === 0) return <div className="list-message">Nenhuma transação encontrada.</div>;
+    if (transactions.length === 0) return <div className="list-message">Nenhuma transação encontrada</div>;
 
     const formatDate = (dateString: string) => {
         return new Date(dateString).toLocaleDateString('pt-BR', { timeZone: 'UTC' });

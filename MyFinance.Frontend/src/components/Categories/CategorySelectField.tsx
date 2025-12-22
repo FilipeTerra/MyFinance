@@ -7,12 +7,12 @@ export interface CategoryDto {
 }
 
 interface CategorySelectFieldProps {
-    categories: CategoryDto[]; // Lista de categorias para exibir
-    selectedId: string; // Valor controlado pelo React Hook Form do pai
-    onChange: (id: string) => void; // Função para atualizar o React Hook Form do pai
+    categories: CategoryDto[];
+    selectedId: string;
+    onChange: (id: string) => void;
     errorMessage?: string;
     disabled?: boolean;
-    onCategoryCreated: (newCategory: CategoryDto) => void; // Callback para atualizar a lista no pai
+    onCategoryCreated: (newCategory: CategoryDto) => void;
 }
 
 export function CategorySelectField({
@@ -26,7 +26,6 @@ export function CategorySelectField({
     const [isCreating, setIsCreating] = useState(false);
     const [newCategoryName, setNewCategoryName] = useState('');
     
-    // Usamos o hook aqui para isolar a lógica de API deste componente
     const { createCategory, isLoading: isSaving, error, setError } = useTransactionFormLogic();
 
     const handleSaveClick = async () => {
@@ -38,11 +37,11 @@ export function CategorySelectField({
         try {
             const newCategory = await createCategory({ name: newCategoryName });
             
-            // Sucesso!
-            onCategoryCreated(newCategory); // Avisa o pai que a lista cresceu
-            onChange(newCategory.id); // Já seleciona a nova categoria automaticamente
+            // Sucesso: notifica o pai e seleciona a nova categoria
+            onCategoryCreated(newCategory); 
+            onChange(newCategory.id);
             
-            // Limpa estado local
+            // Reseta o estado
             setIsCreating(false);
             setNewCategoryName('');
         } catch (err) {
@@ -56,38 +55,53 @@ export function CategorySelectField({
         setError(null);
     };
 
-    // Renderização: Modo Criação
+    // --- MODO CRIAÇÃO: Bloco Cinza "Adicional" ---
     if (isCreating) {
         return (
-            <div className="form-group">
-                <label>Nova Categoria</label>
-                <div className="input-wrapper-inline">
+            <div className="create-category-form">
+                <h4>Nova Categoria</h4>
+                
+                <div className="form-group">
+                    <label htmlFor="newCategoryName">Nome da Categoria</label>
                     <input
+                        id="newCategoryName"
                         type="text"
                         value={newCategoryName}
                         onChange={(e) => {
                             setNewCategoryName(e.target.value);
                             if(error) setError(null);
                         }}
-                        placeholder="Nome da categoria"
+                        placeholder="Ex: Alimentação, Transporte..."
                         disabled={isSaving || disabled}
                         className={error ? 'input-error' : ''}
+                        autoFocus
                     />
-                     <div className="action-buttons-inline">
-                        <button type="button" onClick={handleCancel} disabled={isSaving} className="cancel-button-small">
-                            ✕
-                        </button>
-                        <button type="button" onClick={handleSaveClick} disabled={isSaving} className="save-button-small">
-                            {isSaving ? '...' : '✓'}
-                        </button>
-                    </div>
+                     {error && <span className="field-error-message">{error}</span>}
                 </div>
-                {error && <span className="field-error-message">{error}</span>}
+
+                <div className="create-category-actions">
+                    <button 
+                        type="button" 
+                        onClick={handleCancel} 
+                        disabled={isSaving} 
+                        className="cancel-button"
+                    >
+                        Cancelar
+                    </button>
+                    <button 
+                        type="button" 
+                        onClick={handleSaveClick} 
+                        disabled={isSaving} 
+                        className="save-button"
+                    >
+                        {isSaving ? 'Salvando...' : 'Salvar Categoria'}
+                    </button>
+                </div>
             </div>
         );
     }
 
-    // Renderização: Modo Seleção (Padrão)
+    // --- MODO SELEÇÃO (Padrão) ---
     return (
         <div className="form-group form-group-with-button">
             <div className="input-wrapper">
@@ -103,10 +117,9 @@ export function CategorySelectField({
                     {categories.map((cat) => (
                         <option key={cat.id} value={cat.id}>
                             {cat.name}
-                        </option> // <--- CORRIGIDO AQUI
+                        </option>
                     ))}
-                    {/* Fallback temporário caso não tenha categorias ainda */}
-                    {categories.length === 0 && <option value="temp1">Exemplo (Sem dados)</option>}
+                    {categories.length === 0 && <option value="" disabled>Nenhuma categoria disponível</option>}
                 </select>
                 {errorMessage && <span className="field-error-message">{errorMessage}</span>}
             </div>

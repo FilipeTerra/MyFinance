@@ -135,7 +135,7 @@ export function AccountModal({ isOpen, onClose, onSuccess, accountToEdit }: Acco
                         <label>Nome da Conta</label>
                         <input 
                             {...register('name')} 
-                            placeholder="Ex: Nubank, Carteira..." 
+                            placeholder="Ex: Nubank" 
                             className={errors.name ? 'input-error' : ''}
                         />
                         {errors.name && <span className="field-error-message">{errors.name.message as string}</span>}
