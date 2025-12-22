@@ -1,17 +1,20 @@
+import './HomePage.css';
 import { useEffect, useState } from 'react';
 import { Header } from '../components/Layout/Header';
 import type { TransactionResponseDto } from '../types/TransactionResponseDto';
+import type { AccountResponseDto } from '../types/AccountResponseDto';
+import type { CategoryResponseDto } from '../types/CategoryResponseDto';
 import { TransactionFilter } from '../components/Transactions/TransactionFilter';
 import { TransactionList } from '../components/Transactions/TransactionList';
 import { CreateTransactionButton } from '../components/Transactions/CreateTransactionButton';
 import { TransactionModal } from '../components/Transactions/TransactionModal';
-import './HomePage.css';
 import { accountService, categoryService, transactionService, AxiosError, type ApiErrorResponse } from '../services/Api';
-import type { AccountResponseDto } from '../types/AccountResponseDto';
-import type { CategoryResponseDto } from '../types/CategoryResponseDto';
-import { AccountCard } from '../components/Accounts/AccountCard';
+import { CreateAccountButton } from '../components/Accounts/CreateAccountButton';
 
-// Interface para o estado dos filtros (sem alterações)
+// Componentes de Conta
+import { AccountCard } from '../components/Accounts/AccountCard';
+import { AccountModal } from '../components/Accounts/AccountModal';
+
 interface FiltersState {
     accountId: string;
     searchText?: string;
@@ -22,8 +25,9 @@ interface FiltersState {
 }
 
 export function HomePage() {
-    // Estados existentes
     const [accounts, setAccounts] = useState<AccountResponseDto[]>([]);
+    
+    // Estados para Transações
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [transactions, setTransactions] = useState<TransactionResponseDto[]>([]);
     const [activeFilters, setActiveFilters] = useState<FiltersState | null>(null);
@@ -33,22 +37,26 @@ export function HomePage() {
     const [categories, setCategories] = useState<CategoryResponseDto[]>([]);
     const [transactionToEdit, setTransactionToEdit] = useState<TransactionResponseDto | null>(null);
 
-    // Buscar as contas do usuário ao carregar a página (sem alterações)
+    // <<< ESTADOS PARA CONTA >>>
+    const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
+    const [accountToEdit, setAccountToEdit] = useState<AccountResponseDto | null>(null);
+
+    // Carregar dados iniciais
     useEffect(() => {
         const loadInitialData = async () => {
             setIsLoadingAccounts(true);
             try {
-                // Busca Contas e Categorias em paralelo
                 const [accountsRes, categoriesRes] = await Promise.all([
                     accountService.getAllAccounts(),
                     categoryService.getAll()
                 ]);
 
-                setAccounts(accountsRes.data);
-                setCategories(categoriesRes.data); // Salva as categorias
+                // Ordena contas por nome
+                setAccounts(accountsRes.data.sort((a, b) => a.name.localeCompare(b.name)));
+                setCategories(categoriesRes.data);
             } catch (error) {
                 console.error("Erro ao carregar dados:", error);
-                // Aqui você pode setar um estado de erro se tiver
+                setError("Erro ao carregar dados iniciais.");
             } finally {
                 setIsLoadingAccounts(false);
             }
@@ -57,7 +65,7 @@ export function HomePage() {
         loadInitialData();
     }, []);
 
-    // Buscar as transações QUANDO os filtros mudarem (sem alterações)
+    // Buscar transações quando filtros mudam
     useEffect(() => {
         if (!activeFilters || !activeFilters.accountId) {
             setTransactions([]);
@@ -94,60 +102,96 @@ export function HomePage() {
         setCategories(prev => [...prev, newCategory]);
     };
 
-    // <<< Função para lidar com a criação de uma nova conta vinda do Modal >>>
-    const handleAccountCreated = (newAccount: AccountResponseDto) => {
-        // Adiciona a nova conta à lista existente e ordena alfabeticamente
-        setAccounts(prevAccounts =>
-            [...prevAccounts, newAccount].sort((a, b) => a.name.localeCompare(b.name))
-        );
-    };
-
-    const handleEditAccount = (account: AccountResponseDto) => {
-        console.log("Editar conta:", account);
-        alert("Funcionalidade de Editar Conta será implementada no próximo passo!");
-    };
-
-    const handleDeleteAccount = (id: string) => {
-        console.log("Excluir conta ID:", id);
-        alert("Funcionalidade de Excluir Conta será implementada no próximo passo!");
-    };
-
+    // --- LÓGICA DE TRANSAÇÕES ---
     const handleDeleteTransaction = async (id: string) => {
         try {
-            // Chama o backend
             await transactionService.delete(id);
             setTransactions(prevTransactions => 
                 prevTransactions.filter(tx => tx.id !== id)
             );
             alert('Transação excluída com sucesso!'); 
-
         } catch (err) {
-            console.error("Erro ao deletar:", err);
             const axiosError = err as AxiosError<ApiErrorResponse>;
             alert(axiosError.response?.data?.message || "Erro ao tentar excluir a transação.");
         }
     };
 
-    // Função para abrir o modal de NOVA transação (limpa o estado de edição)
     const handleOpenCreateModal = () => {
         setTransactionToEdit(null); 
         setIsModalOpen(true);
     };
 
-    // Função para abrir o modal de EDIÇÃO (recebe a transação da lista)
     const handleOpenEditModal = (transaction: TransactionResponseDto) => {
         setTransactionToEdit(transaction);
         setIsModalOpen(true);
     };
 
-    // Função para fechar o modal
     const handleCloseModal = () => {
         setIsModalOpen(false);
-        setTransactionToEdit(null); // Limpa por segurança
-        
-        // Atualiza a lista para mostrar as mudanças (recarrega os filtros atuais)
+        setTransactionToEdit(null); 
         if (activeFilters) {
             setActiveFilters({ ...activeFilters });
+        }
+    };
+
+    // --- LÓGICA DE CONTAS ---
+
+    // Abre modal para criar NOVA conta
+    const handleOpenCreateAccountModal = () => {
+        setAccountToEdit(null);
+        setIsAccountModalOpen(true);
+    };
+
+    // Abre modal para EDITAR conta existente
+    const handleEditAccount = (account: AccountResponseDto) => {
+        setAccountToEdit(account);
+        setIsAccountModalOpen(true);
+    };
+
+    // Callback executado quando o AccountModal salva com sucesso
+    const handleAccountSaved = (savedAccount: AccountResponseDto, isEdit: boolean) => {
+        setAccounts(prevAccounts => {
+            let updatedList = [];
+            if (isEdit) {
+                // Substitui a conta antiga pela atualizada
+                updatedList = prevAccounts.map(acc => acc.id === savedAccount.id ? savedAccount : acc);
+            } else {
+                // Adiciona a nova conta
+                updatedList = [...prevAccounts, savedAccount];
+            }
+            // Mantém ordenado
+            return updatedList.sort((a, b) => a.name.localeCompare(b.name));
+        });
+    };
+
+    // Compatibilidade com o TransactionModal (que também cria conta)
+    const handleAccountCreatedFromTransaction = (newAccount: AccountResponseDto) => {
+        handleAccountSaved(newAccount, false);
+    };
+
+    // Exclusão de conta
+    const handleDeleteAccount = async (id: string) => {
+        if (!confirm('Tem certeza que deseja excluir esta conta? Todas as transações vinculadas a ela serão perdidas permanentemente.')) {
+            return;
+        }
+
+        try {
+            await accountService.delete(id);
+            
+            // Remove da lista visual
+            setAccounts(prev => prev.filter(acc => acc.id !== id));
+            
+            // Se a conta excluída estava selecionada no filtro, limpa o filtro
+            if (activeFilters?.accountId === id) {
+                setActiveFilters(prev => prev ? { ...prev, accountId: '' } : null);
+                setTransactions([]); // Limpa a lista de transações pois o filtro sumiu
+            }
+            
+            alert('Conta excluída com sucesso!');
+        } catch (err) {
+            console.error("Erro ao excluir conta:", err);
+            const axiosError = err as AxiosError<ApiErrorResponse>;
+            alert(axiosError.response?.data?.message || 'Erro ao excluir conta. Verifique se existem transações.');
         }
     };
 
@@ -160,10 +204,17 @@ export function HomePage() {
 
                 {error && <div className="error-message">{error}</div>}
 
+                <div className="homepage-actions">
+                    <CreateAccountButton onClick={handleOpenCreateAccountModal} />
+                    <CreateTransactionButton onClick={handleOpenCreateModal} />
+                </div>
+
+                {/* Seção de Cards de Contas */}
                 {isLoadingAccounts ? (
                     <p>Carregando contas...</p>
                 ) : (
                     <div className="accounts-grid">
+                        {/* Lista as contas existentes */}
                         {accounts.map(account => (
                             <AccountCard 
                                 key={account.id} 
@@ -174,10 +225,6 @@ export function HomePage() {
                         ))}
                     </div>
                 )}
-
-                <div className="homepage-actions">
-                    <CreateTransactionButton onClick={handleOpenCreateModal} />
-                </div>
 
                 <TransactionFilter
                     accounts={accounts}
@@ -193,15 +240,23 @@ export function HomePage() {
                 />
             </main>
 
-            {/* Modal para criar transação */}
+            {/* Modal de Transação */}
             <TransactionModal
                 accounts={accounts}
                 categories={categories}
                 isOpen={isModalOpen}
-                onClose={handleCloseModal} // Use a função nova que criamos no passo 2
-                onAccountCreated={handleAccountCreated}
+                onClose={handleCloseModal}
+                onAccountCreated={handleAccountCreatedFromTransaction}
                 onCategoryCreated={handleCategoryCreated}
                 transactionToEdit={transactionToEdit}
+            />
+
+            {/* <<< Modal de Conta >>> */}
+            <AccountModal 
+                isOpen={isAccountModalOpen}
+                onClose={() => setIsAccountModalOpen(false)}
+                onSuccess={handleAccountSaved}
+                accountToEdit={accountToEdit}
             />
         </div>
     );

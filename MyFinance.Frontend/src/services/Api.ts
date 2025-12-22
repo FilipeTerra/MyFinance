@@ -8,6 +8,7 @@ import type { TransactionRequestDto } from '../types/TransactionRequestDto';
 import type { CategoryResponseDto } from '../types/CategoryResponseDto';
 import type { AccountRequestDto } from '../types/AccountRequestDto';
 import type { CategoryRequestDto } from '../types/CategoryRequestDto';
+import type { UpdateAccountRequestDto } from '../types/UpdateAccountRequestDto';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -38,7 +39,6 @@ const tokenManager = {
     }
 };
 
-// Funções para os endpoints de autenticação
 const authService = {
     register: (data: RegisterRequestDto) => {
         return apiClient.post('/auth/register', data);
@@ -48,17 +48,21 @@ const authService = {
     },
 };
 
-// Isso garante que se o usuário recarregar a página, o token ainda estará no Axios
 const initialToken = localStorage.getItem('authToken');
 tokenManager.setAuthToken(initialToken);
 
 const accountService = {
-    // Rota GET /api/accounts (do seu AccountController)
     getAllAccounts: () => {
         return apiClient.get<AccountResponseDto[]>('/accounts');
     },
     create: (data: AccountRequestDto) => {
         return apiClient.post<AccountResponseDto>('/accounts', data);
+    },
+    update: (id: string, data: UpdateAccountRequestDto) => {
+        return apiClient.put<AccountResponseDto>(`/accounts/${id}`, data);
+    },
+    delete: (id: string) => {
+        return apiClient.delete<void>(`/accounts/${id}`);
     }
 };
 
@@ -71,8 +75,6 @@ const categoryService = {
     }
 };
 
-// Interface para os parâmetros do filtro
-// A interface TransactionFilterParams já corresponde ao TransactionSearchRequestDto do backend
 export interface TransactionFilterParams {
     accountId: string;
     searchText?: string;

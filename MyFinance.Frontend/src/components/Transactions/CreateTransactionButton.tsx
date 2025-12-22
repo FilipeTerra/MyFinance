@@ -1,5 +1,4 @@
 ﻿// src/components/Transactions/CreateTransactionButton.tsx
-import React from 'react';
 import './CreateTransactionButton.css';
 
 interface CreateTransactionButtonProps {

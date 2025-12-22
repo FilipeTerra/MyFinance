@@ -11,6 +11,6 @@
     transition: background-color 0.2s ease;
 }
 
-    .create-transaction-button:hover {
-        background-color: #2563eb;
-    }
+.create-transaction-button:hover {
+    background-color: #2563eb;
+}
