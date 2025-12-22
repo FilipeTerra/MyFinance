@@ -80,40 +80,41 @@ export function HomePage() {
 
     }, [activeFilters]);
 
-    const handleFilterChange = (filters: any) => {
+    const handleFilterChange = (filters: Omit<FiltersState, 'page' | 'pageSize'>) => {
         setActiveFilters({
             ...filters,
             page: 1,
             pageSize: 20
-        });
+        } as FiltersState);
     };
 
     const handleCategoryCreated = (newCategory: CategoryResponseDto) => {
         setCategories(prev => [...prev, newCategory]);
     };
 
-    // <<< ADICIONADO: Função para lidar com a criação de uma nova conta vinda do Modal >>>
+    // <<< Função para lidar com a criação de uma nova conta vinda do Modal >>>
     const handleAccountCreated = (newAccount: AccountResponseDto) => {
         // Adiciona a nova conta à lista existente e ordena alfabeticamente
         setAccounts(prevAccounts =>
             [...prevAccounts, newAccount].sort((a, b) => a.name.localeCompare(b.name))
         );
-        // O modal já seleciona a nova conta automaticamente, então não precisamos fazer nada aqui
-        // Poderia adicionar uma mensagem de sucesso temporária se desejado
     };
 
-    // <<< ADICIONADO: Função para lidar com a criação de uma nova transação vinda do Modal >>>
-    // Esta função será chamada quando implementarmos a criação real da transação
-    // const handleTransactionCreated = (newTransaction: TransactionResponseDto) => {
-    // TODO: Atualizar a lista de transações (se a conta da nova transação for a selecionada no filtro)
-    // ou talvez re-buscar as transações para a conta atual
-    // console.log("Nova transação criada:", newTransaction);
-    // Exemplo simples: rebuscar se a conta for a mesma
-    // if (activeFilters && newTransaction.accountId === activeFilters.accountId) {
-    //     // Trigger useEffect para recarregar transações
-    //     setActiveFilters({...activeFilters}); // Pode precisar de uma forma mais robusta de trigger
-    // }
-    // };
+    const handleDeleteTransaction = async (id: string) => {
+        try {
+            // Chama o backend
+            await transactionService.delete(id);
+            setTransactions(prevTransactions => 
+                prevTransactions.filter(tx => tx.id !== id)
+            );
+            alert('Transação excluída com sucesso!'); 
+
+        } catch (err) {
+            console.error("Erro ao deletar:", err);
+            const axiosError = err as AxiosError<ApiErrorResponse>;
+            alert(axiosError.response?.data?.message || "Erro ao tentar excluir a transação.");
+        }
+    };
 
     return (
         <div className="homepage-container">
@@ -141,6 +142,7 @@ export function HomePage() {
                 <TransactionList
                     transactions={transactions}
                     isLoading={isLoadingTransactions}
+                    onDelete={handleDeleteTransaction}
                 />
             </main>
 

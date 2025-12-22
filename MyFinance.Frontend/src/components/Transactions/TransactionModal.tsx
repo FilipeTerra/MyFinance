@@ -5,7 +5,7 @@ import type { CategoryDto } from '../Categories/CategorySelectField';
 import { TransactionType } from '../../types/TransactionType';
 import { CategorySelectField } from '../Categories/CategorySelectField';
 import { AccountSelectField } from '../Accounts/AccountSelectField';
-import { useForm } from 'react-hook-form'; // Controller ajuda com inputs complexos
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useTransactionFormLogic } from '../../hooks/useTransactionFormLogic';
@@ -27,7 +27,7 @@ const transactionSchema = z.object({
             return !isNaN(num) && num > 0;
         }, 'O Valor deve ser maior que zero.'),
     type: z.preprocess((val) => Number(val), z.nativeEnum(TransactionType)),
-    date: z.string().min(1, 'A Data é obrigatória.'), // Pode adicionar validação de data futura/passada se quiser
+    date: z.string().min(1, 'A Data é obrigatória.'),
     accountId: z.string().min(1, 'A Conta é obrigatória.'),
     categoryId: z.string().min(1, 'A Categoria é obrigatória.'),
 });
@@ -37,16 +37,16 @@ type TransactionFormData = z.infer<typeof transactionSchema>;
 
 export function TransactionModal({ 
     accounts, 
-    categories,          // <--- Adicionado
+    categories,
     isOpen, 
     onClose, 
     onAccountCreated,
-    onCategoryCreated    // <--- Adicionado
+    onCategoryCreated
 }: TransactionModalProps) {
     const { 
         createTransaction, 
-        isLoading, // Um único loading para tudo (mais simples)
-        error: apiError, // Erros vindos da API
+        isLoading,
+        error: apiError,
         setError 
     } = useTransactionFormLogic();
 
@@ -63,7 +63,7 @@ export function TransactionModal({
         defaultValues: {
             description: '',
             amount: '',
-            type: TransactionType.Expense, // Valor numérico (2)
+            type: TransactionType.Expense,
             date: new Date().toISOString().split('T')[0],
             accountId: '',
             categoryId: ''

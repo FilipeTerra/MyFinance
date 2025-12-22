@@ -10,7 +10,7 @@ namespace MyFinance.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize] // Todas as rotas aqui exigem autenticação
+[Authorize] // Todas as rotas aqui exigem autenticaï¿½ï¿½o
 public class TransactionsController : ControllerBase
 {
     private readonly ITransactionService _transactionService;
@@ -20,13 +20,13 @@ public class TransactionsController : ControllerBase
         _transactionService = transactionService;
     }
 
-    // --- Função Helper para pegar o UserId do Token ---
+    // --- Funï¿½ï¿½o Helper para pegar o UserId do Token ---
     private Guid GetUserIdFromToken()
     {
         var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(userIdString))
         {
-            throw new InvalidOperationException("Usuário não autenticado.");
+            throw new InvalidOperationException("UsuÃ¡rio nÃ£o autenticado.");
         }
         return new Guid(userIdString);
     }
@@ -45,24 +45,24 @@ public class TransactionsController : ControllerBase
 
         if (!response.Success)
         {
-            // Erros como "Conta não encontrada" podem ser BadRequest ou NotFound,
-            // mas BadRequest é mais simples por enquanto.
+            // Erros como "Conta nï¿½o encontrada" podem ser BadRequest ou NotFound,
+            // mas BadRequest ï¿½ mais simples por enquanto.
             return BadRequest(new { message = response.ErrorMessage });
         }
 
-        // Retorna 201 Created com a transação criada
+        // Retorna 201 Created com a transaï¿½ï¿½o criada
         return CreatedAtAction(nameof(GetTransactionById), new { id = response.Data!.Id }, response.Data);
     }
 
     // GET /api/transactions/account/{accountId} 
-    // Rota específica para pegar transações POR CONTA (US 8: Filtro)
+    // Rota especï¿½fica para pegar transaï¿½ï¿½es POR CONTA (US 8: Filtro)
     [HttpGet("account/{accountId:guid}")]
     public async Task<IActionResult> GetTransactionsByAccount(Guid accountId)
     {
         var userId = GetUserIdFromToken();
         var response = await _transactionService.GetTransactionsByAccountIdAsync(accountId, userId);
 
-        // O serviço retorna lista vazia se a conta não for do usuário, então OK é seguro
+        // O serviï¿½o retorna lista vazia se a conta nï¿½o for do usuï¿½rio, entï¿½o OK ï¿½ seguro
         return Ok(response.Data);
     }
 
@@ -83,18 +83,18 @@ public class TransactionsController : ControllerBase
     [HttpGet("search")]
     public async Task<IActionResult> SearchTransactions([FromQuery] TransactionSearchRequestDto filters)
     {
-        // O [FromQuery] mapeia os parâmetros da URL (ex: ?accountId=...) para o objeto DTO.
+        // O [FromQuery] mapeia os parï¿½metros da URL (ex: ?accountId=...) para o objeto DTO.
         if (!ModelState.IsValid)
         {
-            // Retorna 400 Bad Request se o AccountId não for fornecido,
-            // conforme a validação [Required] no DTO.
+            // Retorna 400 Bad Request se o AccountId nï¿½o for fornecido,
+            // conforme a validaï¿½ï¿½o [Required] no DTO.
             return BadRequest(ModelState);
         }
 
         var userId = GetUserIdFromToken();
         var response = await _transactionService.SearchTransactionsAsync(userId, filters);
 
-        // O serviço sempre retorna uma lista (Data nunca é nulo),
+        // O serviï¿½o sempre retorna uma lista (Data nunca ï¿½ nulo),
         // mesmo que esteja vazia.
         return Ok(response.Data);
     }
@@ -113,15 +113,15 @@ public class TransactionsController : ControllerBase
 
         if (!response.Success)
         {
-            if (response.ErrorMessage!.Contains("não encontrada"))
+            if (response.ErrorMessage!.Contains("nï¿½o encontrada"))
             {
-                // Pode ser a transação ou a nova conta
+                // Pode ser a transaï¿½ï¿½o ou a nova conta
                 return NotFound(new { message = response.ErrorMessage });
             }
             return BadRequest(new { message = response.ErrorMessage });
         }
 
-        return Ok(response.Data); // Retorna a transação atualizada
+        return Ok(response.Data); // Retorna a transaï¿½ï¿½o atualizada
     }
 
     // DELETE /api/transactions/{id}

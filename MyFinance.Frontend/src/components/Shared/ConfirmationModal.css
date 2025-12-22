@@ -1,0 +1,100 @@
+/* --- CONFIRMATION MODAL (Estilo Filament) --- */
+
+.conf-modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: rgba(107, 114, 128, 0.75);
+    backdrop-filter: blur(4px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999; /* Z-index bem alto para ficar por cima de tudo */
+    animation: confFadeIn 0.2s ease-out;
+}
+
+.conf-modal-content {
+    background-color: white;
+    width: 100%;
+    max-width: 28rem;
+    border-radius: 0.75rem;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    animation: confScaleIn 0.2s ease-out;
+    padding: 1.5rem;
+}
+
+.conf-modal-body {
+    text-align: center;
+}
+
+/* Ícone Vermelho */
+.conf-modal-icon-wrapper {
+    margin: 0 auto 1rem auto;
+    height: 3rem;
+    width: 3rem;
+    border-radius: 9999px;
+    background-color: #fee2e2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.conf-modal-icon-wrapper svg {
+    height: 1.5rem;
+    width: 1.5rem;
+    color: #dc2626;
+}
+
+/* Tipografia */
+.conf-modal-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #111827;
+    margin: 0 0 0.5rem 0;
+}
+
+.conf-modal-description {
+    font-size: 0.875rem;
+    color: #6b7280;
+    margin-bottom: 1.5rem;
+    line-height: 1.5;
+}
+
+/* Botões */
+.conf-modal-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+}
+
+.conf-modal-btn {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+}
+
+.conf-btn-cancel {
+    background-color: white;
+    color: #374151;
+    border-color: #d1d5db;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+.conf-btn-cancel:hover { background-color: #f9fafb; }
+
+.conf-btn-confirm {
+    background-color: #dc2626;
+    color: white;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+.conf-btn-confirm:hover { background-color: #b91c1c; }
+
+/* Animações */
+@keyframes confFadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes confScaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }

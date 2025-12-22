@@ -85,25 +85,26 @@ export interface TransactionFilterParams {
 const transactionService = {
     getTransactions: (params: TransactionFilterParams) => {
         const filters = params;
-
-        // Constrói os query params
-        // O backend espera accountId, searchText, date, amount, page, pageSize
         const queryParams = new URLSearchParams({
-            accountId: filters.accountId, // AccountId agora é um query param obrigatório
+            accountId: filters.accountId,
             page: (filters.page || 1).toString(),
             pageSize: (filters.pageSize || 20).toString(),
         });
 
-        // Adiciona os filtros opcionais
         if (filters.searchText) queryParams.append('searchText', filters.searchText);
         if (filters.date) queryParams.append('date', filters.date);
-        if (filters.amount !== undefined && filters.amount !== null) queryParams.append('amount', filters.amount.toString()); // Garante que amount=0 seja enviado se digitado
+        if (filters.amount !== undefined && filters.amount !== null) queryParams.append('amount', filters.amount.toString());
 
-        // O endpoint do backend esperado agora é: GET /api/transactions/search?[QUERY_PARAMS]
         return apiClient.get<TransactionResponseDto[]>('/transactions/search', { params: queryParams });
     },
     create: (data: TransactionRequestDto) => {
         return apiClient.post<TransactionResponseDto>('/transactions', data);
+    },
+    update: (id: string, data: TransactionRequestDto) => {
+        return apiClient.put<TransactionResponseDto>(`/transactions/${id}`, data);
+    },
+    delete: (id: string) => {
+        return apiClient.delete<void>(`/transactions/${id}`);
     }
 };
 

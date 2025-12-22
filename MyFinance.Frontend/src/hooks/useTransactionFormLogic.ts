@@ -23,6 +23,22 @@ export function useTransactionFormLogic() {
         }
     };
 
+    const updateTransaction = async (id: string, data: TransactionRequestDto) => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            // Chama o método update que criamos no Passo 1
+            const response = await transactionService.update(id, data);
+            return response.data;
+        } catch (err) {
+            const axiosError = err as AxiosError<{ message: string }>;
+            setError(axiosError.response?.data?.message || 'Erro ao atualizar transação.');
+            throw err;
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     const createAccount = async (data: AccountRequestDto) => {
         setIsLoading(true); // Opcional: pode usar um estado de loading separado se preferir
         setError(null);
@@ -57,6 +73,7 @@ export function useTransactionFormLogic() {
         isLoading,
         error,
         createTransaction,
+        updateTransaction,
         createAccount,
         createCategory,
         setError
