@@ -9,6 +9,7 @@ import './HomePage.css';
 import { accountService, categoryService, transactionService, AxiosError, type ApiErrorResponse } from '../services/Api';
 import type { AccountResponseDto } from '../types/AccountResponseDto';
 import type { CategoryResponseDto } from '../types/CategoryResponseDto';
+import { AccountCard } from '../components/Accounts/AccountCard';
 
 // Interface para o estado dos filtros (sem alterações)
 interface FiltersState {
@@ -101,6 +102,16 @@ export function HomePage() {
         );
     };
 
+    const handleEditAccount = (account: AccountResponseDto) => {
+        console.log("Editar conta:", account);
+        alert("Funcionalidade de Editar Conta será implementada no próximo passo!");
+    };
+
+    const handleDeleteAccount = (id: string) => {
+        console.log("Excluir conta ID:", id);
+        alert("Funcionalidade de Excluir Conta será implementada no próximo passo!");
+    };
+
     const handleDeleteTransaction = async (id: string) => {
         try {
             // Chama o backend
@@ -149,19 +160,30 @@ export function HomePage() {
 
                 {error && <div className="error-message">{error}</div>}
 
+                {isLoadingAccounts ? (
+                    <p>Carregando contas...</p>
+                ) : (
+                    <div className="accounts-grid">
+                        {accounts.map(account => (
+                            <AccountCard 
+                                key={account.id} 
+                                account={account} 
+                                onEdit={handleEditAccount}
+                                onDelete={handleDeleteAccount}
+                            />
+                        ))}
+                    </div>
+                )}
+
                 <div className="homepage-actions">
                     <CreateTransactionButton onClick={handleOpenCreateModal} />
                 </div>
 
-                {isLoadingAccounts ? (
-                    <p>Carregando contas...</p>
-                ) : (
-                    <TransactionFilter
-                        accounts={accounts} // Passa a lista atualizada
-                        onFilterChange={handleFilterChange}
-                        isLoading={isLoadingTransactions}
-                    />
-                )}
+                <TransactionFilter
+                    accounts={accounts}
+                    onFilterChange={handleFilterChange}
+                    isLoading={isLoadingTransactions}
+                />
 
                 <TransactionList
                     transactions={transactions}

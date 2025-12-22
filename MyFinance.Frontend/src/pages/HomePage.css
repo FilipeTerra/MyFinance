@@ -34,6 +34,14 @@
 
 .homepage-actions {
     display: flex;
-    justify-content: flex-end; /* Isso alinha o item (botão) no final do container (à direita) */
-    margin-bottom: 1.5rem; /* Mantém o espaço que o botão tinha abaixo dele */
+    justify-content: flex-end;
+    margin-bottom: 1.5rem;
+}
+
+.accounts-grid {
+    display: grid;
+    /* Cria colunas automáticas com largura mínima de 300px */
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2.5rem; /* Espaço generoso antes dos filtros */
 }

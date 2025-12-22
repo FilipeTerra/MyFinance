@@ -1,0 +1,86 @@
+.account-card {
+    background-color: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+.account-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.account-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+}
+
+.account-type {
+    background-color: #f1f5f9;
+    color: #64748b;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+}
+
+.account-name {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.1rem;
+    color: #1e293b;
+    font-weight: 600;
+}
+
+.account-balance {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-top: auto; /* Empurra o saldo para baixo se o card crescer */
+}
+
+.account-balance.positive {
+    color: #10b981; /* Verde */
+}
+
+.account-balance.negative {
+    color: #ef4444; /* Vermelho */
+}
+
+/* Botões de Ação */
+.account-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.btn-icon {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 0.25rem;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+    opacity: 0.6;
+}
+
+.btn-icon:hover {
+    opacity: 1;
+    background-color: #f8fafc;
+}
+
+.btn-delete:hover {
+    color: #ef4444;
+    background-color: #fee2e2;
+}
+
+.btn-edit:hover {
+    color: #3b82f6;
+    background-color: #dbeafe;
+}
