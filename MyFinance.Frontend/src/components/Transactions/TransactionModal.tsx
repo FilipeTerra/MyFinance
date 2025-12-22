@@ -2,6 +2,7 @@
 import React, { useEffect } from 'react';
 import type { AccountResponseDto } from '../../types/AccountResponseDto';
 import type { CategoryDto } from '../Categories/CategorySelectField';
+import type { TransactionResponseDto } from '../../types/TransactionResponseDto';
 import { TransactionType } from '../../types/TransactionType';
 import { CategorySelectField } from '../Categories/CategorySelectField';
 import { AccountSelectField } from '../Accounts/AccountSelectField';
@@ -14,25 +15,28 @@ interface TransactionModalProps {
     accounts: AccountResponseDto[];
     categories: CategoryDto[]; 
     onCategoryCreated: (newCategory: CategoryDto) => void;
+    onAccountCreated: (newAccount: AccountResponseDto) => void;
     isOpen: boolean;
     onClose: () => void;
-    onAccountCreated: (newAccount: AccountResponseDto) => void;
+    transactionToEdit?: TransactionResponseDto | null;
 }
 
+// Schema de validação
 const transactionSchema = z.object({
     description: z.string().min(1, 'A Descrição é obrigatória.'),
     amount: z.string().min(1, 'O Valor é obrigatório.')
         .refine((val) => {
+            // Aceita "1000", "1.000,00" ou "1000.00"
             const num = parseFloat(val.replace(/\./g, '').replace(',', '.'));
             return !isNaN(num) && num > 0;
         }, 'O Valor deve ser maior que zero.'),
+    // Preprocess garante que "1" vire 1 (number) antes de validar
     type: z.preprocess((val) => Number(val), z.nativeEnum(TransactionType)),
     date: z.string().min(1, 'A Data é obrigatória.'),
     accountId: z.string().min(1, 'A Conta é obrigatória.'),
     categoryId: z.string().min(1, 'A Categoria é obrigatória.'),
 });
 
-// Inferir o tipo do formulário a partir do schema
 type TransactionFormData = z.infer<typeof transactionSchema>;
 
 export function TransactionModal({ 
@@ -41,16 +45,19 @@ export function TransactionModal({
     isOpen, 
     onClose, 
     onAccountCreated,
-    onCategoryCreated
+    onCategoryCreated,
+    transactionToEdit
 }: TransactionModalProps) {
     const { 
         createTransaction, 
+        updateTransaction,
         isLoading,
         error: apiError,
         setError 
     } = useTransactionFormLogic();
 
-    // Configuração do React Hook Form
+    // CORREÇÃO AQUI: Removemos <TransactionFormData> do useForm.
+    // Deixamos o zodResolver inferir os tipos automaticamente.
     const {
         register,
         handleSubmit,
@@ -72,28 +79,51 @@ export function TransactionModal({
 
     const currentAmount = watch('amount'); 
 
+    // Registra campos que não são inputs nativos (selects customizados)
     useEffect(() => {
         register('accountId');
         register('categoryId');
     }, [register]);
 
+    // Efeito para preencher o formulário (Edição) ou Limpar (Criação)
     useEffect(() => {
-    if (isOpen) {
-        reset({
-            description: '',
-            amount: '',
-            type: TransactionType.Expense,
-            date: new Date().toISOString().split('T')[0],
-            accountId: '',
-            categoryId: ''
-        });
-        setError(null);
-    }}, [isOpen, reset, setError]);
+        if (isOpen) {
+            setError(null);
+            
+            if (transactionToEdit) {
+                // --- MODO EDIÇÃO ---
+                const formattedAmount = transactionToEdit.amount
+                    .toFixed(2)
+                    .replace('.', ',')
+                    .replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 
-    if (!isOpen) {
-        return null;
-    }
+                const formattedDate = new Date(transactionToEdit.date).toISOString().split('T')[0];
 
+                reset({
+                    description: transactionToEdit.description,
+                    amount: formattedAmount,
+                    type: transactionToEdit.type,
+                    date: formattedDate,
+                    accountId: transactionToEdit.accountId,
+                    categoryId: transactionToEdit.categoryId
+                });
+            } else {
+                // --- MODO CRIAÇÃO ---
+                reset({
+                    description: '',
+                    amount: '',
+                    type: TransactionType.Expense,
+                    date: new Date().toISOString().split('T')[0],
+                    accountId: '',
+                    categoryId: ''
+                });
+            }
+        }
+    }, [isOpen, transactionToEdit, reset, setError]);
+
+    if (!isOpen) return null;
+
+    // Formata o valor monetário enquanto digita
     const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
         let digits = value.replace(/\D/g, '');
@@ -128,27 +158,30 @@ export function TransactionModal({
         };
 
         try {
-            // CHAMADA REAL
-            await createTransaction(transactionDto);
+            if (transactionToEdit) {
+                await updateTransaction(transactionToEdit.id, transactionDto);
+            } else {
+                await createTransaction(transactionDto);
+            }
             
-            // Sucesso
             onClose(); 
-            // Dica: Aqui seria ideal chamar uma prop onTransactionCreated() para atualizar a lista na tela de trás
-            
         } catch (err) {
             console.error("Erro ao salvar transação:", err);
-            // O hook já preenche 'apiError' com a mensagem do backend
         }
     };
+
+    const isEditing = !!transactionToEdit;
+    const modalTitle = isEditing ? 'Editar Transação' : 'Nova Transação';
+    const buttonText = isLoading ? 'Salvando...' : (isEditing ? 'Salvar Alterações' : 'Salvar Transação');
 
     return (
         <div className="modal-overlay">
             <div className="modal-content">
-                <h2>Nova Transação</h2>
+                <h2>{modalTitle}</h2>
                 {apiError && <div className="modal-error-message">{apiError}</div>}
 
-                {/* Formulário principal da transação */}
-                <form onSubmit={handleSubmit(onSubmit, (errors) => console.log("Erros de validação:", errors))}>
+                <form onSubmit={handleSubmit(onSubmit, (errors) => console.log("Erros:", errors))}>
+                    
                     <div className="form-group">
                         <label>Tipo da Transação</label>
                           <div className="type-selector">
@@ -156,7 +189,7 @@ export function TransactionModal({
                                 <input 
                                     type="radio" 
                                     value={TransactionType.Expense} 
-                                    {...register('type', { valueAsNumber: true })} // REGISTRA NO RHF
+                                    {...register('type', { valueAsNumber: true })} 
                                     disabled={isLoading} 
                                 /> Despesa
                             </label>
@@ -164,20 +197,19 @@ export function TransactionModal({
                                 <input 
                                     type="radio" 
                                     value={TransactionType.Income} 
-                                    {...register('type', { valueAsNumber: true })} // REGISTRA NO RHF
+                                    {...register('type', { valueAsNumber: true })} 
                                     disabled={isLoading} 
                                 /> Receita
                             </label>
                         </div>
                     </div>
 
-                    {/* Descrição */}
                     <div className="form-group">
                         <label htmlFor="description">Descrição</label>
                         <input
                             type="text"
                             id="description"
-                            {...register('description')} // Conecta ao RHF
+                            {...register('description')}
                             placeholder="Ex: Almoço"
                             disabled={isLoading}
                             className={errors.description ? 'input-error' : ''}
@@ -185,7 +217,6 @@ export function TransactionModal({
                         {errors.description && <span className="field-error-message">{errors.description.message}</span>}
                     </div>
 
-                    {/* Valor */}
                     <div className="form-group">
                         <label htmlFor="amount">Valor (R$)</label>
                         <input
@@ -202,7 +233,6 @@ export function TransactionModal({
                         {errors.amount && <span className="field-error-message">{errors.amount.message}</span>}
                     </div>
 
-                    {/* Data */}
                     <div className="form-group">
                         <label htmlFor="date">Data</label>
                         <input
@@ -214,7 +244,6 @@ export function TransactionModal({
                         {errors.date && <span className="field-error-message">{errors.date.message}</span>}
                     </div>
 
-                    {/* Conta */}
                     <AccountSelectField
                         accounts={accounts}
                         selectedId={watch('accountId')}
@@ -224,20 +253,22 @@ export function TransactionModal({
                         disabled={isLoading}
                     />
 
-                    {/* Categoria */}
                     <CategorySelectField
                         categories={categories}
-                        selectedId={watch('categoryId')} // O valor vem do Form
-                        onChange={(id) => setValue('categoryId', id, { shouldValidate: true })} // Atualiza o Form
+                        selectedId={watch('categoryId')}
+                        onChange={(id) => setValue('categoryId', id, { shouldValidate: true })}
                         errorMessage={errors.categoryId?.message}
                         disabled={isLoading}
                         onCategoryCreated={onCategoryCreated}
                     />
 
-                    {/* Ações do Modal Principal */}
                     <div className="modal-actions">
-                        <button type="button" onClick={onClose} className="cancel-button" disabled={isLoading}>Cancelar Transação</button>
-                        <button type="submit" className="save-button" disabled={isLoading}>{isLoading ? 'Salvando...' : 'Salvar Transação'}</button>
+                        <button type="button" onClick={onClose} className="cancel-button" disabled={isLoading}>
+                            Cancelar
+                        </button>
+                        <button type="submit" className="save-button" disabled={isLoading}>
+                            {buttonText}
+                        </button>
                     </div>
                 </form>
             </div>

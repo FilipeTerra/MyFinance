@@ -30,6 +30,7 @@ export function HomePage() {
     const [isLoadingTransactions, setIsLoadingTransactions] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [categories, setCategories] = useState<CategoryResponseDto[]>([]);
+    const [transactionToEdit, setTransactionToEdit] = useState<TransactionResponseDto | null>(null);
 
     // Buscar as contas do usuário ao carregar a página (sem alterações)
     useEffect(() => {
@@ -116,6 +117,29 @@ export function HomePage() {
         }
     };
 
+    // Função para abrir o modal de NOVA transação (limpa o estado de edição)
+    const handleOpenCreateModal = () => {
+        setTransactionToEdit(null); 
+        setIsModalOpen(true);
+    };
+
+    // Função para abrir o modal de EDIÇÃO (recebe a transação da lista)
+    const handleOpenEditModal = (transaction: TransactionResponseDto) => {
+        setTransactionToEdit(transaction);
+        setIsModalOpen(true);
+    };
+
+    // Função para fechar o modal
+    const handleCloseModal = () => {
+        setIsModalOpen(false);
+        setTransactionToEdit(null); // Limpa por segurança
+        
+        // Atualiza a lista para mostrar as mudanças (recarrega os filtros atuais)
+        if (activeFilters) {
+            setActiveFilters({ ...activeFilters });
+        }
+    };
+
     return (
         <div className="homepage-container">
             <Header />
@@ -126,7 +150,7 @@ export function HomePage() {
                 {error && <div className="error-message">{error}</div>}
 
                 <div className="homepage-actions">
-                    <CreateTransactionButton onClick={() => setIsModalOpen(true)} />
+                    <CreateTransactionButton onClick={handleOpenCreateModal} />
                 </div>
 
                 {isLoadingAccounts ? (
@@ -143,17 +167,19 @@ export function HomePage() {
                     transactions={transactions}
                     isLoading={isLoadingTransactions}
                     onDelete={handleDeleteTransaction}
+                    onEdit={handleOpenEditModal} 
                 />
             </main>
 
             {/* Modal para criar transação */}
             <TransactionModal
                 accounts={accounts}
-                categories={categories} // Passa a lista
+                categories={categories}
                 isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
+                onClose={handleCloseModal} // Use a função nova que criamos no passo 2
                 onAccountCreated={handleAccountCreated}
-                onCategoryCreated={handleCategoryCreated} // Passa a função de atualização
+                onCategoryCreated={handleCategoryCreated}
+                transactionToEdit={transactionToEdit}
             />
         </div>
     );

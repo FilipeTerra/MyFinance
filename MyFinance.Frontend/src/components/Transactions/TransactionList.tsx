@@ -1,16 +1,16 @@
 import { useState } from 'react';
 import type { TransactionResponseDto } from '../../types/TransactionResponseDto';
 import './TransactionList.css';
-// Importe o novo componente (ajuste o caminho conforme onde você salvou)
 import { ConfirmationModal } from '../Shared/ConfirmationModal'; 
 
 interface TransactionListProps {
     transactions: TransactionResponseDto[];
     isLoading: boolean;
     onDelete: (id: string) => Promise<void> | void;
+    onEdit: (transaction: TransactionResponseDto) => void;
 }
 
-export function TransactionList({ transactions, isLoading, onDelete }: TransactionListProps) {
+export function TransactionList({ transactions, isLoading, onDelete, onEdit }: TransactionListProps) {
 
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [idToDelete, setIdToDelete] = useState<string | null>(null);
@@ -71,12 +71,15 @@ export function TransactionList({ transactions, isLoading, onDelete }: Transacti
                                 {tx.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                             </td>
                             <td className="tx-actions">
-                                <button className="action-btn edit-btn">Editar</button>
+                                <button 
+                                    className="action-btn edit-btn"
+                                    onClick={() => onEdit(tx)} 
+                                >Editar
+                                </button>
                                 <button 
                                     className="action-btn delete-btn"
                                     onClick={() => openDeleteModal(tx.id)}
-                                >
-                                    Excluir
+                                >Excluir
                                 </button>
                             </td>
                         </tr>
@@ -90,7 +93,7 @@ export function TransactionList({ transactions, isLoading, onDelete }: Transacti
                 onConfirm={confirmDelete}
                 title="Excluir transação"
                 description="Tem certeza de que deseja excluir esta transação? Esta ação não pode ser desfeita."
-                confirmText="Sim, excluir"
+                confirmText="Excluir"
                 cancelText="Cancelar"
             />
         </div>

@@ -113,15 +113,15 @@ public class TransactionsController : ControllerBase
 
         if (!response.Success)
         {
-            if (response.ErrorMessage!.Contains("n�o encontrada"))
+            if (response.ErrorMessage!.Contains("Transação não encontrada"))
             {
-                // Pode ser a transa��o ou a nova conta
+                // Pode ser a transação ou a nova conta
                 return NotFound(new { message = response.ErrorMessage });
             }
             return BadRequest(new { message = response.ErrorMessage });
         }
 
-        return Ok(response.Data); // Retorna a transa��o atualizada
+        return Ok(response.Data); // Retorna a transação atualizada
     }
 
     // DELETE /api/transactions/{id}

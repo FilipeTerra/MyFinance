@@ -6,8 +6,10 @@ export interface TransactionResponseDto {
     amount: number;
     type: TransactionType;
     typeName: string; // "Income" ou "Expense"
-    date: string; // (string no JSON, pode ser convertida para Date)
+    date: string;
     createdAt: string;
     accountId: string;
     accountName: string;
+    categoryId: string;
+    categoryName: string;
 }
