@@ -12,7 +12,7 @@ namespace MyFinance.Application.Services;
 public class TransactionService : ITransactionService
 {
     private readonly ITransactionRepository _transactionRepository;
-    private readonly IAccountRepository _accountRepository; // Necessário para validar a conta
+    private readonly IAccountRepository _accountRepository; // Necessï¿½rio para validar a conta
     private readonly ICategoryRepository _categoryRepository;
 
     public TransactionService(ITransactionRepository transactionRepository, IAccountRepository accountRepository, ICategoryRepository categoryRepository)
@@ -24,20 +24,20 @@ public class TransactionService : ITransactionService
 
     public async Task<ServiceResponse<TransactionResponseDto>> CreateTransactionAsync(CreateTransactionRequestDto dto, Guid userId)
     {
-        // Validar se a conta pertence ao usuário
+        // Validar se a conta pertence ao usuï¿½rio
         var account = await _accountRepository.GetByIdAsync(dto.AccountId, userId);
         if (account == null)
         {
-            return new ServiceResponse<TransactionResponseDto> { Success = false, ErrorMessage = "Conta não encontrada ou não pertence ao usuário." };
+            return new ServiceResponse<TransactionResponseDto> { Success = false, ErrorMessage = "Conta nï¿½o encontrada ou nï¿½o pertence ao usuï¿½rio." };
         }
 
         var category = await _categoryRepository.GetByIdAsync(dto.CategoryId, userId);
         if (category == null)
         {
-            return new ServiceResponse<TransactionResponseDto> { Success = false, ErrorMessage = "Categoria não encontrada ou não pertence ao usuário." };
+            return new ServiceResponse<TransactionResponseDto> { Success = false, ErrorMessage = "Categoria nï¿½o encontrada ou nï¿½o pertence ao usuï¿½rio." };
         }
 
-        // Criar a entidade Transação
+        // Criar a entidade Transaï¿½ï¿½o
         var newTransaction = new Transaction
         {
             Id = Guid.NewGuid(),
@@ -46,7 +46,7 @@ public class TransactionService : ITransactionService
             Type = dto.Type,
             Date = dto.Date.ToUniversalTime(), // Armazenar em UTC
             AccountId = dto.AccountId,
-            CreatedAt = DateTime.UtcNow,
+            CreatedAt = DateTime.Now,
             CategoryId = dto.CategoryId
         };
 
@@ -55,7 +55,7 @@ public class TransactionService : ITransactionService
         await _transactionRepository.SaveChangesAsync();
 
         // Mapear para DTO de resposta (incluindo nome da conta)
-        // Precisamos recarregar a transação com a conta para o mapeamento
+        // Precisamos recarregar a transaï¿½ï¿½o com a conta para o mapeamento
         var savedTransaction = await _transactionRepository.GetByIdAsync(newTransaction.Id, userId);
         var responseDto = MapTransactionToResponseDto(savedTransaction!); // Usamos ! pois acabamos de criar
 
@@ -64,7 +64,7 @@ public class TransactionService : ITransactionService
 
     public async Task<ServiceResponse<IEnumerable<TransactionResponseDto>>> GetTransactionsByAccountIdAsync(Guid accountId, Guid userId)
     {
-        // O repositório já valida se a conta pertence ao usuário
+        // O repositï¿½rio jï¿½ valida se a conta pertence ao usuï¿½rio
         var transactions = await _transactionRepository.GetAllByAccountIdAsync(accountId, userId);
 
         var responseDtos = transactions.Select(MapTransactionToResponseDto).ToList();
@@ -78,7 +78,7 @@ public class TransactionService : ITransactionService
 
         if (transaction == null)
         {
-            return new ServiceResponse<TransactionResponseDto> { Success = false, ErrorMessage = "Transação não encontrada ou não pertence ao usuário." };
+            return new ServiceResponse<TransactionResponseDto> { Success = false, ErrorMessage = "Transaï¿½ï¿½o nï¿½o encontrada ou nï¿½o pertence ao usuï¿½rio." };
         }
 
         var responseDto = MapTransactionToResponseDto(transaction);
@@ -87,11 +87,11 @@ public class TransactionService : ITransactionService
 
     public async Task<ServiceResponse<TransactionResponseDto>> UpdateTransactionAsync(Guid transactionId, UpdateTransactionRequestDto dto, Guid userId)
     {
-        // Buscar a transação existente (já valida o usuário)
+        // Buscar a transaï¿½ï¿½o existente (jï¿½ valida o usuï¿½rio)
         var transaction = await _transactionRepository.GetByIdAsync(transactionId, userId);
         if (transaction == null)
         {
-            return new ServiceResponse<TransactionResponseDto> { Success = false, ErrorMessage = "Transação não encontrada ou não pertence ao usuário." };
+            return new ServiceResponse<TransactionResponseDto> { Success = false, ErrorMessage = "Transaï¿½ï¿½o nï¿½o encontrada ou nï¿½o pertence ao usuï¿½rio." };
         }
 
         // Validar a nova conta (caso tenha sido alterada)
@@ -100,7 +100,7 @@ public class TransactionService : ITransactionService
             var newAccount = await _accountRepository.GetByIdAsync(dto.AccountId, userId);
             if (newAccount == null)
             {
-                return new ServiceResponse<TransactionResponseDto> { Success = false, ErrorMessage = "Nova conta não encontrada ou não pertence ao usuário." };
+                return new ServiceResponse<TransactionResponseDto> { Success = false, ErrorMessage = "Nova conta nï¿½o encontrada ou nï¿½o pertence ao usuï¿½rio." };
             }
         }
 
@@ -109,7 +109,7 @@ public class TransactionService : ITransactionService
             var newCategory = await _categoryRepository.GetByIdAsync(dto.CategoryId, userId);
             if (newCategory == null)
             {
-                return new ServiceResponse<TransactionResponseDto> { Success = false, ErrorMessage = "Nova categoria não encontrada ou não pertence ao usuário." };
+                return new ServiceResponse<TransactionResponseDto> { Success = false, ErrorMessage = "Nova categoria nï¿½o encontrada ou nï¿½o pertence ao usuï¿½rio." };
             }
         }
 
@@ -134,11 +134,11 @@ public class TransactionService : ITransactionService
 
     public async Task<ServiceResponse<bool>> DeleteTransactionAsync(Guid transactionId, Guid userId)
     {
-        // Buscar a transação (já valida o usuário)
+        // Buscar a transaï¿½ï¿½o (jï¿½ valida o usuï¿½rio)
         var transaction = await _transactionRepository.GetByIdAsync(transactionId, userId);
         if (transaction == null)
         {
-            return new ServiceResponse<bool> { Success = false, ErrorMessage = "Transação não encontrada ou não pertence ao usuário." };
+            return new ServiceResponse<bool> { Success = false, ErrorMessage = "Transaï¿½ï¿½o nï¿½o encontrada ou nï¿½o pertence ao usuï¿½rio." };
         }
 
         // Deletar
@@ -149,10 +149,10 @@ public class TransactionService : ITransactionService
     }
 
 
-    // --- Método Auxiliar de Mapeamento ---
+    // --- Mï¿½todo Auxiliar de Mapeamento ---
     private TransactionResponseDto MapTransactionToResponseDto(Transaction transaction)
     {
-        // Assume que transaction.Account foi carregada pelo repositório (.Include)
+        // Assume que transaction.Account foi carregada pelo repositï¿½rio (.Include)
         return new TransactionResponseDto
         {
             Id = transaction.Id,
@@ -163,7 +163,7 @@ public class TransactionService : ITransactionService
             Date = transaction.Date,
             CreatedAt = transaction.CreatedAt,
             AccountId = transaction.AccountId,
-            AccountName = transaction.Account?.Name ?? "Conta não encontrada", // Usa o objeto Account carregado
+            AccountName = transaction.Account?.Name ?? "Conta nï¿½o encontrada", // Usa o objeto Account carregado
             CategoryId = transaction.CategoryId,
             CategoryName = transaction.Category?.Name ?? "Sem categoria"
         };
@@ -171,7 +171,7 @@ public class TransactionService : ITransactionService
 
     public async Task<ServiceResponse<IEnumerable<TransactionResponseDto>>> SearchTransactionsAsync(Guid userId, TransactionSearchRequestDto filters)
     {
-        // Chama o novo método do repositório
+        // Chama o novo mï¿½todo do repositï¿½rio
         var transactions = await _transactionRepository.GetByFilterAsync(userId, filters);
 
         var responseDtos = transactions.Select(MapTransactionToResponseDto).ToList();

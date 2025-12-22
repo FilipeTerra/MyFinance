@@ -13,6 +13,7 @@ interface CategorySelectFieldProps {
     errorMessage?: string;
     disabled?: boolean;
     onCategoryCreated: (newCategory: CategoryDto) => void;
+    allowCreation?: boolean;
 }
 
 export function CategorySelectField({
@@ -21,11 +22,11 @@ export function CategorySelectField({
     onChange,
     errorMessage,
     disabled,
-    onCategoryCreated
+    onCategoryCreated,
+    allowCreation = true
 }: CategorySelectFieldProps) {
     const [isCreating, setIsCreating] = useState(false);
-    const [newCategoryName, setNewCategoryName] = useState('');
-    
+    const [newCategoryName, setNewCategoryName] = useState('');    
     const { createCategory, isLoading: isSaving, error, setError } = useTransactionFormLogic();
 
     const handleSaveClick = async () => {
@@ -123,15 +124,17 @@ export function CategorySelectField({
                 </select>
                 {errorMessage && <span className="field-error-message">{errorMessage}</span>}
             </div>
-            <button
-                type="button"
-                className="add-new-button"
-                onClick={() => setIsCreating(true)}
-                disabled={disabled}
-                title="Criar nova categoria"
-            >
-                +
-            </button>
+            {allowCreation && (
+                <button
+                    type="button"
+                    className="add-new-button"
+                    onClick={() => setIsCreating(true)}
+                    disabled={disabled}
+                    title="Criar nova categoria"
+                >
+                    +
+                </button>
+            )}
         </div>
     );
 }

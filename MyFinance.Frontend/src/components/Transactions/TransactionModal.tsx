@@ -251,6 +251,7 @@ export function TransactionModal({
                         onAccountCreated={onAccountCreated}
                         errorMessage={errors.accountId?.message}
                         disabled={isLoading}
+                        allowCreation={!isEditing}
                     />
 
                     <CategorySelectField
@@ -260,6 +261,7 @@ export function TransactionModal({
                         errorMessage={errors.categoryId?.message}
                         disabled={isLoading}
                         onCategoryCreated={onCategoryCreated}
+                        allowCreation={!isEditing}
                     />
 
                     <div className="modal-actions">

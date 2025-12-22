@@ -10,6 +10,7 @@ interface AccountSelectFieldProps {
     onAccountCreated: (newAccount: AccountResponseDto) => void;
     errorMessage?: string;
     disabled?: boolean;
+    allowCreation?: boolean;
 }
 
 interface NewAccountState {
@@ -24,7 +25,8 @@ export function AccountSelectField({
     onChange,
     onAccountCreated,
     errorMessage,
-    disabled
+    disabled,
+    allowCreation = true
 }: AccountSelectFieldProps) {
     const [isCreating, setIsCreating] = useState(false);
     
@@ -196,15 +198,17 @@ export function AccountSelectField({
                 </select>
                 {errorMessage && <span className="field-error-message">{errorMessage}</span>}
             </div>
-            <button
-                type="button"
-                className="add-new-button"
-                onClick={() => setIsCreating(true)}
-                disabled={disabled}
-                title="Criar nova conta"
-            >
-                +
-            </button>
+            {allowCreation && (
+                <button
+                    type="button"
+                    className="add-new-button"
+                    onClick={() => setIsCreating(true)}
+                    disabled={disabled}
+                    title="Criar nova conta"
+                >
+                    +
+                </button>
+            )}
         </div>
     );
 }
