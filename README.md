@@ -66,4 +66,4 @@ O projeto utiliza uma stack moderna, separada entre Backend (API) e Frontend (SP
 * [ ] Metas de economia e orçamentos.
 
 ---
-Desenvolvido por **[Seu Nome]** 👨‍💻
+Desenvolvido por **[Filipe Caldeira]** 👨‍💻
