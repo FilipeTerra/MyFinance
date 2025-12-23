@@ -41,7 +41,7 @@ export function TransactionList({ transactions, isLoading, onDelete, onEdit }: T
 
     return (
         <div className="transaction-list-container">
-            <h3>Transações e contas</h3>
+            <h3>Transações</h3>
             
             {/* Tabela de Transações */}
             <table className="transaction-table">

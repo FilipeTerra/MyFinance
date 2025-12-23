@@ -31,7 +31,8 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowReactApp", policyBuilder =>
     {
-        policyBuilder.WithOrigins("http://localhost:5173")
+        policyBuilder
+               .AllowAnyOrigin() // Alterar para a URL do Vercel depois (ex: .WithOrigins("https://meu-app.vercel.app"))
                .AllowAnyHeader()
                .AllowAnyMethod();
     });

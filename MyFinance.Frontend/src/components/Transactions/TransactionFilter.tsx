@@ -41,7 +41,7 @@ export function TransactionFilter({ accounts, onFilterChange, isLoading }: Trans
                     <option value="" disabled>Selecione uma conta...</option>
                     {accounts.map(account => (
                         <option key={account.id} value={account.id}>
-                            {account.name} (Saldo: {account.currentBalance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })})
+                            {account.name}
                         </option>
                     ))}
                 </select>
