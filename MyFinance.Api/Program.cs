@@ -77,14 +77,8 @@ builder.Services.AddScoped<ICategoryService, CategoryService>();
 var app = builder.Build();
 
 // --- Configura��o do Pipeline HTTP ---
-
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    // Habilitar Swagger UI em desenvolvimento
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+app.UseSwagger();
+app.UseSwaggerUI();
 
 app.UseHttpsRedirection();
 
