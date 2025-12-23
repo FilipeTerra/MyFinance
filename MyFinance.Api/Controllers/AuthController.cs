@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 namespace MyFinance.Api.Controllers;
 
 [ApiController]
-[Route("api/[controller]")] // Rota base será /api/auth
+[Route("api/[controller]")] // Rota base serï¿½ /api/auth
 public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;
@@ -19,7 +19,7 @@ public class AuthController : ControllerBase
     [HttpPost("login")] // Rota completa: POST /api/auth/login
     public async Task<IActionResult> Login([FromBody] LoginRequestDto loginRequest)
     {
-        // Validação básica do DTO (verifica os [Required], [EmailAddress])
+        // Validaï¿½ï¿½o bï¿½sica do DTO (verifica os [Required], [EmailAddress])
         if (!ModelState.IsValid)
         {
             return BadRequest(ModelState);
@@ -39,7 +39,7 @@ public class AuthController : ControllerBase
     [HttpPost("register")] // Rota completa: POST /api/auth/register
     public async Task<IActionResult> Register([FromBody] RegisterRequestDto registerRequest)
     {
-        // Validação básica do DTO (verifica [Required], [Compare], etc.)
+        // Validaï¿½ï¿½o bï¿½sica do DTO (verifica [Required], [Compare], etc.)
         if (!ModelState.IsValid)
         {
             return BadRequest(ModelState);
@@ -49,11 +49,11 @@ public class AuthController : ControllerBase
 
         if (!success)
         {
-            // Retorna 400 Bad Request com a mensagem de erro (ex: email já existe)
+            // Retorna 400 Bad Request com a mensagem de erro (ex: email jï¿½ existe)
             return BadRequest(new { message = errorMessage });
         }
 
         // Retorna 201 Created 
-        return Ok(new { message = "Usuário registrado com sucesso!" });
+        return Ok(new { message = "UsuÃ¡rio registrado com sucesso!" });
     }
 }

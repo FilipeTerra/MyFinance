@@ -10,39 +10,30 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// --- Configura��o dos Servi�os ---
-
-// Ler a Connection String do appsettings.Development.json
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
-// Registrar o DbContext com o provedor Npgsql
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(connectionString));
 
-// Registrar os servi�os dos Controllers
 builder.Services.AddControllers();
 
-// Configurar o Swagger/OpenAPI
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Configurar o CORS (Permitir acesso do Frontend React)
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowReactApp", policyBuilder =>
     {
         policyBuilder
-               .AllowAnyOrigin() // Alterar para a URL do Vercel depois (ex: .WithOrigins("https://meu-app.vercel.app"))
+               .AllowAnyOrigin()
                .AllowAnyHeader()
                .AllowAnyMethod();
     });
 });
 
-// Ler configura��es do JWT do appsettings
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 var secretKey = jwtSettings["Secret"] ?? throw new ArgumentNullException("JwtSettings:Secret", "Chave secreta JWT n�o configurada.");
 
-// Configurar Autentica��o JWT Bearer
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -73,23 +64,14 @@ builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 
-// --- Constru��o do App ---
 var app = builder.Build();
 
-// --- Configura��o do Pipeline HTTP ---
 app.UseSwagger();
 app.UseSwaggerUI();
-
-app.UseHttpsRedirection();
-
-// Habilitar a pol�tica CORS que definimos
 app.UseCors("AllowReactApp");
-app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Mapear as rotas para os Controllers
 app.MapControllers();
 
-// --- Executar o App ---
 app.Run();
