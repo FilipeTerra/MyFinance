@@ -32,7 +32,7 @@ builder.Services.AddCors(options =>
 });
 
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
-var secretKey = jwtSettings["Secret"] ?? throw new ArgumentNullException("JwtSettings:Secret", "Chave secreta JWT n�o configurada.");
+var secretKey = jwtSettings["Secret"] ?? throw new ArgumentNullException("JwtSettings:Secret", "Chave secreta JWT náo configurada.");
 
 builder.Services.AddAuthentication(options =>
 {
@@ -45,16 +45,16 @@ builder.Services.AddAuthentication(options =>
     {
         ValidateIssuer = true,
         ValidateAudience = true,
-        ValidateLifetime = true, // Verifica se o token n�o expirou
+        ValidateLifetime = true, // Verifica se o token náo expirou
         ValidateIssuerSigningKey = true,
         ValidIssuer = jwtSettings["Issuer"],
         ValidAudience = jwtSettings["Audience"],
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
-        ClockSkew = TimeSpan.Zero // Remove a toler�ncia padr�o de 5 minutos na expira��o
+        ClockSkew = TimeSpan.Zero // Remove a toleráncia padráo de 5 minutos na expiração
     };
 });
 
-// Registrar servi�os e reposit�rios para Inje��o de Depend�ncia
+// Registrar serviáos e repositários para Injeção de Dependáncia
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IAccountRepository, AccountRepository>();

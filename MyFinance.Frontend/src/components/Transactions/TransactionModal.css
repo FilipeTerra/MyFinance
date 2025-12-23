@@ -118,15 +118,15 @@
     }
 
 
-/* Estilos para o Grupo de Conta com Bot�o */
+/* Estilos para o Grupo de Conta com Botáo */
 .form-group-with-button {
     display: flex;
-    align-items: flex-end; /* Alinha o bot�o na base do input */
+    align-items: flex-end; /* Alinha o botáo na base do input */
     gap: 0.5rem;
 }
 
     .form-group-with-button .input-wrapper {
-        flex-grow: 1; /* Faz o select ocupar o espa�o dispon�vel */
+        flex-grow: 1; /* Faz o select ocupar o espaáo disponável */
     }
 
         /* Garante que o label e o select dentro do wrapper funcionem */
@@ -153,7 +153,7 @@
     line-height: 42.5px; /* Centraliza o "+" verticalmente */
     text-align: center;
     transition: background-color 0.2s ease;
-    flex-shrink: 0; /* Impede que o bot�o encolha */
+    flex-shrink: 0; /* Impede que o botáo encolha */
 }
 
     .add-new-button:hover {
@@ -168,12 +168,12 @@
     border-width: 1px; /* Garante que a borda tenha espessura */
 }
 
-    /* Opcional: Adiciona um brilho vermelho sutil no foco para refor�ar */
+    /* Opcional: Adiciona um brilho vermelho sutil no foco para reforáar */
     .form-group input.input-error:focus,
     .form-group select.input-error:focus,
     .input-wrapper select.input-error:focus {
         box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.3) !important;
-        outline: none; /* Remove o outline padr�o do navegador no foco */
+        outline: none; /* Remove o outline padráo do navegador no foco */
     }
 
 /* Estilo para a mensagem de erro abaixo do campo (mantido) */
@@ -194,13 +194,13 @@
     text-align: left;
 }
 
-/* Estilos para o formul�rio de cria��o de conta dentro do modal */
+/* Estilos para o formulário de criação de conta dentro do modal */
 .create-account-form {
     border: 1px solid #e2e8f0;
     border-radius: 6px;
     padding: 1.5rem;
-    margin-top: 1rem; /* Espa�o acima do formul�rio de conta */
-    margin-bottom: 1rem; /* Espa�o abaixo antes do pr�ximo campo (categoria) */
+    margin-top: 1rem; /* Espaáo acima do formulário de conta */
+    margin-bottom: 1rem; /* Espaáo abaixo antes do práximo campo (categoria) */
     background-color: #f8fafc; /* Um fundo levemente diferente */
 }
 
@@ -215,19 +215,19 @@
     display: flex;
     justify-content: flex-end;
     gap: 0.8rem;
-    margin-top: 1.5rem; /* Espa�o acima dos bot�es Salvar/Cancelar Conta */
+    margin-top: 1.5rem; /* Espaáo acima dos botáes Salvar/Cancelar Conta */
 }
 
 .create-category-actions {
     display: flex;
     justify-content: flex-end;
     gap: 0.8rem;
-    margin-top: 1.5rem; /* Espa�o acima dos bot�es Salvar/Cancelar Conta */
+    margin-top: 1.5rem; /* Espaáo acima dos botáes Salvar/Cancelar Conta */
 }
 
-/* Ajuste opcional para o bot�o '+' n�o ficar estranho quando o form aparecer */
+/* Ajuste opcional para o botáo '+' náo ficar estranho quando o form aparecer */
 .account-section {
-    position: relative; /* Para contexto, se necess�rio */
+    position: relative; /* Para contexto, se necessário */
 }
 
 .create-account-form,

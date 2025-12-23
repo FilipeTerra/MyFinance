@@ -26,13 +26,13 @@ public class AuthService : IAuthService
 
     public async Task<(bool Success, LoginResponseDto? Data, string? ErrorMessage)> AuthenticateAsync(LoginRequestDto loginRequest)
     {
-        // Encontrar o usu·rio pelo email
+        // Encontrar o usu√°rio pelo email
         var user = await _userRepository.GetUserByEmailAsync(loginRequest.Email);
 
-        // Verificar se o usu·rio existe e se a senha est· correta
+        // Verificar se o usu√°rio existe e se a senha est√° correta
         if (user == null || !BCrypt.Net.BCrypt.Verify(loginRequest.Password, user.PasswordHash))
         {
-            return (false, null, "Email ou senha inv·lidos."); // CritÈrio de AceitaÁ„o
+            return (false, null, "Email ou senha inv√°lidos."); // Crit√°rio de Aceita√ß√£o
         }
 
         // Gerar o Token JWT
@@ -50,27 +50,27 @@ public class AuthService : IAuthService
 
     public async Task<(bool Success, string? ErrorMessage)> RegisterAsync(RegisterRequestDto registerRequest)
     {
-        // Verificar se o email j· existe (CritÈrio de AceitaÁ„o)
+        // Verificar se o email j√° existe (Crit√°rio de Aceita√ß√£o)
         var emailExists = await _userRepository.CheckEmailExistsAsync(registerRequest.Email);
         if (emailExists)
         {
-            return (false, "Este email j· est· cadastrado.");
+            return (false, "Este email j√° est√° cadastrado.");
         }
 
-        // Criar o hash da senha (CritÈrio de AceitaÁ„o)
+        // Criar o hash da senha (Crit√°rio de Aceita√ß√£o)
         var passwordHash = BCrypt.Net.BCrypt.HashPassword(registerRequest.Password);
 
         // Criar a nova entidade User
         var newUser = new User
         {
-            Id = Guid.NewGuid(), // Gerar um novo ID ˙nico
+            Id = Guid.NewGuid(), // Gerar um novo ID √°nico
             Name = registerRequest.Name,
             Email = registerRequest.Email,
             PasswordHash = passwordHash,
             CreatedAt = DateTime.UtcNow // Usar UTC para datas no servidor
         };
 
-        // Adicionar o usu·rio ao banco de dados
+        // Adicionar o usu√°rio ao banco de dados
         try
         {
             await _userRepository.AddUserAsync(newUser);
@@ -78,7 +78,7 @@ public class AuthService : IAuthService
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Erro ao registrar usu·rio: {ex.Message}"); // Apenas para debug
+            Console.WriteLine($"Erro ao registrar usu√°rio: {ex.Message}"); // Apenas para debug
             return (false, "Ocorreu um erro inesperado ao tentar registrar. Tente novamente mais tarde.");
         }
     }
@@ -90,19 +90,19 @@ public class AuthService : IAuthService
         // Obter a chave secreta do appsettings
         var jwtSettings = _configuration.GetSection("JwtSettings");
         var key = Encoding.ASCII.GetBytes(jwtSettings["Secret"]
-            ?? throw new InvalidOperationException("Chave secreta JWT n„o configurada."));
+            ?? throw new InvalidOperationException("Chave secreta JWT n√°o configurada."));
 
-        // Obter tempo de expiraÁ„o
+        // Obter tempo de expira√ß√£o
         var expiryMinutes = int.Parse(jwtSettings["ExpiryMinutes"] ?? "60");
 
-        // Criar as "claims" (informaÁıes dentro do token)
+        // Criar as "claims" (informa√ß√£es dentro do token)
         var claims = new[]
         {
-            new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()), // Id do usu·rio (Subject)
+            new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()), // Id do usu√°rio (Subject)
             new Claim(JwtRegisteredClaimNames.Email, user.Email),
             new Claim(JwtRegisteredClaimNames.Name, user.Name),
             // Adicione outras claims se precisar (ex: roles)
-            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()) // Identificador ˙nico do token
+            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()) // Identificador √°nico do token
         };
 
         // Configurar o descritor do token

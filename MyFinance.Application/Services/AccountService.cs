@@ -27,7 +27,7 @@ public class AccountService : IAccountService
             Type = dto.Type,
             InitialBalance = dto.InitialBalance,
             CreatedAt = DateTime.UtcNow,
-            UserId = userId // O UserId vem do token (seguro), n�o do DTO
+            UserId = userId // O UserId vem do token (seguro), náo do DTO
         };
 
         await _accountRepository.AddAsync(newAccount);
@@ -57,7 +57,7 @@ public class AccountService : IAccountService
             return new ServiceResponse<AccountResponseDto>
             {
                 Success = false,
-                ErrorMessage = "Conta n�o encontrada ou n�o pertence ao usu�rio."
+                ErrorMessage = "Conta náo encontrada ou náo pertence ao usuário."
             };
         }
 
@@ -81,15 +81,15 @@ public class AccountService : IAccountService
             return new ServiceResponse<bool>
             {
                 Success = false,
-                ErrorMessage = "Conta n�o encontrada ou n�o pertence ao usu�rio."
+                ErrorMessage = "Conta náo encontrada ou náo pertence ao usuário."
             };
         }
 
-        // REGRA DE NEG�CIO (AC 4.3): N�o excluir conta com transa��es
-        // TODO: Adicionar verifica��o com TransactionRepository quando ele existir
+        // REGRA DE NEGáCIO (AC 4.3): Náo excluir conta com transaçães
+        // TODO: Adicionar verificação com TransactionRepository quando ele existir
         // if (await _transactionRepository.HasTransactionsAsync(accountId))
         // {
-        //    return new ServiceResponse<bool> { Success = false, ErrorMessage = "N�o � poss�vel excluir contas com transa��es." };
+        //    return new ServiceResponse<bool> { Success = false, ErrorMessage = "Náo á possável excluir contas com transaçães." };
         // }
 
         _accountRepository.Delete(account);
@@ -98,7 +98,7 @@ public class AccountService : IAccountService
         return new ServiceResponse<bool> { Data = true };
     }
 
-    // --- M�todo Auxiliar de Mapeamento ---
+    // --- Mátodo Auxiliar de Mapeamento ---
     private AccountResponseDto MapAccountToResponseDto(Account account)
     {
         return new AccountResponseDto
@@ -109,8 +109,8 @@ public class AccountService : IAccountService
             TypeName = account.Type.ToString(), // Converte Enum para String
             InitialBalance = account.InitialBalance,
 
-            // NOTA: CurrentBalance por enquanto � s� o InitialBalance.
-            // Isso ser� atualizado quando tivermos transa��es.
+            // NOTA: CurrentBalance por enquanto á sá o InitialBalance.
+            // Isso será atualizado quando tivermos transaçães.
             CurrentBalance = account.InitialBalance,
 
             UserId = account.UserId
