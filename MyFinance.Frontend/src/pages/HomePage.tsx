@@ -138,6 +138,33 @@ export function HomePage() {
         }
     };
 
+    const handleFileUpload = async (file: File) => {
+    // Validação UX: O extrato pertence a qual conta?
+    // Se o usuário não selecionou uma conta no filtro, precisamos pedir!
+    if (!activeFilters?.accountId) {
+        alert("Por favor, selecione uma conta no filtro acima antes de fazer o upload do extrato.");
+        return;
+    }
+
+    try {
+        setIsLoadingTransactions(true); // Reaproveita o estado de loading para mostrar que está trabalhando
+        
+        // Chama a API passando o arquivo e a conta atual selecionada
+        await transactionService.uploadFile(file, activeFilters.accountId);
+        
+        alert("Arquivo enviado com sucesso! O Agente IA está processando as transações.");
+        
+        // Recarrega a lista de transações para mostrar os novos dados inseridos
+        handleFilterChange(activeFilters); 
+        
+    } catch (err) {
+        const axiosError = err as AxiosError<ApiErrorResponse>;
+        alert(axiosError.response?.data?.message || "Erro ao fazer upload do arquivo.");
+    } finally {
+        setIsLoadingTransactions(false);
+    }
+};
+
     // --- LÓGICA DE CONTAS ---
 
     // Abre modal para criar NOVA conta
@@ -215,7 +242,7 @@ export function HomePage() {
                 <div className="homepage-actions">
                     <CreateAccountButton onClick={handleOpenCreateAccountModal} />
                     <CreateTransactionButton onClick={handleOpenCreateModal} />
-                    <UploadTransactionFileButton onClick={() => alert('Funcionalidade de upload ainda não implementada.')} />
+                    <UploadTransactionFileButton onFileSelect={handleFileUpload} />
                 </div>
 
                 {/* Seção de Cards de Contas */}

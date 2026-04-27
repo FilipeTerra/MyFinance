@@ -12,7 +12,7 @@ namespace MyFinance.Application.Services;
 public class TransactionService : ITransactionService
 {
     private readonly ITransactionRepository _transactionRepository;
-    private readonly IAccountRepository _accountRepository; // Necessário para validar a conta
+    private readonly IAccountRepository _accountRepository;
     private readonly ICategoryRepository _categoryRepository;
 
     public TransactionService(ITransactionRepository transactionRepository, IAccountRepository accountRepository, ICategoryRepository categoryRepository)

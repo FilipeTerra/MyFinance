@@ -9,6 +9,7 @@ import type { CategoryResponseDto } from '../types/CategoryResponseDto';
 import type { AccountRequestDto } from '../types/AccountRequestDto';
 import type { CategoryRequestDto } from '../types/CategoryRequestDto';
 import type { UpdateAccountRequestDto } from '../types/UpdateAccountRequestDto';
+import type { UploadFileResponseDto } from '../types/UploadFileResponseDto';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -107,7 +108,14 @@ const transactionService = {
     },
     delete: (id: string) => {
         return apiClient.delete<void>(`/transactions/${id}`);
-    }
+    },
+    uploadFile: async (file: File, accountId: string) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('accountId', accountId);
+
+        return apiClient.post<UploadFileResponseDto<TransactionResponseDto>>('/transactions/upload', formData);
+    },
 };
 
 export {
