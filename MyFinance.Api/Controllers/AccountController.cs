@@ -2,39 +2,51 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MyFinance.Application.Dtos;
 using MyFinance.Application.Interfaces.Services;
-using System;
-using System.Security.Claims; // Para ler o Id do usu·rio do token
+using System.Security.Claims;
 
 namespace MyFinance.Api.Controllers;
 
+/// <summary>
+/// Controlador respons√°vel pela gest√£o de contas do usu√°rio.
+/// Fornece endpoints para criar, obter, atualizar e deletar contas.
+/// </summary>
 [ApiController]
-[Route("api/[controller]")] // Rota base: /api/accounts
-[Authorize] // Protege TODOS os endpoints neste controller
+[Route("api/[controller]")]
+[Authorize]
 public class AccountsController : ControllerBase
 {
     private readonly IAccountService _accountService;
 
+    /// <summary>
+    /// Inicializa uma nova inst√¢ncia do controlador de contas com o servi√ßo de contas injetado.
+    /// </summary>
+    /// <param name="accountService">Servi√ßo respons√°vel pela l√≥gica de neg√≥cio das contas</param>
     public AccountsController(IAccountService accountService)
     {
         _accountService = accountService;
     }
 
-    // --- FunÁ„o Helper para pegar o UserId do Token (JwtRegisteredClaimNames.Sub) ---
+    /// <summary>
+    /// Extrai o identificador do usu√°rio autenticado a partir do token JWT.
+    /// </summary>
+    /// <returns>GUID do usu√°rio autenticado</returns>
+    /// <exception cref="InvalidOperationException">Lan√ßado quando o usu√°rio n√£o est√° autenticado</exception>
     private Guid GetUserIdFromToken()
     {
-        // Busca a claim "sub" (Subject) do token, que configuramos no AuthService
-        //
         var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
         if (string.IsNullOrEmpty(userIdString))
         {
-            // Isso n„o deve acontecer se [Authorize] estiver funcionando
-            throw new InvalidOperationException("Usu·rio n„o autenticado.");
+            throw new InvalidOperationException("Usu√°rio n√£o autenticado.");
         }
         return new Guid(userIdString);
     }
 
-    // POST /api/accounts
+    /// <summary>
+    /// Cria uma nova conta de usu√°rio no sistema.
+    /// </summary>
+    /// <param name="requestDto">Dados da conta a ser criada</param>
+    /// <returns>Retorna 201 (Created) com os dados da conta criada, ou 400 (BadRequest) se houver erro</returns>
     [HttpPost]
     public async Task<IActionResult> CreateAccount([FromBody] AccountRequestDto requestDto)
     {
@@ -51,39 +63,47 @@ public class AccountsController : ControllerBase
             return BadRequest(new { message = response.ErrorMessage });
         }
 
-        // Retorna 201 Created com o objeto criado e o local (URL)
         return CreatedAtAction(nameof(GetAccountById), new { id = response.Data!.Id }, response.Data);
     }
 
-    // GET /api/accounts
+    /// <summary>
+    /// Retorna todas as contas do usu√°rio autenticado.
+    /// </summary>
+    /// <returns>Lista de todas as contas do usu√°rio com status 200 (OK)</returns>
     [HttpGet]
     public async Task<IActionResult> GetAllAccounts()
     {
         var userId = GetUserIdFromToken();
         var response = await _accountService.GetAllAccountsAsync(userId);
 
-        // response.Data nunca ser· nulo aqui, na pior das hipÛteses È uma lista vazia
         return Ok(response.Data);
     }
 
-    // GET /api/accounts/{id} 
-    // (Necess·rio para o 'CreatedAtAction' do Create)
+    /// <summary>
+    /// Retorna uma conta espec√≠fica do usu√°rio autenticado pelo seu identificador.
+    /// </summary>
+    /// <param name="id">Identificador √∫nico (GUID) da conta</param>
+    /// <returns>Retorna 200 (OK) com os dados da conta, ou 404 (NotFound) se a conta n√£o existir</returns>
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetAccountById(Guid id)
     {
         var userId = GetUserIdFromToken();
-        // Usamos o Service para garantir que o usu·rio sÛ possa pegar a *sua* conta
         var response = await _accountService.GetAllAccountsAsync(userId);
         var account = response.Data?.FirstOrDefault(a => a.Id == id);
 
         if (account == null)
         {
-            return NotFound(new { message = "Conta n„o encontrada." });
+            return NotFound(new { message = "Conta n√£o encontrada." });
         }
         return Ok(account);
     }
 
-    // PUT /api/accounts/{id}
+    /// <summary>
+    /// Atualiza os dados de uma conta existente do usu√°rio autenticado.
+    /// </summary>
+    /// <param name="id">Identificador √∫nico (GUID) da conta a ser atualizada</param>
+    /// <param name="requestDto">Novos dados da conta</param>
+    /// <returns>Retorna 200 (OK) com os dados atualizados, 404 (NotFound) se n√£o encontrar, ou 400 (BadRequest) se houver erro</returns>
     [HttpPut("{id:guid}")]
     public async Task<IActionResult> UpdateAccount(Guid id, [FromBody] UpdateAccountRequestDto requestDto)
     {
@@ -97,18 +117,21 @@ public class AccountsController : ControllerBase
 
         if (!response.Success)
         {
-            // Se a conta n„o for encontrada ou n„o pertencer ao usu·rio
-            if (response.ErrorMessage!.Contains("n„o encontrada"))
+            if (response.ErrorMessage!.Contains("n√£o encontrada"))
             {
                 return NotFound(new { message = response.ErrorMessage });
             }
             return BadRequest(new { message = response.ErrorMessage });
         }
 
-        return Ok(response.Data); // Retorna a conta atualizada
+        return Ok(response.Data);
     }
 
-    // DELETE /api/accounts/{id}
+    /// <summary>
+    /// Deleta uma conta existente do usu√°rio autenticado.
+    /// </summary>
+    /// <param name="id">Identificador √∫nico (GUID) da conta a ser deletada</param>
+    /// <returns>Retorna 204 (NoContent) se bem-sucedido, 404 (NotFound) se n√£o encontrar, ou 400 (BadRequest) se houver erro</returns>
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> DeleteAccount(Guid id)
     {
@@ -117,15 +140,13 @@ public class AccountsController : ControllerBase
 
         if (!response.Success)
         {
-            // Se a conta n„o for encontrada
-            if (response.ErrorMessage!.Contains("n„o encontrada"))
+            if (response.ErrorMessage!.Contains("n√£o encontrada"))
             {
                 return NotFound(new { message = response.ErrorMessage });
             }
-            // Se for outra regra (ex: conta com transaÁıes)
             return BadRequest(new { message = response.ErrorMessage });
         }
 
-        return NoContent(); // Sucesso (204), sem conte˙do para retornar
+        return NoContent();
     }
 }

@@ -2,25 +2,35 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MyFinance.Application.Dtos;
 using MyFinance.Application.Interfaces.Services;
-using System;
 using System.Security.Claims;
-using System.Threading.Tasks;
 
 namespace MyFinance.Api.Controllers;
 
+/// <summary>
+/// Controlador responsável pela gestão de transações financeiras do usuário.
+/// Fornece endpoints para criar, obter, buscar, atualizar e deletar transações.
+/// </summary>
 [ApiController]
 [Route("api/[controller]")]
-[Authorize] // Todas as rotas aqui exigem autenticação
+[Authorize]
 public class TransactionsController : ControllerBase
 {
     private readonly ITransactionService _transactionService;
 
+    /// <summary>
+    /// Inicializa uma nova instância do controlador de transações com o serviço de transações injetado.
+    /// </summary>
+    /// <param name="transactionService">Serviço responsável pela lógica de negócio das transações</param>
     public TransactionsController(ITransactionService transactionService)
     {
         _transactionService = transactionService;
     }
 
-    // --- Função Helper para pegar o UserId do Token ---
+    /// <summary>
+    /// Extrai o identificador do usuário autenticado a partir do token JWT.
+    /// </summary>
+    /// <returns>GUID do usuário autenticado</returns>
+    /// <exception cref="InvalidOperationException">Lançado quando o usuário não está autenticado</exception>
     private Guid GetUserIdFromToken()
     {
         var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -31,7 +41,11 @@ public class TransactionsController : ControllerBase
         return new Guid(userIdString);
     }
 
-    // POST /api/transactions
+    /// <summary>
+    /// Cria uma nova transação para o usuário autenticado.
+    /// </summary>
+    /// <param name="requestDto">Dados da transação a ser criada</param>
+    /// <returns>Retorna 201 (Created) com os dados da transação criada, ou 400 (BadRequest) se houver erro</returns>
     [HttpPost]
     public async Task<IActionResult> CreateTransaction([FromBody] CreateTransactionRequestDto requestDto)
     {
@@ -45,28 +59,31 @@ public class TransactionsController : ControllerBase
 
         if (!response.Success)
         {
-            // Erros como "Conta náo encontrada" podem ser BadRequest ou NotFound,
-            // mas BadRequest á mais simples por enquanto.
             return BadRequest(new { message = response.ErrorMessage });
         }
 
-        // Retorna 201 Created com a transação criada
         return CreatedAtAction(nameof(GetTransactionById), new { id = response.Data!.Id }, response.Data);
     }
 
-    // GET /api/transactions/account/{accountId} 
-    // Rota especáfica para pegar transaçães POR CONTA (US 8: Filtro)
+    /// <summary>
+    /// Retorna todas as transações de uma conta específica do usuário autenticado.
+    /// </summary>
+    /// <param name="accountId">Identificador único (GUID) da conta</param>
+    /// <returns>Lista de transações da conta com status 200 (OK)</returns>
     [HttpGet("account/{accountId:guid}")]
     public async Task<IActionResult> GetTransactionsByAccount(Guid accountId)
     {
         var userId = GetUserIdFromToken();
         var response = await _transactionService.GetTransactionsByAccountIdAsync(accountId, userId);
 
-        // O serviáo retorna lista vazia se a conta náo for do usuário, entáo OK á seguro
         return Ok(response.Data);
     }
 
-    // GET /api/transactions/{id}
+    /// <summary>
+    /// Retorna uma transação específica do usuário autenticado pelo seu identificador.
+    /// </summary>
+    /// <param name="id">Identificador único (GUID) da transação</param>
+    /// <returns>Retorna 200 (OK) com os dados da transação, ou 404 (NotFound) se a transação não existir</returns>
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetTransactionById(Guid id)
     {
@@ -80,26 +97,31 @@ public class TransactionsController : ControllerBase
         return Ok(response.Data);
     }
 
+    /// <summary>
+    /// Busca transações do usuário autenticado com base em filtros fornecidos.
+    /// </summary>
+    /// <param name="filters">Filtros de busca como data, tipo, categoria ou valor</param>
+    /// <returns>Lista de transações que atendem aos critérios de busca com status 200 (OK), ou 400 (BadRequest) se filtros inválidos</returns>
     [HttpGet("search")]
     public async Task<IActionResult> SearchTransactions([FromQuery] TransactionSearchRequestDto filters)
     {
-        // O [FromQuery] mapeia os parámetros da URL (ex: ?accountId=...) para o objeto DTO.
         if (!ModelState.IsValid)
         {
-            // Retorna 400 Bad Request se o AccountId náo for fornecido,
-            // conforme a validação [Required] no DTO.
             return BadRequest(ModelState);
         }
 
         var userId = GetUserIdFromToken();
         var response = await _transactionService.SearchTransactionsAsync(userId, filters);
 
-        // O serviáo sempre retorna uma lista (Data nunca á nulo),
-        // mesmo que esteja vazia.
         return Ok(response.Data);
     }
 
-    // PUT /api/transactions/{id}
+    /// <summary>
+    /// Atualiza os dados de uma transação existente do usuário autenticado.
+    /// </summary>
+    /// <param name="id">Identificador único (GUID) da transação a ser atualizada</param>
+    /// <param name="requestDto">Novos dados da transação</param>
+    /// <returns>Retorna 200 (OK) com os dados atualizados, 404 (NotFound) se não encontrar, ou 400 (BadRequest) se houver erro</returns>
     [HttpPut("{id:guid}")]
     public async Task<IActionResult> UpdateTransaction(Guid id, [FromBody] UpdateTransactionRequestDto requestDto)
     {
@@ -115,16 +137,19 @@ public class TransactionsController : ControllerBase
         {
             if (response.ErrorMessage!.Contains("Transação não encontrada"))
             {
-                // Pode ser a transação ou a nova conta
                 return NotFound(new { message = response.ErrorMessage });
             }
             return BadRequest(new { message = response.ErrorMessage });
         }
 
-        return Ok(response.Data); // Retorna a transação atualizada
+        return Ok(response.Data);
     }
 
-    // DELETE /api/transactions/{id}
+    /// <summary>
+    /// Deleta uma transação existente do usuário autenticado.
+    /// </summary>
+    /// <param name="id">Identificador único (GUID) da transação a ser deletada</param>
+    /// <returns>Retorna 204 (NoContent) se bem-sucedido, 404 (NotFound) se não encontrar</returns>
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> DeleteTransaction(Guid id)
     {
@@ -136,6 +161,6 @@ public class TransactionsController : ControllerBase
             return NotFound(new { message = response.ErrorMessage });
         }
 
-        return NoContent(); // Sucesso (204)
+        return NoContent();
     }
 }

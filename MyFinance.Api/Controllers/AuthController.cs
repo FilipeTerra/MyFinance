@@ -1,25 +1,37 @@
-using Microsoft.AspNetCore.Mvc; // Para [ApiController], [Route], ControllerBase, etc.
+using Microsoft.AspNetCore.Mvc;
 using MyFinance.Application.Dtos;
 using MyFinance.Application.Interfaces.Services;
 using System.Threading.Tasks;
 
 namespace MyFinance.Api.Controllers;
 
+/// <summary>
+/// Controlador responsável pela autenticação e registro de usuários.
+/// Fornece endpoints para login e registro de novos usuários.
+/// </summary>
 [ApiController]
-[Route("api/[controller]")] // Rota base será /api/auth
+[Route("api/[controller]")]
 public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;
 
+    /// <summary>
+    /// Inicializa uma nova instância do controlador de autenticação com o serviço de autenticação injetado.
+    /// </summary>
+    /// <param name="authService">Serviço responsável pela lógica de autenticação e registro de usuários</param>
     public AuthController(IAuthService authService)
     {
         _authService = authService;
     }
 
-    [HttpPost("login")] // Rota completa: POST /api/auth/login
+    /// <summary>
+    /// Autentica um usuário com base nas credenciais fornecidas e retorna um token JWT.
+    /// </summary>
+    /// <param name="loginRequest">Dados de login contendo email e senha do usuário</param>
+    /// <returns>Retorna 200 (OK) com token JWT se bem-sucedido, 401 (Unauthorized) se credenciais inválidas, ou 400 (BadRequest) se dados inválidos</returns>
+    [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginRequestDto loginRequest)
     {
-        // Validação básica do DTO (verifica os [Required], [EmailAddress])
         if (!ModelState.IsValid)
         {
             return BadRequest(ModelState);
@@ -29,17 +41,20 @@ public class AuthController : ControllerBase
 
         if (!success)
         {
-            // Retorna 401 Unauthorized com a mensagem de erro
             return Unauthorized(new { message = errorMessage });
         }
 
         return Ok(data);
     }
 
-    [HttpPost("register")] // Rota completa: POST /api/auth/register
+    /// <summary>
+    /// Registra um novo usuário no sistema.
+    /// </summary>
+    /// <param name="registerRequest">Dados do registro contendo email, senha e informações pessoais do usuário</param>
+    /// <returns>Retorna 200 (OK) com mensagem de sucesso se bem-sucedido, 400 (BadRequest) se houver erro no registro ou dados inválidos</returns>
+    [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterRequestDto registerRequest)
     {
-        // Validação básica do DTO (verifica [Required], [Compare], etc.)
         if (!ModelState.IsValid)
         {
             return BadRequest(ModelState);
@@ -49,11 +64,9 @@ public class AuthController : ControllerBase
 
         if (!success)
         {
-            // Retorna 400 Bad Request com a mensagem de erro (ex: email já existe)
             return BadRequest(new { message = errorMessage });
         }
 
-        // Retorna 201 Created 
         return Ok(new { message = "Usuário registrado com sucesso!" });
     }
 }
