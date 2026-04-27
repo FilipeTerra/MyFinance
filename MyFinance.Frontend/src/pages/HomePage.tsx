@@ -219,6 +219,8 @@ export function HomePage() {
                 {/* Seção de Cards de Contas */}
                 {isLoadingAccounts ? (
                     <p>Carregando contas...</p>
+                ) : accounts.length === 0 ? (
+                    <p>Não existem contas cadastradas</p>
                 ) : (
                     <div className="accounts-grid">
                         {/* Lista as contas existentes */}

@@ -46,7 +46,7 @@ public class TransactionService : ITransactionService
             Type = dto.Type,
             Date = dto.Date.ToUniversalTime(), // Armazenar em UTC
             AccountId = dto.AccountId,
-            CreatedAt = DateTime.Now,
+            CreatedAt = DateTime.UtcNow,
             CategoryId = dto.CategoryId
         };
 
