@@ -7,9 +7,10 @@ import type { CategoryResponseDto } from '../types/CategoryResponseDto';
 import { TransactionFilter } from '../components/Transactions/TransactionFilter';
 import { TransactionList } from '../components/Transactions/TransactionList';
 import { CreateTransactionButton } from '../components/Transactions/CreateTransactionButton';
+import { CreateAccountButton } from '../components/Accounts/CreateAccountButton';
+import { UploadTransactionFileButton } from '../components/Transactions/UploadTransactionFileButton';
 import { TransactionModal } from '../components/Transactions/TransactionModal';
 import { accountService, categoryService, transactionService, AxiosError, type ApiErrorResponse } from '../services/Api';
-import { CreateAccountButton } from '../components/Accounts/CreateAccountButton';
 import { ConfirmationModal } from '../components/Shared/ConfirmationModal';
 
 // Componentes de Conta
@@ -214,6 +215,7 @@ export function HomePage() {
                 <div className="homepage-actions">
                     <CreateAccountButton onClick={handleOpenCreateAccountModal} />
                     <CreateTransactionButton onClick={handleOpenCreateModal} />
+                    <UploadTransactionFileButton onClick={() => alert('Funcionalidade de upload ainda não implementada.')} />
                 </div>
 
                 {/* Seção de Cards de Contas */}

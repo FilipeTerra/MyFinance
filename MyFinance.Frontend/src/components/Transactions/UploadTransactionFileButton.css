@@ -1,0 +1,31 @@
+/* src/components/Transactions/UploadTransactionFileButton.css */
+.upload-transaction-file-button{
+    background-color: #3b82f6; /* Azul padrão */
+    color: white;
+    border: none;
+    padding: 0.8rem 1.5rem;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+}
+
+.upload-transaction-file-icon {
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+}
+
+.upload-transaction-file-button:hover {
+    background-color: #2563eb;
+    transform: translateY(-1px);
+}
+
+.upload-transaction-file-button:active {
+    transform: translateY(0);
+}
