@@ -3,7 +3,7 @@
 [Bb]in/
 [Oo]bj/
 
-## Arquivos de configuraÁ„o de usu·rio especÌficos da m·quina
+## Arquivos de configura√ß√£o de usu√°rio espec√≠ficos da m√°quina
 *.user
 *.userosscache
 *.sln.docstates
@@ -22,41 +22,63 @@
 *.psess
 *.vsp
 *.vspx
-*.pyc
-*.pyo
 
 ## Arquivos do EF Core
 *.efbundle
 
 # Node.js / React (Vite)
-## DependÍncias
+## Depend√™ncias
 node_modules/
 
 ## Logs
 logs
-*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-## Arquivos de build de produÁ„o
+## Arquivos de build de produ√ß√£o
 dist
 .output
 dist-ssr
 
-## Arquivos de cache e tempor·rios
+## Arquivos de cache e tempor√°rios
 .npm
 .eslintcache
 .vite-node-cache
 *.tsbuildinfo
 
-## Vari·veis de ambiente locais (NUNCA versione segredos!)
+## Vari√°veis de ambiente locais (NUNCA versione segredos!)
 .env.local
 .env.*.local
 
-# ConfiguraÁıes de IDE e Sistema Operacional
+# Python / AI Agent (FastAPI / LangChain)
+## Ambientes Virtuais (Virtualenvs)
+venv/
+.venv/
+env/
+.env/
+
+## Arquivos compilados do Python (Caches)
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyc
+
+## Ferramentas de tipagem e testes (Opcional, mas recomendado)
+.mypy_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+
+## Arquivos tempor√°rios gerados por processamento de arquivos (Ex: PDFs/CSVs)
+tmp/
+temp/
+*.tmp
+
+# Configura√ß√µes de IDE e Sistema Operacional
 .vscode/
 .idea/
 .DS_Store

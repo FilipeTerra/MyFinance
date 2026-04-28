@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MyFinance.Application.Dtos;
 using MyFinance.Application.Interfaces.Services;
+using System.Net.Http.Headers;
 using System.Security.Claims;
 
 namespace MyFinance.Api.Controllers;
@@ -64,6 +65,47 @@ public class TransactionsController : ControllerBase
 
         return CreatedAtAction(nameof(GetTransactionById), new { id = response.Data!.Id }, response.Data);
     }
+
+/// <summary>
+/// Endpoint para upload de extrato bancário/cartão de crédito (CSV ou PDF) e processamento via Agente de IA.
+/// </summary>
+/// <param name="file"></param>
+/// <param name="accountId"></param>
+/// <returns></returns>
+[HttpPost("upload")]
+public async Task<IActionResult> UploadExtrato(IFormFile file, [FromForm] Guid accountId)
+{
+    if (file == null || file.Length == 0)
+        return BadRequest(new { message = "Nenhum arquivo enviado." });
+
+    using var client = new HttpClient();
+    using var content = new MultipartFormDataContent();
+
+    using var fileStream = file.OpenReadStream();
+    var fileContent = new StreamContent(fileStream);
+    
+    fileContent.Headers.ContentType = MediaTypeHeaderValue.Parse(file.ContentType);
+    content.Add(fileContent, "file", file.FileName);
+
+    content.Add(new StringContent(accountId.ToString()), "accountId");
+
+    try
+    {
+        var response = await client.PostAsync("http://127.0.0.1:8181/api/ai/process-statement", content);
+
+        if (response.IsSuccessStatusCode)
+        {
+            var aiResult = await response.Content.ReadAsStringAsync();
+            return Content(aiResult, "application/json"); 
+        }
+
+        return StatusCode((int)response.StatusCode, new { message = "Erro ao processar no Agente de IA." });
+    }
+    catch (Exception ex)
+    {
+        return StatusCode(500, new { message = $"Falha de comunicação com o Agente IA: {ex.Message}" });
+    }
+}
 
     /// <summary>
     /// Retorna todas as transações de uma conta específica do usuário autenticado.

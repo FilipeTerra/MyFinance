@@ -30,7 +30,7 @@ export function UploadTransactionFileButton({ onFileSelect }: UploadTransactionF
                 type="file"
                 ref={fileInputRef}
                 style={{ display: 'none' }} // Esconde o input original
-                accept=".csv, .txt" // Limita aos formatos que o Agente Python vai ler
+                accept=".csv, .application/pdf" // Limita aos formatos que o Agente Python vai ler
                 onChange={handleFileChange}
             />
             <button className="upload-transaction-file-button" onClick={handleButtonClick}>
