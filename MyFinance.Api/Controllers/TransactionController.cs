@@ -17,14 +17,17 @@ namespace MyFinance.Api.Controllers;
 public class TransactionsController : ControllerBase
 {
     private readonly ITransactionService _transactionService;
+    private readonly IAiIntegrationService _aiIntegrationService;
 
     /// <summary>
     /// Inicializa uma nova instância do controlador de transações com o serviço de transações injetado.
     /// </summary>
     /// <param name="transactionService">Serviço responsável pela lógica de negócio das transações</param>
-    public TransactionsController(ITransactionService transactionService)
+    /// <param name="aiIntegrationService">Serviço responsável pela integração com o Agente de IA</param>
+    public TransactionsController(ITransactionService transactionService, IAiIntegrationService aiIntegrationService)
     {
         _transactionService = transactionService;
+        _aiIntegrationService = aiIntegrationService;
     }
 
     /// <summary>
@@ -78,28 +81,18 @@ public async Task<IActionResult> UploadExtrato(IFormFile file, [FromForm] Guid a
     if (file == null || file.Length == 0)
         return BadRequest(new { message = "Nenhum arquivo enviado." });
 
-    using var client = new HttpClient();
-    using var content = new MultipartFormDataContent();
-
-    using var fileStream = file.OpenReadStream();
-    var fileContent = new StreamContent(fileStream);
-    
-    fileContent.Headers.ContentType = MediaTypeHeaderValue.Parse(file.ContentType);
-    content.Add(fileContent, "file", file.FileName);
-
-    content.Add(new StringContent(accountId.ToString()), "accountId");
-
     try
     {
-        var response = await client.PostAsync("http://127.0.0.1:8181/api/ai/process-statement", content);
-
-        if (response.IsSuccessStatusCode)
-        {
-            var aiResult = await response.Content.ReadAsStringAsync();
-            return Content(aiResult, "application/json"); 
-        }
-
-        return StatusCode((int)response.StatusCode, new { message = "Erro ao processar no Agente de IA." });
+        using var fileStream = file.OpenReadStream();
+        
+        var aiResult = await _aiIntegrationService.ProcessStatementAsync(
+            fileStream, 
+            file.FileName, 
+            file.ContentType, 
+            accountId
+        );
+        
+        return Content(aiResult, "application/json"); 
     }
     catch (Exception ex)
     {

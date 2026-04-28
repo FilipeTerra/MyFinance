@@ -16,6 +16,7 @@ import { ConfirmationModal } from '../components/Shared/ConfirmationModal';
 // Componentes de Conta
 import { AccountCard } from '../components/Accounts/AccountCard';
 import { AccountModal } from '../components/Accounts/AccountModal';
+import { UploadTransactionModal } from '../components/Transactions/UploadTransactionModal';
 
 interface FiltersState {
     accountId: string;
@@ -40,6 +41,7 @@ export function HomePage() {
     const [transactionToEdit, setTransactionToEdit] = useState<TransactionResponseDto | null>(null);
     const [isDeleteAccountModalOpen, setIsDeleteAccountModalOpen] = useState(false);
     const [accountToDeleteId, setAccountToDeleteId] = useState<string | null>(null);
+    const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
 
     // <<< ESTADOS PARA CONTA >>>
     const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
@@ -138,32 +140,24 @@ export function HomePage() {
         }
     };
 
-    const handleFileUpload = async (file: File) => {
-    // Validação UX: O extrato pertence a qual conta?
-    // Se o usuário não selecionou uma conta no filtro, precisamos pedir!
-    if (!activeFilters?.accountId) {
-        alert("Por favor, selecione uma conta no filtro acima antes de fazer o upload do extrato.");
-        return;
-    }
-
-    try {
-        setIsLoadingTransactions(true); // Reaproveita o estado de loading para mostrar que está trabalhando
+    const handleFileUpload = async (file: File, selectedAccountId: string) => {
+        try {
+            setIsLoadingTransactions(true); 
+        await transactionService.uploadFile(file, selectedAccountId);
+        alert("Arquivo enviado com sucesso! O Agente IA processou as transações.");
         
-        // Chama a API passando o arquivo e a conta atual selecionada
-        await transactionService.uploadFile(file, activeFilters.accountId);
-        
-        alert("Arquivo enviado com sucesso! O Agente IA está processando as transações.");
-        
-        // Recarrega a lista de transações para mostrar os novos dados inseridos
-        handleFilterChange(activeFilters); 
-        
-    } catch (err) {
-        const axiosError = err as AxiosError<ApiErrorResponse>;
-        alert(axiosError.response?.data?.message || "Erro ao fazer upload do arquivo.");
-    } finally {
-        setIsLoadingTransactions(false);
-    }
-};
+        if (activeFilters) {
+            handleFilterChange(activeFilters); 
+        }
+            
+        } catch (err) {
+            const axiosError = err as AxiosError<ApiErrorResponse>;
+            alert(axiosError.response?.data?.message || "Erro ao fazer upload do arquivo.");
+            throw err;
+        } finally {
+            setIsLoadingTransactions(false);
+        }
+    };
 
     // --- LÓGICA DE CONTAS ---
 
@@ -242,7 +236,7 @@ export function HomePage() {
                 <div className="homepage-actions">
                     <CreateAccountButton onClick={handleOpenCreateAccountModal} />
                     <CreateTransactionButton onClick={handleOpenCreateModal} />
-                    <UploadTransactionFileButton onFileSelect={handleFileUpload} />
+                    <UploadTransactionFileButton onClick={() => setIsUploadModalOpen(true)} />
                 </div>
 
                 {/* Seção de Cards de Contas */}
@@ -287,6 +281,15 @@ export function HomePage() {
                 onAccountCreated={handleAccountCreatedFromTransaction}
                 onCategoryCreated={handleCategoryCreated}
                 transactionToEdit={transactionToEdit}
+            />
+
+            {/* Modal de Upload de arquivos */}
+            <UploadTransactionModal 
+                isOpen={isUploadModalOpen}
+                onClose={() => setIsUploadModalOpen(false)}
+                onUpload={handleFileUpload}
+                accounts={accounts} 
+                onAccountCreated={handleAccountCreatedFromTransaction}
             />
 
             <ConfirmationModal

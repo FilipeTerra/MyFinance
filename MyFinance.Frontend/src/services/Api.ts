@@ -114,7 +114,11 @@ const transactionService = {
         formData.append('file', file);
         formData.append('accountId', accountId);
 
-        return apiClient.post<UploadFileResponseDto<TransactionResponseDto>>('/transactions/upload', formData);
+        return apiClient.post<UploadFileResponseDto<boolean>>('/Transactions/upload', formData, {
+        headers: {
+            'Content-Type': 'multipart/form-data'
+        }
+    });
     },
 };
 

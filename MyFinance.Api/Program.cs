@@ -68,7 +68,10 @@ builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();
 builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
-
+builder.Services.AddHttpClient<IAiIntegrationService, AiIntegrationService>(client =>
+{
+    client.BaseAddress = new Uri("http://127.0.0.1:8181/");
+});
 var app = builder.Build();
 
 app.UseSwagger();

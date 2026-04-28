@@ -4,7 +4,7 @@ from typing import List
 
 app = FastAPI(title="MyFinance AI Agent")
 
-@app.post("/api/ai/process-statement")
+@app.post("/api/ai/process-file")
 async def process_statement(
     accountId: str = Form(...),
     file: UploadFile = File(...)
