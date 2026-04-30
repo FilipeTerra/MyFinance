@@ -50,10 +50,6 @@ public class CategoryRepository : ICategoryRepository
 
     public async Task<bool> HasTransactionsAsync(Guid categoryId)
     {
-        // Precisamos verificar se existe ALGUMA transação para a categoria
-        // Esta lógica depende de como TransactionRepository implementa a verificação.
-        // Se TransactionRepository.HasTransactionsAsync for específico da *conta*,
-        // precisamos de uma verificação direta aqui:
         return await _context.Transactions.AnyAsync(t => t.CategoryId == categoryId);
     }
 

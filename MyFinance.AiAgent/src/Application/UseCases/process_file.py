@@ -1,34 +1,29 @@
-# src/application/use_cases/process_file.py
-from src.domain.interfaces import IFileExtractor, ILlmClassifier
+# MyFinance.AiAgent/src/Application/UseCases/process_file.py
+from src.Domain.interfaces import IFileExtractor, ILlmClassifier
 
 class ProcessFileUseCase:
-    # injeção de dependência
     def __init__(self, extractor: IFileExtractor, classifier: ILlmClassifier):
         self.extractor = extractor
         self.classifier = classifier
 
-    def execute(self, file_path: str, account_id: str) -> list[dict]:
-        # Extrai as linhas do arquivo (não importa se é PDF ou CSV)
-        df_transactions = self.extractor.extract(file_path)
+    def execute(self, file_path: str, account_id: str, existing_categories: dict) -> list:
+        df = self.extractor.extract(file_path)
+        category_names = list(existing_categories.keys())
         
-        processed_transactions = []
-        
-        for index, row in df_transactions.iterrows():
-            description = row['descricao']
-            amount = row['valor']
-            date = row['data']
+        results = []
+        for _, row in df.iterrows():
+            ai_decision = self.classifier.classify_category(row['descricao'], category_names)
             
-            # IA faz a classificacao
-            category_id = self.classifier.classify_category(description)
+            # Mapeia de volta para IDs se não for novo para manter consistência
+            category_id = existing_categories.get(ai_decision['categoryName'])
             
-            transaction_dto = {
-                "description": description,
-                "amount": float(amount),
-                "type": 1 if float(amount) < 0 else 0, # 1=Expense, 0=Income
-                "date": date,
+            results.append({
+                "date": row['data'],
+                "description": row['descricao'],
+                "amount": float(row['valor']),
                 "accountId": account_id,
-                "categoryId": category_id
-            }
-            processed_transactions.append(transaction_dto)
-            
-        return processed_transactions
+                "categoryId": category_id, # Será nulo se isNew for True
+                "suggestedCategoryName": ai_decision['categoryName'] if ai_decision['isNew'] else None,
+                "isSuggestion": ai_decision['isNew']
+            })
+        return results

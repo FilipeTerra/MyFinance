@@ -81,6 +81,10 @@ public async Task<IActionResult> UploadExtrato(IFormFile file, [FromForm] Guid a
     if (file == null || file.Length == 0)
         return BadRequest(new { message = "Nenhum arquivo enviado." });
 
+    var userIdString = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+    if (!Guid.TryParse(userIdString, out Guid userId))
+        return Unauthorized(new { message = "Usuário não autenticado." });
+
     try
     {
         using var fileStream = file.OpenReadStream();
@@ -89,10 +93,11 @@ public async Task<IActionResult> UploadExtrato(IFormFile file, [FromForm] Guid a
             fileStream, 
             file.FileName, 
             file.ContentType, 
-            accountId
+            accountId, 
+            userId
         );
         
-        return Content(aiResult, "application/json"); 
+        return Ok(aiResult); 
     }
     catch (Exception ex)
     {
