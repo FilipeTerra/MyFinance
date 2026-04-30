@@ -9,43 +9,45 @@ namespace MyFinance.Application.Interfaces.Repositories;
 public interface ITransactionRepository
 {
     /// <summary>
-    /// Busca uma transação pelo seu Id, verificando indiretamente o usuário através da conta.
+    /// Busca uma transaï¿½ï¿½o pelo seu Id, verificando indiretamente o usuï¿½rio atravï¿½s da conta.
     /// Inclui a entidade Account relacionada.
     /// </summary>
     Task<Transaction?> GetByIdAsync(Guid id, Guid userId);
 
     /// <summary>
-    /// Busca todas as transações de uma conta específica pertencente ao usuário.
+    /// Busca todas as transaï¿½ï¿½es de uma conta especï¿½fica pertencente ao usuï¿½rio.
     /// </summary>
     Task<IEnumerable<Transaction>> GetAllByAccountIdAsync(Guid accountId, Guid userId);
 
     /// <summary>
-    /// Adiciona uma nova transação ao contexto do EF.
+    /// Adiciona uma nova transaï¿½ï¿½o ao contexto do EF.
     /// </summary>
     Task AddAsync(Transaction transaction);
 
     /// <summary>
-    /// Marca uma transação como modificada no contexto do EF.
+    /// Marca uma transaï¿½ï¿½o como modificada no contexto do EF.
     /// </summary>
     void Update(Transaction transaction);
 
     /// <summary>
-    /// Marca uma transação como removida no contexto do EF.
+    /// Marca uma transaï¿½ï¿½o como removida no contexto do EF.
     /// </summary>
     void Delete(Transaction transaction);
 
     /// <summary>
-    /// Verifica se uma conta possui alguma transação associada.
+    /// Verifica se uma conta possui alguma transaï¿½ï¿½o associada.
     /// </summary>
     Task<bool> HasTransactionsAsync(Guid accountId);
 
     /// <summary>
-    /// Salva todas as mudanças pendentes (Add, Update, Delete) no banco de dados.
+    /// Salva todas as mudanï¿½as pendentes (Add, Update, Delete) no banco de dados.
     /// </summary>
     Task<bool> SaveChangesAsync();
 
     /// <summary>
-    /// Busca transações com base em um conjunto de filtros dinâmicos.
+    /// Busca transaï¿½ï¿½es com base em um conjunto de filtros dinï¿½micos.
     /// </summary>
     Task<IEnumerable<Transaction>> GetByFilterAsync(Guid userId, TransactionSearchRequestDto filters);
+
+    Task AddRangeAsync(IEnumerable<Transaction> transactions);
 }

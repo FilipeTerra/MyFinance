@@ -8,12 +8,12 @@ namespace MyFinance.Application.Interfaces.Repositories;
 public interface ICategoryRepository
 {
     /// <summary>
-    /// Busca uma categoria pelo Id, garantindo que ela pertença ao usuário.
+    /// Busca uma categoria pelo Id, garantindo que ela pertenï¿½a ao usuï¿½rio.
     /// </summary>
     Task<Category?> GetByIdAsync(Guid id, Guid userId);
 
     /// <summary>
-    /// Busca todas as categorias de um usuário específico.
+    /// Busca todas as categorias de um usuï¿½rio especï¿½fico.
     /// </summary>
     Task<IEnumerable<Category>> GetAllByUserIdAsync(Guid userId);
 
@@ -33,12 +33,14 @@ public interface ICategoryRepository
     void Delete(Category category);
 
     /// <summary>
-    /// Verifica se uma categoria possui transações associadas.
+    /// Verifica se uma categoria possui transaï¿½ï¿½es associadas.
     /// </summary>
     Task<bool> HasTransactionsAsync(Guid categoryId);
 
     /// <summary>
-    /// Salva todas as mudanças (Add, Update, Delete) no banco de dados.
+    /// Salva todas as mudanï¿½as (Add, Update, Delete) no banco de dados.
     /// </summary>
     Task<bool> SaveChangesAsync();
+
+    Task<Category?> GetByNameAsync(string name, Guid userId);
 }

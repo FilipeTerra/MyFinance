@@ -57,4 +57,10 @@ public class CategoryRepository : ICategoryRepository
     {
         return await _context.SaveChangesAsync() > 0;
     }
+
+    public async Task<Category?> GetByNameAsync(string name, Guid userId)
+    {
+        return await _context.Categories
+            .FirstOrDefaultAsync(c => c.Name.ToLower() == name.ToLower() && c.UserId == userId);
+    }
 }

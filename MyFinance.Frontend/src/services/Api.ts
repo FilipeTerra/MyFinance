@@ -10,6 +10,7 @@ import type { AccountRequestDto } from '../types/AccountRequestDto';
 import type { CategoryRequestDto } from '../types/CategoryRequestDto';
 import type { UpdateAccountRequestDto } from '../types/UpdateAccountRequestDto';
 import type { UploadFileResponseDto } from '../types/UploadFileResponseDto';
+import type { SaveBatchTransactionRequestDto } from '../types/AiIntegration';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -120,6 +121,10 @@ const transactionService = {
         }
     });
     },
+    saveBatchTransactions: async (transactions: SaveBatchTransactionRequestDto[]) => {
+        const response = await apiClient.post('/Transaction/batch', transactions);
+        return response.data;
+    }
 };
 
 export {
@@ -128,5 +133,6 @@ export {
     categoryService,
     transactionService,
     tokenManager,
+    apiClient as api,
     AxiosError
 };

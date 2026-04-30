@@ -70,6 +70,32 @@ public class TransactionsController : ControllerBase
     }
 
 /// <summary>
+/// Salva um lote de transações, criando novas categorias se necessário, e associando as transações às contas e categorias corretas.
+/// </summary>
+/// <param name="transactions"></param>
+/// <returns></returns>
+[HttpPost("batch")]
+public async Task<IActionResult> SaveBatch([FromBody] List<SaveBatchTransactionRequestDto> transactions)
+{
+    if (transactions == null || !transactions.Any())
+        return BadRequest(new { message = "Nenhuma transação enviada para salvamento." });
+
+    var userIdString = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+    if (!Guid.TryParse(userIdString, out Guid userId))
+        return Unauthorized();
+
+    try
+    {
+        await _transactionService.SaveBatchAsync(transactions, userId);
+        return Ok(new { message = $"{transactions.Count} transações processadas e salvas com sucesso." });
+    }
+    catch (Exception ex)
+    {
+        return BadRequest(new { message = $"Erro ao salvar lote: {ex.Message}" });
+    }
+}
+
+/// <summary>
 /// Endpoint para upload de extrato bancário/cartão de crédito (CSV ou PDF) e processamento via Agente de IA.
 /// </summary>
 /// <param name="file"></param>

@@ -2,6 +2,7 @@ using MyFinance.Application.Dtos;
 using MyFinance.Application.Interfaces.Repositories;
 using MyFinance.Application.Interfaces.Services;
 using MyFinance.Domain.Entities;
+using MyFinance.Domain.Enums;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -38,17 +39,14 @@ public class TransactionService : ITransactionService
         }
 
         // Criar a entidade Transação
-        var newTransaction = new Transaction
-        {
-            Id = Guid.NewGuid(),
-            Description = dto.Description,
-            Amount = dto.Amount, // Valor sempre positivo
-            Type = dto.Type,
-            Date = dto.Date.ToUniversalTime(), // Armazenar em UTC
-            AccountId = dto.AccountId,
-            CreatedAt = DateTime.UtcNow,
-            CategoryId = dto.CategoryId
-        };
+        var newTransaction = new Transaction(
+            dto.Description,
+            dto.Amount, // Valor sempre positivo
+            dto.Type,
+            dto.Date.ToUniversalTime(), // Armazenar em UTC
+            dto.AccountId,
+            dto.CategoryId
+        );
 
         // Salvar no banco
         await _transactionRepository.AddAsync(newTransaction);
@@ -148,8 +146,75 @@ public class TransactionService : ITransactionService
         return new ServiceResponse<bool> { Data = true };
     }
 
+    public async Task<ServiceResponse<IEnumerable<TransactionResponseDto>>> SearchTransactionsAsync(Guid userId, TransactionSearchRequestDto filters)
+    {
+        // Chama o novo mátodo do repositário
+        var transactions = await _transactionRepository.GetByFilterAsync(userId, filters);
 
-    // --- Mátodo Auxiliar de Mapeamento ---
+        var responseDtos = transactions.Select(MapTransactionToResponseDto).ToList();
+
+        return new ServiceResponse<IEnumerable<TransactionResponseDto>> { Data = responseDtos };
+    }
+
+    public async Task SaveBatchAsync(List<SaveBatchTransactionRequestDto> dtos, Guid userId)
+        {
+            // Dicionário local para evitar criar a mesma categoria nova duas vezes no mesmo lote
+            var newlyCreatedCategories = new Dictionary<string, Guid>();
+            var transactionsToSave = new List<Transaction>();
+
+            foreach (var dto in dtos)
+            {
+                Guid finalCategoryId;
+
+                // Lógica de Resolução de Categoria
+                if (dto.IsNewCategory && !string.IsNullOrWhiteSpace(dto.NewCategoryName))
+                {
+                    // Verifica se já criamos essa categoria neste loop ou se ela já existe no banco
+                    if (newlyCreatedCategories.ContainsKey(dto.NewCategoryName))
+                    {
+                        finalCategoryId = newlyCreatedCategories[dto.NewCategoryName];
+                    }
+                    else
+                    {
+                        // Verifica no banco para evitar duplicidade (Segurança Extra)
+                        var existing = await _categoryRepository.GetByNameAsync(dto.NewCategoryName, userId);
+                        if (existing != null)
+                        {
+                            finalCategoryId = existing.Id;
+                        }
+                        else
+                        {
+                            // Cria a nova categoria aprovada pelo usuário
+                            var newCategory = new Category(dto.NewCategoryName, userId);
+                            await _categoryRepository.AddAsync(newCategory);
+                            finalCategoryId = newCategory.Id;
+                            newlyCreatedCategories.Add(dto.NewCategoryName, finalCategoryId);
+                        }
+                    }
+                }
+                else
+                {
+                    finalCategoryId = dto.CategoryId ?? throw new Exception("Categoria não informada para a transação.");
+                }
+
+                // Cria a entidade de transação
+                var transaction = new Transaction(
+                    dto.Description,
+                    dto.Amount,
+                    dto.Amount >= 0 ? TransactionType.Income : TransactionType.Expense,
+                    dto.Date,
+                    dto.AccountId,
+                    finalCategoryId
+                );
+
+                transactionsToSave.Add(transaction);
+            }
+
+            // Salva todas as transações de uma vez
+            await _transactionRepository.AddRangeAsync(transactionsToSave);
+        }
+
+    // --- Mátodos Auxiliares ---
     private TransactionResponseDto MapTransactionToResponseDto(Transaction transaction)
     {
         // Assume que transaction.Account foi carregada pelo repositário (.Include)
@@ -167,15 +232,5 @@ public class TransactionService : ITransactionService
             CategoryId = transaction.CategoryId,
             CategoryName = transaction.Category?.Name ?? "Sem categoria"
         };
-    }
-
-    public async Task<ServiceResponse<IEnumerable<TransactionResponseDto>>> SearchTransactionsAsync(Guid userId, TransactionSearchRequestDto filters)
-    {
-        // Chama o novo mátodo do repositário
-        var transactions = await _transactionRepository.GetByFilterAsync(userId, filters);
-
-        var responseDtos = transactions.Select(MapTransactionToResponseDto).ToList();
-
-        return new ServiceResponse<IEnumerable<TransactionResponseDto>> { Data = responseDtos };
-    }
+    }    
 }
