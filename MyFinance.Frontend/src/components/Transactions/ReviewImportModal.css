@@ -1,0 +1,60 @@
+/* src/components/Transactions/ReviewImportModal.css */
+
+.transactions-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+    font-size: 0.9rem;
+}
+
+.transactions-table th,
+.transactions-table td {
+    border: 1px solid #e2e8f0;
+    padding: 10px;
+    text-align: left;
+    vertical-align: middle;
+}
+
+.transactions-table th {
+    background-color: #f8fafc;
+    font-weight: 600;
+    color: #334155;
+}
+
+/* Destaque suave para as linhas onde a IA fez uma sugestão */
+.row-suggestion {
+    background-color: #fef3c7; /* Fundo amarelado/laranja bem suave */
+    transition: background-color 0.3s;
+}
+
+/* Linhas normais (categorias já existentes) */
+.row-confirmed {
+    background-color: #ffffff;
+}
+
+.text-success {
+    color: #16a34a;
+    font-weight: 500;
+}
+
+.text-danger {
+    color: #dc2626;
+    font-weight: 500;
+}
+
+/* Estilização do select para ficar mais limpo na tabela */
+.transactions-table select {
+    width: 100%;
+    padding: 6px;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    background-color: #fff;
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+
+.transactions-table select:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 1px #3b82f6;
+}

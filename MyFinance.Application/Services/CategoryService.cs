@@ -20,13 +20,7 @@ public class CategoryService : ICategoryService
 
     public async Task<ServiceResponse<CategoryResponseDto>> CreateCategoryAsync(CategoryRequestDto dto, Guid userId)
     {
-        var newCategory = new Category
-        {
-            Id = Guid.NewGuid(),
-            Name = dto.Name,
-            CreatedAt = DateTime.UtcNow,
-            UserId = userId
-        };
+        var newCategory = new Category(dto.Name, userId);
 
         await _categoryRepository.AddAsync(newCategory);
         await _categoryRepository.SaveChangesAsync();
@@ -51,7 +45,7 @@ public class CategoryService : ICategoryService
             return new ServiceResponse<CategoryResponseDto>
             {
                 Success = false,
-                ErrorMessage = "Categoria não encontrada ou não pertence ao usuário."
+                ErrorMessage = "Categoria nï¿½o encontrada ou nï¿½o pertence ao usuï¿½rio."
             };
         }
 
@@ -72,14 +66,14 @@ public class CategoryService : ICategoryService
             return new ServiceResponse<bool>
             {
                 Success = false,
-                ErrorMessage = "Categoria não encontrada ou não pertence ao usuário."
+                ErrorMessage = "Categoria nï¿½o encontrada ou nï¿½o pertence ao usuï¿½rio."
             };
         }
 
-        // REGRA DE NEGÓCIO: Não excluir categoria com transações
+        // REGRA DE NEGï¿½CIO: Nï¿½o excluir categoria com transaï¿½ï¿½es
         if (await _categoryRepository.HasTransactionsAsync(categoryId))
         {
-            return new ServiceResponse<bool> { Success = false, ErrorMessage = "Não é possível excluir categorias com transações associadas." };
+            return new ServiceResponse<bool> { Success = false, ErrorMessage = "Nï¿½o ï¿½ possï¿½vel excluir categorias com transaï¿½ï¿½es associadas." };
         }
 
         _categoryRepository.Delete(category);

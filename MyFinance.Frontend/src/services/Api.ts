@@ -10,7 +10,7 @@ import type { AccountRequestDto } from '../types/AccountRequestDto';
 import type { CategoryRequestDto } from '../types/CategoryRequestDto';
 import type { UpdateAccountRequestDto } from '../types/UpdateAccountRequestDto';
 import type { UploadFileResponseDto } from '../types/UploadFileResponseDto';
-import type { SaveBatchTransactionRequestDto } from '../types/AiIntegration';
+import type { AiTransactionResponseDto, SaveBatchTransactionRequestDto } from '../types/AiIntegration';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -115,14 +115,14 @@ const transactionService = {
         formData.append('file', file);
         formData.append('accountId', accountId);
 
-        return apiClient.post<UploadFileResponseDto<boolean>>('/Transactions/upload', formData, {
-        headers: {
-            'Content-Type': 'multipart/form-data'
-        }
-    });
+        return apiClient.post<AiTransactionResponseDto[]>('/transactions/upload', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        });
     },
     saveBatchTransactions: async (transactions: SaveBatchTransactionRequestDto[]) => {
-        const response = await apiClient.post('/Transaction/batch', transactions);
+        const response = await apiClient.post('/transactions/batch', transactions);
         return response.data;
     }
 };
