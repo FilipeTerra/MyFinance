@@ -15,3 +15,12 @@ class ILlmClassifier(ABC):
         Retorna: {"categoryName": str, "isNew": bool}
         """
         pass
+
+    @abstractmethod
+    def classify_batch(self, descriptions: list, existing_categories: list) -> list:
+        """
+        existing_categories: lista de strings com os nomes das categorias atuais.
+        descriptions: lista de strings com as descrições das transações.
+        Retorna: lista de objetos com as chaves "description", "categoryName" e "isNew".
+        """
+        pass

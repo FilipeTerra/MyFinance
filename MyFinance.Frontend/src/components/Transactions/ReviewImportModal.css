@@ -1,33 +1,71 @@
 /* src/components/Transactions/ReviewImportModal.css */
 
+/* 1. Restringe o tamanho do modal e permite layout flexível */
+.review-modal-content {
+    max-width: 950px;
+    width: 90%;
+    max-height: 85vh; /* 85% da altura da tela */
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* Evita que o conteúdo vaze do modal */
+}
+
+/* 2. O corpo do modal ganha flex-grow para empurrar o footer e segurar a tabela */
+.modal-body {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    overflow: hidden; /* Fundamental para a rolagem interna funcionar */
+    padding-bottom: 10px;
+}
+
+/* 3. Container mágico que faz a tabela rolar */
+.table-container {
+    flex-grow: 1;
+    overflow-y: auto; /* Rolagem vertical apenas aqui! */
+    margin-top: 15px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+}
+
+/* 4. Ajustes na tabela */
 .transactions-table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 15px;
     font-size: 0.9rem;
+}
+
+/* CABEÇALHO FIXO NO TOPO */
+.transactions-table th {
+    position: sticky;
+    top: 0;
+    background-color: #f8fafc;
+    font-weight: 600;
+    color: #334155;
+    z-index: 10; /* Fica acima das linhas que vão rolar por baixo */
+    box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1); /* Cria uma sombrinha elegante ao rolar */
 }
 
 .transactions-table th,
 .transactions-table td {
-    border: 1px solid #e2e8f0;
-    padding: 10px;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 12px 10px; /* Um pouco mais de respiro */
     text-align: left;
     vertical-align: middle;
 }
 
-.transactions-table th {
-    background-color: #f8fafc;
-    font-weight: 600;
-    color: #334155;
+/* Remove a borda da última linha para ficar bonito no rodapé do container */
+.transactions-table tbody tr:last-child td {
+    border-bottom: none;
 }
 
-/* Destaque suave para as linhas onde a IA fez uma sugestão */
+/* --- ESTILOS ORIGINAIS MANTIDOS --- */
+
 .row-suggestion {
-    background-color: #fef3c7; /* Fundo amarelado/laranja bem suave */
+    background-color: #fef3c7; 
     transition: background-color 0.3s;
 }
 
-/* Linhas normais (categorias já existentes) */
 .row-confirmed {
     background-color: #ffffff;
 }
@@ -42,7 +80,6 @@
     font-weight: 500;
 }
 
-/* Estilização do select para ficar mais limpo na tabela */
 .transactions-table select {
     width: 100%;
     padding: 6px;

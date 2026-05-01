@@ -9,7 +9,6 @@ import type { CategoryResponseDto } from '../types/CategoryResponseDto';
 import type { AccountRequestDto } from '../types/AccountRequestDto';
 import type { CategoryRequestDto } from '../types/CategoryRequestDto';
 import type { UpdateAccountRequestDto } from '../types/UpdateAccountRequestDto';
-import type { UploadFileResponseDto } from '../types/UploadFileResponseDto';
 import type { AiTransactionResponseDto, SaveBatchTransactionRequestDto } from '../types/AiIntegration';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;

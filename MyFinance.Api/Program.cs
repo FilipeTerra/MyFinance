@@ -71,6 +71,7 @@ builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddHttpClient<IAiIntegrationService, AiIntegrationService>(client =>
 {
     client.BaseAddress = new Uri("http://127.0.0.1:8181/");
+    client.Timeout = TimeSpan.FromMinutes(10);
 });
 var app = builder.Build();
 
