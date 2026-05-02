@@ -1,31 +1,65 @@
 /* src/components/Transactions/UploadTransactionFileButton.css */
-.upload-transaction-file-button{
-    background-color: #3b82f6; /* Azul padrão */
-    color: white;
-    border: none;
-    padding: 0.8rem 1.5rem;
-    border-radius: 6px;
-    font-size: 1rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background-color 0.2s ease, transform 0.1s ease;
-    display: flex;
+
+.upload-transaction-file-button {
+    display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
-    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+    justify-content: center;
+    gap: 8px; /* Espaço entre o ícone e o texto */
+    padding: 10px 16px;
+    background-color: #f8fafc; /* Fundo cinza bem claro */
+    color: #334155; /* Texto cinza escuro/ardósia */
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); /* Sombra bem leve */
 }
 
-.upload-transaction-file-icon {
-    width: 20px;
-    height: 20px;
-    object-fit: contain;
-}
-
+/* Efeito ao passar o mouse */
 .upload-transaction-file-button:hover {
-    background-color: #2563eb;
-    transform: translateY(-1px);
+    background-color: #f1f5f9;
+    border-color: #3788eb;
+    color: #0f172a;
+    transform: translateY(-1px); /* Sobe um pixel suavemente */
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
+/* Efeito ao clicar */
 .upload-transaction-file-button:active {
     transform: translateY(0);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+/* Estilo do ícone */
+.upload-icon {
+    width: 18px;
+    height: 18px;
+    color: #64748b;
+    transition: color 0.2s ease;
+}
+
+.upload-transaction-file-button:hover .upload-icon {
+    color: #2563eb; /* O ícone fica azul primário no hover */
+}
+
+/* Estilo da pílula de IA (Um charme extra) */
+.ai-badge {
+    background-color: #dbeafe; /* Fundo azul bem claro */
+    color: #1d4ed8; /* Texto azul escuro */
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 9999px;
+    margin-left: 4px;
+    border: 1px solid #3788eb;
+    display: inline-flex;
+    align-items: center;
+    letter-spacing: 0.5px;
+}
+
+.upload-transaction-file-button:hover .ai-badge {
+    background-color: #bfdbfe;
 }

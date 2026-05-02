@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using MyFinance.Application.Dtos;
 using MyFinance.Application.Interfaces.Services;
 using System.Net.Http.Headers;
@@ -89,7 +90,12 @@ public async Task<IActionResult> SaveBatch([FromBody] List<SaveBatchTransactionR
         await _transactionService.SaveBatchAsync(transactions, userId);
         return Ok(new { message = $"{transactions.Count} transações processadas e salvas com sucesso." });
     }
-    catch (Exception ex)
+    catch (DbUpdateException ex) 
+    {
+        var innerMessage = ex.InnerException?.Message ?? ex.Message;
+        return BadRequest(new { message = $"Erro de Banco de Dados: {innerMessage}" });
+    }
+    catch (Exception ex) 
     {
         return BadRequest(new { message = $"Erro ao salvar lote: {ex.Message}" });
     }

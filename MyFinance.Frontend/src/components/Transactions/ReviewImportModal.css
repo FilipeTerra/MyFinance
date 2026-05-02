@@ -1,97 +1,237 @@
 /* src/components/Transactions/ReviewImportModal.css */
 
-/* 1. Restringe o tamanho do modal e permite layout flexível */
+/* =========================================
+   1. ESTRUTURA DO MODAL
+   ========================================= */
+.modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: rgba(15, 23, 42, 0.6); /* Fundo escurecido mais sofisticado */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    backdrop-filter: blur(2px); /* Efeito de desfoque no fundo */
+}
+
 .review-modal-content {
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
     max-width: 950px;
     width: 90%;
-    max-height: 85vh; /* 85% da altura da tela */
+    max-height: 85vh;
     display: flex;
     flex-direction: column;
-    overflow: hidden; /* Evita que o conteúdo vaze do modal */
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
-/* 2. O corpo do modal ganha flex-grow para empurrar o footer e segurar a tabela */
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: #1e293b;
+}
+
+.close-button {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: #64748b;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.close-button:hover {
+    color: #ef4444;
+}
+
 .modal-body {
+    padding: 20px 24px;
     display: flex;
     flex-direction: column;
     flex-grow: 1;
-    overflow: hidden; /* Fundamental para a rolagem interna funcionar */
-    padding-bottom: 10px;
+    overflow: hidden;
 }
 
-/* 3. Container mágico que faz a tabela rolar */
+.modal-subtitle {
+    margin: 0 0 16px 0;
+    color: #475569;
+    font-size: 0.95rem;
+}
+
+/* =========================================
+   2. TABELA E ROLAGEM
+   ========================================= */
 .table-container {
     flex-grow: 1;
-    overflow-y: auto; /* Rolagem vertical apenas aqui! */
-    margin-top: 15px;
+    overflow-y: auto;
     border: 1px solid #e2e8f0;
-    border-radius: 6px;
+    border-radius: 8px;
+    background-color: #f8fafc; /* Fundo suave para a tabela vazia/bordas */
 }
 
-/* 4. Ajustes na tabela */
 .transactions-table {
     width: 100%;
     border-collapse: collapse;
     font-size: 0.9rem;
-}
-
-/* CABEÇALHO FIXO NO TOPO */
-.transactions-table th {
-    position: sticky;
-    top: 0;
-    background-color: #f8fafc;
-    font-weight: 600;
-    color: #334155;
-    z-index: 10; /* Fica acima das linhas que vão rolar por baixo */
-    box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1); /* Cria uma sombrinha elegante ao rolar */
-}
-
-.transactions-table th,
-.transactions-table td {
-    border-bottom: 1px solid #e2e8f0;
-    padding: 12px 10px; /* Um pouco mais de respiro */
-    text-align: left;
-    vertical-align: middle;
-}
-
-/* Remove a borda da última linha para ficar bonito no rodapé do container */
-.transactions-table tbody tr:last-child td {
-    border-bottom: none;
-}
-
-/* --- ESTILOS ORIGINAIS MANTIDOS --- */
-
-.row-suggestion {
-    background-color: #fef3c7; 
-    transition: background-color 0.3s;
-}
-
-.row-confirmed {
     background-color: #ffffff;
 }
 
-.text-success {
-    color: #16a34a;
-    font-weight: 500;
+.transactions-table th {
+    position: sticky;
+    top: 0;
+    background-color: #f1f5f9;
+    color: #334155;
+    font-weight: 600;
+    padding: 12px 16px;
+    text-align: left;
+    border-bottom: 2px solid #e2e8f0;
+    z-index: 10;
 }
 
-.text-danger {
-    color: #dc2626;
-    font-weight: 500;
+.transactions-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid #e2e8f0;
+    vertical-align: top; /* Mantém o alinhamento no topo quando a célula de categoria cresce */
 }
 
-.transactions-table select {
-    width: 100%;
-    padding: 6px;
-    border: 1px solid #cbd5e1;
-    border-radius: 4px;
-    background-color: #fff;
-    font-size: 0.9rem;
+/* Larguras específicas para organizar melhor */
+.date-cell { width: 12%; white-space: nowrap; color: #475569; }
+.desc-cell { width: 33%; color: #0f172a; font-weight: 500; }
+.amount-cell { width: 15%; white-space: nowrap; }
+.category-cell { width: 25%; display: flex; flex-direction: column; gap: 8px; }
+.status-cell { width: 15%; text-align: center !important; vertical-align: middle !important; }
+
+/* Cores dos Valores */
+.text-success { color: #059669; }
+.text-danger { color: #dc2626; }
+
+/* Linhas */
+.row-suggestion { background-color: #fefce8; transition: background-color 0.3s; }
+.row-confirmed { background-color: #ffffff; transition: background-color 0.3s; }
+.transactions-table tbody tr:hover { background-color: #f8fafc; }
+.row-suggestion:hover { background-color: #fef9c3; }
+
+/* =========================================
+   3. INPUTS E SELECTS 
+   ========================================= */
+.category-cell {
+    width: 28%; /* Aumentamos um pouco a largura da coluna */
+    min-width: 220px; /* Garante que a coluna não esmague o conteúdo */
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px 16px !important;
+}
+
+.category-select {
+    width: 100% !important; /* Força ocupar todo o espaço da célula */
+    min-width: 180px !important; /* Impede que ele fique "curto" como na foto */
+    height: 38px !important; /* Força uma altura padrão para o texto aparecer */
+    padding: 8px 12px !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 6px !important;
+    font-size: 0.85rem !important;
+    color: #334155 !important;
+    background-color: #ffffff !important;
     cursor: pointer;
+    appearance: auto !important; /* Garante que a setinha do navegador apareça */
 }
 
-.transactions-table select:focus {
-    outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 1px #3b82f6;
+.category-input {
+    width: 100% !important;
+    padding: 8px 12px !important;
+    border: 1px solid #3b82f6 !important; /* Borda azul para destacar que está editando */
+    border-radius: 6px !important;
+    font-size: 0.85rem !important;
+    background-color: #eff6ff !important;
+}
+
+.opt-suggestion { font-weight: bold; color: #d97706; }
+.opt-custom { font-weight: bold; color: #3b82f6; }
+
+/* Animação suave quando o input de texto aparece */
+.custom-fade-in {
+    animation: fadeInDown 0.3s ease-out;
+}
+
+@keyframes fadeInDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* =========================================
+   4. BADGES (Pílulas de Status)
+   ========================================= */
+.badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 9999px; /* Formato de pílula */
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.badge-new { background-color: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+.badge-ok { background-color: #dcfce7; color: #047857; border: 1px solid #bbf7d0; }
+.badge-pending { background-color: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+
+/* =========================================
+   5. RODAPÉ E BOTÕES
+   ========================================= */
+.modal-footer {
+    padding: 16px 24px;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    background-color: #f8fafc;
+    border-radius: 0 0 12px 12px;
+}
+
+.btn-secondary, .btn-primary {
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+}
+
+.btn-secondary {
+    background-color: #ffffff;
+    color: #475569;
+    border: 1px solid #cbd5e1;
+}
+
+.btn-secondary:hover {
+    background-color: #f1f5f9;
+    color: #0f172a;
+}
+
+.btn-primary {
+    background-color: #2563eb;
+    color: #ffffff;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.btn-primary:hover:not(:disabled) {
+    background-color: #1d4ed8;
+}
+
+.btn-primary:disabled {
+    background-color: #94a3b8;
+    cursor: not-allowed;
+    opacity: 0.7;
 }

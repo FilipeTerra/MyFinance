@@ -74,6 +74,7 @@ builder.Services.AddHttpClient<IAiIntegrationService, AiIntegrationService>(clie
     client.Timeout = TimeSpan.FromMinutes(10);
 });
 var app = builder.Build();
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
 app.UseSwagger();
 app.UseSwaggerUI();

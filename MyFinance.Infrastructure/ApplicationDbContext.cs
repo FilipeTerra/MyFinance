@@ -55,7 +55,10 @@ namespace MyFinance.Infrastructure
                           v => (TransactionType)Enum.Parse(typeof(TransactionType), v));
 
                 entity.Property(t => t.Date)
-                      .HasColumnType("date");
+                      .HasColumnType("date")
+                      .HasConversion(
+                        v => v.ToUniversalTime(),
+                        v => DateTime.SpecifyKind(v, DateTimeKind.Utc));
             });
         }
     }
