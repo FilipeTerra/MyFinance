@@ -27,7 +27,11 @@ class ProcessFileUseCase:
                 except ValueError:
                     data_iso = data_str
 
-                valor_str = str(row['valor'])
+                valor_str = str(row['valor']).strip()
+
+                # Tira o ponto de milhar (se houver) e troca a vírgula decimal por ponto
+                valor_str = valor_str.replace('.', '').replace(',', '.')
+
                 valor_float = float(valor_str)
                 descricao = str(row['descricao']).strip()
 
@@ -47,7 +51,7 @@ class ProcessFileUseCase:
                         "isSuggestion": False
                     })
                 else:
-                    print(f"🔍 [NOVA] '{descricao}' separada para análise da IA.")
+                    print(f"[NOVA] '{descricao}' separada para análise da IA.")
                     transacoes_pendentes.append({
                         "date": data_iso,
                         "description": descricao,
@@ -86,6 +90,11 @@ class ProcessFileUseCase:
                 print(f"Aprendi: '{desc}' agora é '{cat_name}'")
 
                 category_id = existing_categories.get(cat_name)
+                
+                # Validação: se a categoria não existe mas IA disse que não é nova, corrigir
+                if category_id is None and not is_new:
+                    is_new = True
+                    print(f"Ajuste: '{cat_name}' não encontrada em categorias existentes, marcando como nova sugestão.")
                 
                 resultados_finais.append({
                     "date": t['date'],

@@ -5,9 +5,11 @@ interface AccountCardProps {
     account: AccountResponseDto;
     onEdit: (account: AccountResponseDto) => void;
     onDelete: (id: string) => void;
+    onSelect?: (id: string) => void;
+    selected?: boolean;
 }
 
-export function AccountCard({ account, onEdit, onDelete }: AccountCardProps) {
+export function AccountCard({ account, onEdit, onDelete, onSelect, selected = false }: AccountCardProps) {
     
     // Formatador de moeda (R$)
     const formatCurrency = (value: number) => {
@@ -15,13 +17,13 @@ export function AccountCard({ account, onEdit, onDelete }: AccountCardProps) {
     };
 
     return (
-        <div className="account-card">
+        <div className={`account-card ${selected ? 'selected' : ''}`} onClick={() => onSelect?.(account.id)}>
             <div className="account-card-header">
                 <span className="account-type">{account.typeName}</span>
                 <div className="account-actions">
                     {/* Botão Editar */}
                     <button 
-                        onClick={() => onEdit(account)} 
+                        onClick={(e) => { e.stopPropagation(); onEdit(account); }}
                         className="btn-icon btn-edit" 
                         title="Editar Conta"
                     >
@@ -30,7 +32,7 @@ export function AccountCard({ account, onEdit, onDelete }: AccountCardProps) {
                     
                     {/* Botão Excluir */}
                     <button 
-                        onClick={() => onDelete(account.id)} 
+                        onClick={(e) => { e.stopPropagation(); onDelete(account.id); }}
                         className="btn-icon btn-delete" 
                         title="Excluir Conta"
                     >

@@ -108,6 +108,15 @@ export function HomePage() {
         setCategories(prev => [...prev, newCategory]);
     };
 
+    const handleAccountCardSelect = (accountId: string) => {
+        setActiveFilters(prev => ({
+            ...(prev || {}),
+            accountId,
+            page: 1,
+            pageSize: 20
+        } as FiltersState));
+    };
+
     // --- LÓGICA DE TRANSAÇÕES ---
     const handleDeleteTransaction = async (id: string) => {
         try {
@@ -253,6 +262,8 @@ export function HomePage() {
                                 account={account} 
                                 onEdit={handleEditAccount}
                                 onDelete={handleDeleteAccount}
+                                onSelect={handleAccountCardSelect}
+                                selected={activeFilters?.accountId === account.id}
                             />
                         ))}
                     </div>
@@ -260,6 +271,7 @@ export function HomePage() {
 
                 <TransactionFilter
                     accounts={accounts}
+                    selectedAccountId={activeFilters?.accountId ?? ''}
                     onFilterChange={handleFilterChange}
                     isLoading={isLoadingTransactions}
                 />

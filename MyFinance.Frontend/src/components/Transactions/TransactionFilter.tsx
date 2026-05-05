@@ -1,16 +1,17 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import type { AccountResponseDto } from '../../types/AccountResponseDto';
 import './TransactionFilter.css'; // Criaremos este CSS
 
 interface TransactionFilterProps {
     accounts: AccountResponseDto[]; // Lista de contas para o dropdown
+    selectedAccountId?: string;
     onFilterChange: (filters: any) => void; // Função para enviar filtros para o pai
     isLoading: boolean;
 }
 
-export function TransactionFilter({ accounts, onFilterChange, isLoading }: TransactionFilterProps) {
+export function TransactionFilter({ accounts, selectedAccountId = '', onFilterChange, isLoading }: TransactionFilterProps) {
     // Estado inicial dos filtros
-    const [selectedAccountId, setSelectedAccountId] = useState<string>('');
+    const [selectedAccount, setSelectedAccount] = useState<string>(selectedAccountId);
     const [searchText, setSearchText] = useState('');
     const [date, setDate] = useState('');
     const [amount, setAmount] = useState('');
@@ -18,12 +19,16 @@ export function TransactionFilter({ accounts, onFilterChange, isLoading }: Trans
     const handleFilterSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         onFilterChange({
-            accountId: selectedAccountId,
+            accountId: selectedAccount,
             searchText: searchText || undefined,
             date: date || undefined,
             amount: amount ? parseFloat(amount) : undefined,
         });
     };
+
+    useEffect(() => {
+        setSelectedAccount(selectedAccountId);
+    }, [selectedAccountId]);
 
     return (
         <form className="transaction-filter-form" onSubmit={handleFilterSubmit}>
@@ -34,8 +39,8 @@ export function TransactionFilter({ accounts, onFilterChange, isLoading }: Trans
                 <label htmlFor="account-filter">Conta</label>
                 <select
                     id="account-filter"
-                    value={selectedAccountId}
-                    onChange={(e) => setSelectedAccountId(e.target.value)}
+                    value={selectedAccount}
+                    onChange={(e) => setSelectedAccount(e.target.value)}
                     required // Força o usuário a escolher uma conta
                 >
                     <option value="" disabled>Selecione uma conta...</option>
@@ -83,7 +88,7 @@ export function TransactionFilter({ accounts, onFilterChange, isLoading }: Trans
                 />
             </div>
 
-            <button type="submit" className="filter-button" disabled={isLoading || !selectedAccountId}>
+            <button type="submit" className="filter-button" disabled={isLoading || !selectedAccount}>
                 {isLoading ? 'Buscando...' : 'Buscar'}
             </button>
         </form>

@@ -4,7 +4,7 @@
     border-radius: 8px;
     padding: 1.5rem;
     box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
     display: flex;
     flex-direction: column;
 }
@@ -12,6 +12,13 @@
 .account-card:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    cursor: pointer;
+}
+
+.account-card.selected {
+    border-color: #3b82f6;
+    border-width: 2.7px;
+    box-shadow: 0 0 0 1px rgba(59,130,246,0.25), 0 4px 6px rgba(0,0,0,0.08);
 }
 
 .account-card-header {
