@@ -16,10 +16,17 @@ export function AccountCard({ account, onEdit, onDelete, onSelect, selected = fa
         return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
     };
 
+    const formatAccountTypeName = (typeName: string) => {
+        return typeName
+            .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+            .replace(/([A-Z])([A-Z][a-z])/g, '$1 $2')
+            .trim();
+    };
+
     return (
         <div className={`account-card ${selected ? 'selected' : ''}`} onClick={() => onSelect?.(account.id)}>
             <div className="account-card-header">
-                <span className="account-type">{account.typeName}</span>
+                <span className="account-type">{formatAccountTypeName(account.typeName)}</span>
                 <div className="account-actions">
                     {/* Botão Editar */}
                     <button 

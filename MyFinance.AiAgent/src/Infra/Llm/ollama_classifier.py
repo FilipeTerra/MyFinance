@@ -30,7 +30,6 @@ class OllamaClassifier(ILlmClassifier):
         except:
             return {"categoryName": "Revisão Necessária", "isNew": True}
 
-
     def classify_batch(self, descriptions: list, existing_categories: list) -> list:
         if not descriptions:
             return []

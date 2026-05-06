@@ -28,6 +28,12 @@ export function Header() {
                     Home
                 </NavLink>
                 <NavLink
+                    to="/chat"
+                    className={({ isActive }) => isActive ? "header-link active" : "header-link"}
+                >
+                    Consultor IA
+                </NavLink>
+                <NavLink
                     to="/dashboard"
                     className={({ isActive }) => isActive ? "header-link active" : "header-link"}
                 >

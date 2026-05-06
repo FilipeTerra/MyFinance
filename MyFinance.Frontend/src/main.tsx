@@ -9,6 +9,7 @@ import './index.css'; // Seus estilos globais
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { HomePage } from "./pages/HomePage";
+import { ChatPage } from "./pages/ChatPage";
 import { ProtectedRoute } from "./components/Auth/ProtectedRoute";
 
 const rootElement = document.getElementById('root');
@@ -27,6 +28,7 @@ root.render(
                 {/* Rotas Protegidas */}
                 <Route element={<ProtectedRoute />}> {/* <-- Envolve as rotas protegidas */}
                     <Route path="/home" element={<HomePage />} />
+                    <Route path="/chat" element={<ChatPage />} />
 
                     {/* Redireciona a raiz "/" para a home se estiver logado */}
                     <Route path="/" element={<Navigate to="/home" replace />} />

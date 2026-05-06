@@ -1,12 +1,12 @@
 namespace MyFinance.Domain.Enums;
 
 /// <summary>
-/// Define os tipos de contas financeiras que o usuário pode cadastrar.
+/// Define os tipos de contas financeiras que o usuï¿½rio pode cadastrar.
 /// </summary>
 public enum AccountType
 {
     /// <summary>
-    /// Contas bancárias tradicionais.
+    /// Contas bancï¿½rias tradicionais.
     /// </summary>
     ContaCorrente = 1,
 
@@ -16,12 +16,12 @@ public enum AccountType
     Poupanca = 2,
 
     /// <summary>
-    /// Dinheiro físico (em espécie).
+    /// Dinheiro fï¿½sico (em espï¿½cie).
     /// </summary>
     Carteira = 3,
 
     /// <summary>
-    /// Cartões de crédito, focados em limite e fatura.
+    /// Cartï¿½es de crï¿½dito, focados em limite e fatura.
     /// </summary>
     CartaoCredito = 4,
 
