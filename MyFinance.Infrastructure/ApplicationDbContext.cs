@@ -27,6 +27,9 @@ namespace MyFinance.Infrastructure
                 entity.Property(a => a.InitialBalance)
                       .HasColumnType("decimal(18,2)");
 
+                entity.Property(a => a.Balance)
+                      .HasColumnType("decimal(18,2)");
+
                 entity.Property(a => a.Type)
                       .HasConversion(
                           v => v.ToString(),

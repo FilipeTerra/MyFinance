@@ -8,12 +8,12 @@ namespace MyFinance.Application.Interfaces.Repositories;
 public interface IAccountRepository
 {
     /// <summary>
-    /// Busca uma conta pelo Id, garantindo que ela pertença ao usuário (segurança).
+    /// Busca uma conta pelo Id, garantindo que ela pertenï¿½a ao usuï¿½rio (seguranï¿½a).
     /// </summary>
     Task<Account?> GetByIdAsync(Guid id, Guid userId);
 
     /// <summary>
-    /// Busca todas as contas de um usuário específico.
+    /// Busca todas as contas de um usuï¿½rio especï¿½fico.
     /// </summary>
     Task<IEnumerable<Account>> GetAllByUserIdAsync(Guid userId);
 
@@ -28,12 +28,17 @@ public interface IAccountRepository
     void Update(Account account);
 
     /// <summary>
+    /// Atualiza uma conta e salva as alteraÃ§Ãµes no banco de dados.
+    /// </summary>
+    Task UpdateAsync(Account account);
+
+    /// <summary>
     /// Marca uma conta como removida no contexto do EF.
     /// </summary>
     void Delete(Account account);
 
     /// <summary>
-    /// Salva todas as mudanças (Add, Update, Delete) no banco de dados.
+    /// Salva todas as mudanï¿½as (Add, Update, Delete) no banco de dados.
     /// </summary>
     Task<bool> SaveChangesAsync();
 }

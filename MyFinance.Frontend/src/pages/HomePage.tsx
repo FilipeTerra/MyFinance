@@ -43,32 +43,55 @@ export function HomePage() {
     const [accountToDeleteId, setAccountToDeleteId] = useState<string | null>(null);
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
 
+    const loadAccountsAndCategories = async () => {
+        setIsLoadingAccounts(true);
+        try {
+            const [accountsRes, categoriesRes] = await Promise.all([
+                accountService.getAllAccounts(),
+                categoryService.getAll()
+            ]);
+
+            setAccounts(accountsRes.data.sort((a, b) => a.name.localeCompare(b.name)));
+            setCategories(categoriesRes.data);
+        } catch (error) {
+            console.error('Erro ao carregar dados:', error);
+            setError('Erro ao carregar dados iniciais.');
+        } finally {
+            setIsLoadingAccounts(false);
+        }
+    };
+
+    const loadTransactions = async () => {
+        if (!activeFilters?.accountId) {
+            setTransactions([]);
+            return;
+        }
+
+        try {
+            setError(null);
+            setIsLoadingTransactions(true);
+            const response = await transactionService.getTransactions(activeFilters);
+            setTransactions(response.data);
+        } catch (err) {
+            const axiosError = err as AxiosError<ApiErrorResponse>;
+            setError(axiosError.response?.data?.message || 'Erro ao buscar transações.');
+        } finally {
+            setIsLoadingTransactions(false);
+        }
+    };
+
+    const handleTransactionSaved = async () => {
+        await loadAccountsAndCategories();
+        await loadTransactions();
+    };
+
     // <<< ESTADOS PARA CONTA >>>
     const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
     const [accountToEdit, setAccountToEdit] = useState<AccountResponseDto | null>(null);
 
     // Carregar dados iniciais
     useEffect(() => {
-        const loadInitialData = async () => {
-            setIsLoadingAccounts(true);
-            try {
-                const [accountsRes, categoriesRes] = await Promise.all([
-                    accountService.getAllAccounts(),
-                    categoryService.getAll()
-                ]);
-
-                // Ordena contas por nome
-                setAccounts(accountsRes.data.sort((a, b) => a.name.localeCompare(b.name)));
-                setCategories(categoriesRes.data);
-            } catch (error) {
-                console.error("Erro ao carregar dados:", error);
-                setError("Erro ao carregar dados iniciais.");
-            } finally {
-                setIsLoadingAccounts(false);
-            }
-        };
-
-        loadInitialData();
+        void loadAccountsAndCategories();
     }, []);
 
     // Buscar transações quando filtros mudam
@@ -78,21 +101,7 @@ export function HomePage() {
             return;
         }
 
-        const fetchTransactions = async () => {
-            try {
-                setError(null);
-                setIsLoadingTransactions(true);
-                const response = await transactionService.getTransactions(activeFilters);
-                setTransactions(response.data);
-            } catch (err) {
-                const axiosError = err as AxiosError<ApiErrorResponse>;
-                setError(axiosError.response?.data?.message || 'Erro ao buscar transações.');
-            } finally {
-                setIsLoadingTransactions(false);
-            }
-        };
-
-        fetchTransactions();
+        void loadTransactions();
 
     }, [activeFilters]);
 
@@ -292,6 +301,7 @@ export function HomePage() {
                 onClose={handleCloseModal}
                 onAccountCreated={handleAccountCreatedFromTransaction}
                 onCategoryCreated={handleCategoryCreated}
+                onTransactionSaved={handleTransactionSaved}
                 transactionToEdit={transactionToEdit}
             />
 
@@ -302,6 +312,7 @@ export function HomePage() {
                 onUpload={handleFileUpload}
                 accounts={accounts} 
                 onAccountCreated={handleAccountCreatedFromTransaction}
+                onTransactionSaved={handleTransactionSaved}
             />
 
             <ConfirmationModal

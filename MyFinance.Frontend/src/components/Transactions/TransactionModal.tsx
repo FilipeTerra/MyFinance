@@ -16,6 +16,7 @@ interface TransactionModalProps {
     categories: CategoryDto[]; 
     onCategoryCreated: (newCategory: CategoryDto) => void;
     onAccountCreated: (newAccount: AccountResponseDto) => void;
+    onTransactionSaved: () => void;
     isOpen: boolean;
     onClose: () => void;
     transactionToEdit?: TransactionResponseDto | null;
@@ -46,6 +47,7 @@ export function TransactionModal({
     onClose, 
     onAccountCreated,
     onCategoryCreated,
+    onTransactionSaved,
     transactionToEdit
 }: TransactionModalProps) {
     const { 
@@ -164,7 +166,8 @@ export function TransactionModal({
                 await createTransaction(transactionDto);
             }
             
-            onClose(); 
+            onTransactionSaved();
+            onClose();
         } catch (err) {
             console.error("Erro ao salvar transação:", err);
         }

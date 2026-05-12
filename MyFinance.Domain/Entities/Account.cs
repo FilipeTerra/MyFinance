@@ -9,10 +9,15 @@ public class Account
     public AccountType Type { get; set; }
 
     /// <summary>
-    /// O saldo inicial que o usuário informou ao criar a conta.
+    /// O saldo inicial que o usuï¿½rio informou ao criar a conta.
     /// </summary>
     public decimal InitialBalance { get; set; }
+    public decimal Balance { get; private set; }
 
+    public void UpdateBalance(decimal amount)
+    {
+        Balance += amount;
+    }
     public DateTime CreatedAt { get; set; }
 
     // --- Relacionamento com User ---
@@ -23,8 +28,8 @@ public class Account
     public Guid UserId { get; set; }
 
     /// <summary>
-    /// Propriedade de Navegação para o EF Core entender o relacionamento.
-    /// Uma conta pertence a UM usuário.
+    /// Propriedade de Navegaï¿½ï¿½o para o EF Core entender o relacionamento.
+    /// Uma conta pertence a UM usuï¿½rio.
     /// </summary>
     public User User { get; set; } = null!;
 }

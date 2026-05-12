@@ -38,19 +38,37 @@ public class TransactionService : ITransactionService
             return new ServiceResponse<TransactionResponseDto> { Success = false, ErrorMessage = "Categoria náo encontrada ou náo pertence ao usuário." };
         }
 
+        // Normalizar o sinal do valor conforme o tipo de transação
+        var normalizedAmount = dto.Type == TransactionType.Expense
+            ? -Math.Abs(dto.Amount)
+            : Math.Abs(dto.Amount);
+
         // Criar a entidade Transação
         var newTransaction = new Transaction(
             dto.Description,
-            dto.Amount, // Valor sempre positivo
+            normalizedAmount,
             dto.Type,
             dto.Date.ToUniversalTime(), // Armazenar em UTC
             dto.AccountId,
             dto.CategoryId
         );
 
-        // Salvar no banco
-        await _transactionRepository.AddAsync(newTransaction);
-        await _transactionRepository.SaveChangesAsync();
+        account.UpdateBalance(normalizedAmount);
+
+        await using var dbTransaction = await _transactionRepository.BeginTransactionAsync();
+        try
+        {
+            await _transactionRepository.AddAsync(newTransaction);
+            _accountRepository.Update(account);
+
+            await _transactionRepository.SaveChangesAsync();
+            await dbTransaction.CommitAsync();
+        }
+        catch
+        {
+            await dbTransaction.RollbackAsync();
+            throw;
+        }
 
         // Mapear para DTO de resposta (incluindo nome da conta)
         // Precisamos recarregar a transação com a conta para o mapeamento
@@ -111,9 +129,14 @@ public class TransactionService : ITransactionService
             }
         }
 
+        // Normalizar o sinal do valor conforme o tipo de transação
+        var normalizedAmount = dto.Type == TransactionType.Expense
+            ? -Math.Abs(dto.Amount)
+            : Math.Abs(dto.Amount);
+
         // Atualizar os dados da entidade
         transaction.Description = dto.Description;
-        transaction.Amount = dto.Amount;
+        transaction.Amount = normalizedAmount;
         transaction.Type = dto.Type;
         transaction.Date = dto.Date.ToUniversalTime();
         transaction.AccountId = dto.AccountId;
@@ -157,11 +180,35 @@ public class TransactionService : ITransactionService
     }
 
     public async Task SaveBatchAsync(List<SaveBatchTransactionRequestDto> dtos, Guid userId)
+    {
+        if (dtos == null || !dtos.Any())
         {
-            // Dicionário local para evitar criar a mesma categoria nova duas vezes no mesmo lote
-            var newlyCreatedCategories = new Dictionary<string, Guid>();
-            var transactionsToSave = new List<Transaction>();
+            return;
+        }
 
+        var newlyCreatedCategories = new Dictionary<string, Guid>();
+        var transactionsToSave = new List<Transaction>();
+
+        // Buscar e atualizar o saldo de cada conta uma única vez por AccountId
+        var accountsById = new Dictionary<Guid, Account>();
+
+        foreach (var accountGroup in dtos.GroupBy(dto => dto.AccountId))
+        {
+            var accountId = accountGroup.Key;
+            var account = await _accountRepository.GetByIdAsync(accountId, userId);
+            if (account == null)
+            {
+                throw new Exception($"Conta {accountId} não encontrada ou não pertence ao usuário.");
+            }
+
+            var groupTotal = accountGroup.Sum(dto => dto.Amount);
+            account.UpdateBalance(groupTotal);
+            accountsById[accountId] = account;
+        }
+
+        await using var dbTransaction = await _transactionRepository.BeginTransactionAsync();
+        try
+        {
             foreach (var dto in dtos)
             {
                 Guid finalCategoryId;
@@ -169,14 +216,12 @@ public class TransactionService : ITransactionService
                 // Lógica de Resolução de Categoria
                 if (dto.IsNewCategory && !string.IsNullOrWhiteSpace(dto.NewCategoryName))
                 {
-                    // Verifica se já criamos essa categoria neste loop ou se ela já existe no banco
                     if (newlyCreatedCategories.ContainsKey(dto.NewCategoryName))
                     {
                         finalCategoryId = newlyCreatedCategories[dto.NewCategoryName];
                     }
                     else
                     {
-                        // Verifica no banco para evitar duplicidade (Segurança Extra)
                         var existing = await _categoryRepository.GetByNameAsync(dto.NewCategoryName, userId);
                         if (existing != null)
                         {
@@ -184,7 +229,6 @@ public class TransactionService : ITransactionService
                         }
                         else
                         {
-                            // Cria a nova categoria aprovada pelo usuário
                             var newCategory = new Category(dto.NewCategoryName, userId);
                             await _categoryRepository.AddAsync(newCategory);
                             finalCategoryId = newCategory.Id;
@@ -197,7 +241,6 @@ public class TransactionService : ITransactionService
                     finalCategoryId = dto.CategoryId ?? throw new Exception("Categoria não informada para a transação.");
                 }
 
-                // Cria a entidade de transação
                 var transaction = new Transaction(
                     dto.Description,
                     dto.Amount,
@@ -210,9 +253,22 @@ public class TransactionService : ITransactionService
                 transactionsToSave.Add(transaction);
             }
 
-            // Salva todas as transações de uma vez
             await _transactionRepository.AddRangeAsync(transactionsToSave);
+
+            foreach (var account in accountsById.Values)
+            {
+                _accountRepository.Update(account);
+            }
+
+            await _transactionRepository.SaveChangesAsync();
+            await dbTransaction.CommitAsync();
         }
+        catch
+        {
+            await dbTransaction.RollbackAsync();
+            throw;
+        }
+    }
 
     // --- Mátodos Auxiliares ---
     private TransactionResponseDto MapTransactionToResponseDto(Transaction transaction)

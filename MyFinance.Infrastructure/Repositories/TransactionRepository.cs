@@ -1,7 +1,8 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
+using MyFinance.Application.Dtos;
 using MyFinance.Application.Interfaces.Repositories;
 using MyFinance.Domain.Entities;
-using MyFinance.Application.Dtos;
 
 namespace MyFinance.Infrastructure.Repositories;
 
@@ -91,10 +92,9 @@ public class TransactionRepository : ITransactionRepository
     }
 
     public async Task AddRangeAsync(IEnumerable<Transaction> transactions)
-        {
-            await _context.Transactions.AddRangeAsync(transactions);
-            await _context.SaveChangesAsync();
-        }
+    {
+        await _context.Transactions.AddRangeAsync(transactions);
+    }
 
     public async Task AddAsync(Transaction transaction)
     {
@@ -120,5 +120,27 @@ public class TransactionRepository : ITransactionRepository
     public async Task<bool> SaveChangesAsync()
     {
         return await _context.SaveChangesAsync() > 0;
+    }
+
+    public async Task<ITransactionDbTransaction> BeginTransactionAsync()
+    {
+        var transaction = await _context.Database.BeginTransactionAsync();
+        return new EfCoreTransaction(transaction);
+    }
+
+    private sealed class EfCoreTransaction : ITransactionDbTransaction
+    {
+        private readonly IDbContextTransaction _transaction;
+
+        public EfCoreTransaction(IDbContextTransaction transaction)
+        {
+            _transaction = transaction;
+        }
+
+        public Task CommitAsync() => _transaction.CommitAsync();
+
+        public Task RollbackAsync() => _transaction.RollbackAsync();
+
+        public ValueTask DisposeAsync() => _transaction.DisposeAsync();
     }
 }

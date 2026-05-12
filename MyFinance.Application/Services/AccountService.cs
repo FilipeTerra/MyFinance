@@ -30,6 +30,8 @@ public class AccountService : IAccountService
             UserId = userId // O UserId vem do token (seguro), náo do DTO
         };
 
+        newAccount.UpdateBalance(dto.InitialBalance);
+
         await _accountRepository.AddAsync(newAccount);
         await _accountRepository.SaveChangesAsync();
 
@@ -109,9 +111,9 @@ public class AccountService : IAccountService
             TypeName = account.Type.ToString(), // Converte Enum para String
             InitialBalance = account.InitialBalance,
 
-            // NOTA: CurrentBalance por enquanto á sá o InitialBalance.
-            // Isso será atualizado quando tivermos transaçães.
-            CurrentBalance = account.InitialBalance,
+            // NOTA: CurrentBalance usa o Balance atual da conta.
+            // Isso será mantido quando houver transaçães.
+            CurrentBalance = account.Balance,
 
             UserId = account.UserId
         };

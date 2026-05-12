@@ -14,13 +14,15 @@ interface UploadTransactionModalProps {
     onUpload: (file: File, accountId: string) => Promise<void>;
     accounts: AccountResponseDto[];
     onAccountCreated: (newAccount: AccountResponseDto) => void;
+    onTransactionSaved: () => void;
 }
 
 export function UploadTransactionModal({ 
     isOpen, 
     onClose,
     accounts, 
-    onAccountCreated 
+    onAccountCreated,
+    onTransactionSaved
 }: UploadTransactionModalProps) {
     const [accountId, setAccountId] = useState<string>('');
     const [file, setFile] = useState<File | null>(null);
@@ -86,7 +88,7 @@ export function UploadTransactionModal({
             setFile(null);
             setAccountId('');
             onClose();
-            window.location.reload(); 
+            onTransactionSaved();
         } catch (error) {
             alert('Erro ao gravar o lote de transações.');
             console.error(error);

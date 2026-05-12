@@ -45,7 +45,12 @@ public interface ITransactionRepository
     Task<bool> SaveChangesAsync();
 
     /// <summary>
-    /// Busca transa��es com base em um conjunto de filtros din�micos.
+    /// Inicia uma transa��o de banco de dados para garantir atomicidade.
+    /// </summary>
+    Task<ITransactionDbTransaction> BeginTransactionAsync();
+
+    /// <summary>
+    /// Busca transa��es com base em um conjunto de filtros dinâmicos.
     /// </summary>
     Task<IEnumerable<Transaction>> GetByFilterAsync(Guid userId, TransactionSearchRequestDto filters);
 
