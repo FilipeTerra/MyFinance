@@ -8,10 +8,11 @@ namespace MyFinance.Infrastructure
     {
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) {}
 
-        public DbSet<User> Users { get; set; }
-        public DbSet<Account> Accounts { get; set; }
-        public DbSet<Transaction> Transactions { get; set; }
-        public DbSet<Category> Categories { get; set; }
+      public DbSet<User> Users { get; set; }
+      public DbSet<Account> Accounts { get; set; }
+      public DbSet<Transaction> Transactions { get; set; }
+      public DbSet<Category> Categories { get; set; }
+      public DbSet<FinancialGoal> FinancialGoals { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -63,6 +64,18 @@ namespace MyFinance.Infrastructure
                         v => v.ToUniversalTime(),
                         v => DateTime.SpecifyKind(v, DateTimeKind.Utc));
             });
-        }
+                  modelBuilder.Entity<FinancialGoal>(entity =>
+                  {
+                        entity.ToTable("FinancialGoals");
+                        entity.HasKey(fg => fg.Id);
+                        entity.Property(fg => fg.TargetAmount).HasColumnType("decimal(18,2)");
+                        entity.Property(fg => fg.CurrentAmount).HasColumnType("decimal(18,2)");
+                        // Relacionamento 1-N: User -> FinancialGoals
+                        entity.HasOne<User>()
+                                .WithMany()
+                                .HasForeignKey(fg => fg.UserId)
+                                .OnDelete(DeleteBehavior.Cascade);
+                  });
+            }
     }
 }

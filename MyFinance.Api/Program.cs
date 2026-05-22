@@ -73,6 +73,8 @@ builder.Services.AddHttpClient<IAiIntegrationService, AiIntegrationService>(clie
     client.BaseAddress = new Uri("http://127.0.0.1:8181/");
     client.Timeout = TimeSpan.FromMinutes(10);
 });
+builder.Services.AddScoped<IFinancialGoalRepository, FinancialGoalRepository>();
+builder.Services.AddScoped<IFinancialGoalService, FinancialGoalService>();
 var app = builder.Build();
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 

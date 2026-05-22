@@ -53,7 +53,7 @@ namespace MyFinance.Application.Services
         private class AiResponseWrapper
         {
             public bool Success { get; set; }
-            public List<AiTransactionResponseDto> Data { get; set; }
+            public List<AiTransactionResponseDto>? Data { get; set; }
         }
     }
 }
