@@ -1,18 +1,18 @@
 import axios, { AxiosError } from 'axios';
 
-const AI_API_BASE_URL = import.meta.env.VITE_AI_API_BASE_URL || 'http://localhost:8181/api/ai'; // Default para desenvolvimento
+const AI_API_BASE_URL = import.meta.env.VITE_AI_API_BASE_URL || 'http://localhost:8181/api/ai';
 
 const aiApiClient = axios.create({
     baseURL: AI_API_BASE_URL,
     headers: {
-        'Content-Type': 'application/json; charset=utf-8',
+        'Content-Type': 'application/json',
     },
-    timeout: 30000, // 30 segundos timeout
+    timeout: 300000, // 5 minutos — Ollama pode levar bastante tempo para responder
 });
 
 export interface AiMessageResponse {
     message?: string;
-    data?: any; // Para objetos complexos futuros (gráficos, tabelas)
+    data?: any;
 }
 
 export interface ApiErrorResponse {
@@ -20,33 +20,33 @@ export interface ApiErrorResponse {
     errors?: Record<string, string[]>;
 }
 
-/**
- * Envia uma mensagem para o agente de IA e retorna a resposta.
- * @param message - O texto da mensagem a ser enviada
- * @returns A resposta da API, que pode ser uma string ou um objeto complexo
- */
 export async function sendMessage(message: string): Promise<AiMessageResponse> {
+    const jwtToken = localStorage.getItem('authToken');
+    if (!jwtToken) throw new Error('Sessão expirada. Faça login novamente.');
+
     try {
-        const response = await aiApiClient.post<AiMessageResponse>('/chat', {
-            prompt: message
+        const response = await aiApiClient.post('/chat', {
+            jwt_token: jwtToken,
+            prompt: message,
         });
 
         const responseData = response.data as any;
         return {
-            message: responseData.resposta ?? responseData.message,
+            message: responseData.resposta ?? responseData.message ?? 'Sem resposta do agente.',
             data: responseData.data,
-            ...responseData,
         };
     } catch (error) {
         if (axios.isAxiosError(error)) {
-            const axiosError = error as AxiosError<ApiErrorResponse>;
-            throw new Error(
+            const axiosError = error as AxiosError<any>;
+            if (axiosError.code === 'ECONNABORTED') {
+                throw new Error('O agente demorou muito para responder. Tente novamente.');
+            }
+            const serverMessage =
+                axiosError.response?.data?.detail ||
                 axiosError.response?.data?.message ||
-                axiosError.message ||
-                'Erro ao comunicar com o agente de IA'
-            );
-        } else {
-            throw new Error('Erro desconhecido ao enviar mensagem para IA');
+                axiosError.message;
+            throw new Error(serverMessage || 'Erro ao comunicar com o agente de IA.');
         }
+        throw new Error('Erro desconhecido ao enviar mensagem para IA.');
     }
 }

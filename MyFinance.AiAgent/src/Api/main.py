@@ -24,7 +24,6 @@ _knowledge_base = FinancialKnowledgeBase()
 
 
 class ChatRequest(BaseModel):
-    user_id: str
     jwt_token: str
     prompt: str
 
@@ -47,7 +46,7 @@ async def ingest_documents(request: IngestRequest):
 @app.post("/api/ai/chat")
 async def consultant_chat(request: ChatRequest):
     try:
-        response = await invoke_chat(request.user_id, request.prompt, request.jwt_token)
+        response = await invoke_chat(request.prompt, request.jwt_token)
         return {"success": True, "resposta": response}
     except Exception as e:
         return {"success": False, "erro": str(e)}
