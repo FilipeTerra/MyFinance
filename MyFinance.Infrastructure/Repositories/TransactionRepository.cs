@@ -17,8 +17,8 @@ public class TransactionRepository : ITransactionRepository
 
     public async Task<Transaction?> GetByIdAsync(Guid id, Guid userId)
     {
-        // Busca a transa��o e inclui a conta, 
-        // depois verifica se a conta pertence ao usu�rio.
+        // Busca a transação e inclui a conta, 
+        // depois verifica se a conta pertence ao usuário.
         return await _context.Transactions
             .Include(t => t.Account) // Inclui os dados da conta relacionada
             .Include(t => t.Category) // Inclui os dados da categoria relacionada
@@ -27,7 +27,7 @@ public class TransactionRepository : ITransactionRepository
 
     public async Task<IEnumerable<Transaction>> GetAllByAccountIdAsync(Guid accountId, Guid userId)
     {
-        // Verifica se a conta pertence ao usu�rio
+        // Verifica se a conta pertence ao usuário
         var accountExists = await _context.Accounts
                                 .AnyAsync(a => a.Id == accountId && a.UserId == userId);
 
@@ -36,7 +36,7 @@ public class TransactionRepository : ITransactionRepository
             return Enumerable.Empty<Transaction>();
         }
 
-        // Busca as transa��es da conta, ordenadas pela data (mais recente primeiro)
+        // Busca as transações da conta, ordenadas pela data (mais recente primeiro)
         return await _context.Transactions
             .Where(t => t.AccountId == accountId)
             .OrderByDescending(t => t.Date)
@@ -48,16 +48,16 @@ public class TransactionRepository : ITransactionRepository
 
     public async Task<IEnumerable<Transaction>> GetByFilterAsync(Guid userId, TransactionSearchRequestDto filters)
     {
-        // Garante que a conta pertence ao usu�rio E que estamos buscando na conta correta
+        // Garante que a conta pertence ao usuário E que estamos buscando na conta correta
         var query = _context.Transactions
             .Where(t => t.Account.UserId == userId && t.AccountId == filters.AccountId);
 
-        // Filtro de Descri��o Textual
+        // Filtro de Descrição Textual
         if (!string.IsNullOrWhiteSpace(filters.SearchText))
         {
-            // Usando EF.Functions.ILike para busca case-insensitive (espec�fico do PostgreSQL)
+            // Usando EF.Functions.ILike para busca case-insensitive (específico do PostgreSQL)
             // Se usar SQL Server, seria t.Description.Contains(filters.SearchText)
-            // Para ser mais gen�rico e case-insensitive:
+            // Para ser mais genérico e case-insensitive:
             string searchTextLower = filters.SearchText.ToLower();
             query = query.Where(t => t.Description.ToLower().Contains(searchTextLower));
         }
@@ -113,7 +113,7 @@ public class TransactionRepository : ITransactionRepository
 
     public async Task<bool> HasTransactionsAsync(Guid accountId)
     {
-        // Verifica se existe ALGUMA transa��o para a conta
+        // Verifica se existe ALGUMA transação para a conta
         return await _context.Transactions.AnyAsync(t => t.AccountId == accountId);
     }
 
