@@ -91,4 +91,44 @@ def make_api_tools(jwt_token: str) -> list:
         except Exception as e:
             return f"Erro inesperado ao consultar transações: {e}"
 
-    return [consultar_saldos_contas, consultar_metas_financeiras, consultar_transacoes_recentes]
+    @tool
+    def criar_meta_financeira(nome: str, valor_alvo: float, data_limite: str) -> str:
+        """Use esta ferramenta para criar uma nova meta financeira para o usuário APENAS quando
+        ele pedir explicitamente. Exemplos: 'Quero criar uma meta para comprar um carro de 50000
+        até dezembro', 'Cria uma meta de viagem de R$5000 para junho de 2026'.
+        Recebe o nome da meta, o valor alvo e a data limite no formato 'YYYY-MM-DD'."""
+        payload = {
+            "name": nome,
+            "targetAmount": valor_alvo,
+            "deadline": f"{data_limite}T00:00:00",
+        }
+        try:
+            response = requests.post(
+                f"{_API_BASE_URL}/financial-goals",
+                json=payload,
+                headers=_headers,
+                timeout=10,
+            )
+            if response.status_code in (200, 201):
+                return (
+                    f"✅ Meta criada com sucesso!\n"
+                    f"  • Nome: {nome}\n"
+                    f"  • Valor alvo: R$ {valor_alvo:,.2f}\n"
+                    f"  • Prazo: {data_limite}"
+                )
+            if response.status_code == 401:
+                return "Sessão expirada. O usuário precisa fazer login novamente."
+            if response.status_code == 400:
+                return f"Dados inválidos para criar a meta: {response.text}"
+            return f"Erro ao criar meta (status {response.status_code})."
+        except requests.exceptions.ConnectionError:
+            return "Erro: A API financeira está offline ou inacessível."
+        except Exception as e:
+            return f"Erro inesperado ao criar meta: {e}"
+
+    return [
+        consultar_saldos_contas,
+        consultar_metas_financeiras,
+        consultar_transacoes_recentes,
+        criar_meta_financeira,
+    ]

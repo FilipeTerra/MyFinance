@@ -15,6 +15,7 @@
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-hook-form": "^7.69.0",
+    "react-markdown": "^10.1.0",
     "react-router-dom": "^7.9.4",
     "zod": "^4.2.1"
   },

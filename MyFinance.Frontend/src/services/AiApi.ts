@@ -20,9 +20,16 @@ export interface ApiErrorResponse {
     errors?: Record<string, string[]>;
 }
 
+export class SessionExpiredError extends Error {
+    constructor() {
+        super('session_expired');
+        this.name = 'SessionExpiredError';
+    }
+}
+
 export async function sendMessage(message: string): Promise<AiMessageResponse> {
     const jwtToken = localStorage.getItem('authToken');
-    if (!jwtToken) throw new Error('Sessão expirada. Faça login novamente.');
+    if (!jwtToken) throw new SessionExpiredError();
 
     try {
         const response = await aiApiClient.post('/chat', {
@@ -31,11 +38,19 @@ export async function sendMessage(message: string): Promise<AiMessageResponse> {
         });
 
         const responseData = response.data as any;
+
+        if (!responseData.success && responseData.error_type === 'session_expired') {
+            localStorage.removeItem('authToken');
+            throw new SessionExpiredError();
+        }
+
         return {
             message: responseData.resposta ?? responseData.message ?? 'Sem resposta do agente.',
             data: responseData.data,
         };
     } catch (error) {
+        if (error instanceof SessionExpiredError) throw error;
+
         if (axios.isAxiosError(error)) {
             const axiosError = error as AxiosError<any>;
             if (axiosError.code === 'ECONNABORTED') {

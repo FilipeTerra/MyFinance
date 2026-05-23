@@ -1,5 +1,8 @@
+import logging
 from langchain_core.tools import tool
 from src.Infra.Data.financial_rag import FinancialKnowledgeBase
+
+_logger = logging.getLogger("myfinance.agent")
 
 # Singleton — o índice FAISS é carregado uma única vez e reutilizado
 _kb = FinancialKnowledgeBase()
@@ -12,4 +15,10 @@ def consultar_teoria_financeira(query: str) -> str:
     regra dos 50/30/20, juros compostos, reserva de emergência, ou qualquer princípio e regra
     financeira consagrada. Recebe uma dúvida ou contexto do usuário e devolve trechos relevantes
     extraídos de livros de finanças pessoais."""
-    return _kb.search(query)
+    _logger.info("📚 [RAG]  Consultando base de conhecimento: '%s'", query[:80])
+    result = _kb.search(query)
+    if "não inicializada" in result:
+        _logger.warning("⚠️  [RAG]  Índice FAISS ausente. Adicione livros em data/books/ e chame POST /api/ai/ingest.")
+    else:
+        _logger.info("📚 [RAG]  %d chars retornados da base de conhecimento.", len(result))
+    return result

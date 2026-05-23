@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './ChatPage.css';
-import { sendMessage } from '../services/AiApi';
+import { sendMessage, SessionExpiredError } from '../services/AiApi';
 import { Header } from '../components/Layout/Header';
+import ReactMarkdown from 'react-markdown';
 
 interface Message {
     id: string;
@@ -14,6 +16,7 @@ interface Message {
 const TYPING_ID = 'typing-indicator';
 
 export function ChatPage() {
+    const navigate = useNavigate();
     const [messages, setMessages] = useState<Message[]>([
         {
             id: '1',
@@ -60,6 +63,11 @@ export function ChatPage() {
                 },
             ]);
         } catch (error) {
+            if (error instanceof SessionExpiredError) {
+                localStorage.removeItem('authToken');
+                navigate('/login', { replace: true });
+                return;
+            }
             setMessages(prev => [
                 ...prev.filter(m => m.id !== TYPING_ID),
                 {
@@ -99,6 +107,10 @@ export function ChatPage() {
                                 {message.isTyping ? (
                                     <div className="typing-indicator">
                                         <span></span><span></span><span></span>
+                                    </div>
+                                ) : message.sender === 'agent' ? (
+                                    <div className="message-text markdown-body">
+                                        <ReactMarkdown>{message.text}</ReactMarkdown>
                                     </div>
                                 ) : (
                                     <div className="message-text">{message.text}</div>

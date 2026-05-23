@@ -1,15 +1,64 @@
 import json
+import logging
+import os
+import time
+import asyncio
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from src.Infra.Llm.ollama_classifier import OllamaClassifier
+from src.Infra.Llm.ollama_utils import ensure_model
 from src.Infra.Parsers.csv_parser import CsvParser
 from src.Infra.Data.financial_rag import FinancialKnowledgeBase
+from src.Infra.Logging.agent_logger import setup_logging
 from src.Application.UseCases.process_file import ProcessFileUseCase
+import jwt
 from src.Application.Agents.chat_consultant_agent import invoke_chat
 
-app = FastAPI(title="MyFinance AI Agent")
+setup_logging()
+
+_logger = logging.getLogger("myfinance.agent")
+_knowledge_base = FinancialKnowledgeBase()
+
+_BOOKS_DIR = "data/books"
+_EMBEDDING_MODEL = "nomic-embed-text"
+
+
+def _startup_sync() -> None:
+    """Executado em thread separada: garante o modelo de embeddings e ingere documentos."""
+    ensure_model(_EMBEDDING_MODEL)
+
+    if not os.path.isdir(_BOOKS_DIR):
+        _logger.info("📚 [RAG]  Diretório '%s' não encontrado. RAG não será inicializado.", _BOOKS_DIR)
+        return
+
+    files = [f for f in os.listdir(_BOOKS_DIR) if f.lower().endswith((".pdf", ".txt"))]
+    if not files:
+        _logger.info(
+            "📚 [RAG]  Nenhum .pdf/.txt encontrado em '%s'. "
+            "Adicione documentos para ativar o RAG.",
+            _BOOKS_DIR,
+        )
+        return
+
+    _logger.info("📚 [RAG]  Ingerindo %d arquivo(s) de '%s'...", len(files), _BOOKS_DIR)
+    try:
+        total = _knowledge_base.ingest_documents(_BOOKS_DIR)
+        _logger.info("✅ [RAG]  %d chunks indexados com sucesso.", total)
+    except Exception as e:
+        _logger.error("❌ [RAG]  Falha na ingestão automática: %s", e)
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    asyncio.create_task(asyncio.to_thread(_startup_sync))
+    yield
+
+
+app = FastAPI(title="MyFinance AI Agent", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -18,9 +67,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-_knowledge_base = FinancialKnowledgeBase()
 
 
 class ChatRequest(BaseModel):
@@ -46,6 +92,10 @@ async def ingest_documents(request: IngestRequest):
 @app.post("/api/ai/chat")
 async def consultant_chat(request: ChatRequest):
     try:
+        payload = jwt.decode(request.jwt_token, options={"verify_signature": False})
+        if time.time() > payload.get("exp", 0):
+            return {"success": False, "error_type": "session_expired", "erro": "Token expirado."}
+
         response = await invoke_chat(request.prompt, request.jwt_token)
         return {"success": True, "resposta": response}
     except Exception as e:

@@ -1,4 +1,5 @@
 import os
+import logging
 from langchain_ollama import OllamaEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_community.document_loaders import DirectoryLoader, PyPDFLoader, TextLoader
@@ -15,6 +16,12 @@ class FinancialKnowledgeBase:
     def __init__(self):
         self.embeddings = OllamaEmbeddings(model=_EMBEDDING_MODEL)
         self._vectorstore: FAISS | None = None
+        if not os.path.exists(_INDEX_PATH):
+            logging.getLogger("myfinance.agent").warning(
+                "⚠️  [RAG]  Índice FAISS não encontrado em '%s'. "
+                "Adicione livros em data/books/ e chame POST /api/ai/ingest para ativar o RAG.",
+                _INDEX_PATH,
+            )
 
     def _load_index(self):
         """Carrega o índice do disco na primeira chamada (lazy-load)."""
