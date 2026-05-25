@@ -96,7 +96,7 @@ export function ChatPage() {
             <div className="chat-content">
                 <div className="chat-panel">
                     <div className="chat-header">
-                        <h2>FinAl — Mentor Financeiro</h2>
+                        <h2>Mentor Financeiro</h2>
                     </div>
                     <div className="messages-container">
                         {messages.map(message => (
@@ -132,7 +132,7 @@ export function ChatPage() {
                             onClick={handleSend}
                             disabled={isLoading || !inputText.trim()}
                         >
-                            {isLoading ? 'Aguardando FinAl...' : 'Enviar'}
+                            {isLoading ? 'Gerando resposta...' : 'Enviar'}
                         </button>
                     </div>
                 </div>

@@ -19,6 +19,12 @@ def consultar_teoria_financeira(query: str) -> str:
     result = _kb.search(query)
     if "não inicializada" in result:
         _logger.warning("⚠️  [RAG]  Índice FAISS ausente. Adicione livros em data/books/ e chame POST /api/ai/ingest.")
-    else:
-        _logger.info("📚 [RAG]  %d chars retornados da base de conhecimento.", len(result))
-    return result
+        return result
+    _logger.info("📚 [RAG]  %d chars retornados da base de conhecimento.", len(result))
+    return (
+        "=== TRECHOS EXTRAÍDOS DOS LIVROS DE FINANÇAS PESSOAIS ===\n\n"
+        f"{result}\n\n"
+        "=== FIM DOS TRECHOS ===\n"
+        "INSTRUÇÃO: Apresente os conceitos acima ao usuário. Cite os pontos principais "
+        "que os livros ensinam sobre o tema perguntado."
+    )

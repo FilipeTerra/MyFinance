@@ -34,6 +34,9 @@ class ProcessFileUseCase:
 
                 valor_float = float(valor_str)
                 descricao = str(row['descricao']).strip()
+                historico = str(row.get('historico', '')).strip()
+                sinal = "+" if valor_float >= 0 else ""
+                contexto_ia = f"[{historico}] {descricao} | R$ {sinal}{valor_float:.2f}"
 
                 # Consulta a Memória Rápida
                 categoria_cache = self.kb.get_category(account_id, descricao)
@@ -55,6 +58,7 @@ class ProcessFileUseCase:
                     transacoes_pendentes.append({
                         "date": data_iso,
                         "description": descricao,
+                        "context": contexto_ia,
                         "amount": valor_float,
                         "accountId": account_id
                     })
@@ -66,22 +70,21 @@ class ProcessFileUseCase:
         if transacoes_pendentes:
             print(f"\n--- Enviando lote de {len(transacoes_pendentes)} transações para a IA ---")
             
-            # Extraímos apenas as descrições para mandar para o Gemma
-            descricoes = [t['description'] for t in transacoes_pendentes]
-            
+            # Enviamos o contexto enriquecido ([Histórico] Descrição | R$ valor) para a IA
+            contextos = [t['context'] for t in transacoes_pendentes]
+
             # Uma única chamada à IA!
-            respostas_ia = self.classifier.classify_batch(descricoes, category_names)
-            
-            # Criamos um "dicionário de busca rápida" com a resposta da IA. 
-            # Fazemos isso porque a IA pode responder fora de ordem!
+            respostas_ia = self.classifier.classify_batch(contextos, category_names)
+
+            # A IA ecoa o contexto enriquecido como 'description', usamos ele como chave
             mapa_respostas = {item['description']: item for item in respostas_ia if 'description' in item}
 
             # Agora varremos as pendentes e casamos com a resposta da IA
             for t in transacoes_pendentes:
                 desc = t['description']
-                
-                # Pega a decisão da IA (ou usa um fallback caso a IA tenha esquecido esse item)
-                decisao = mapa_respostas.get(desc, {"categoryName": "Revisão Necessária", "isNew": True})
+
+                # Pega a decisão da IA pelo contexto enriquecido (ou fallback)
+                decisao = mapa_respostas.get(t['context'], {"categoryName": "Revisão Necessária", "isNew": True})
                 cat_name = decisao.get('categoryName', 'Revisão Necessária')
                 is_new = decisao.get('isNew', True)
 

@@ -155,16 +155,35 @@ public class TransactionService : ITransactionService
 
     public async Task<ServiceResponse<bool>> DeleteTransactionAsync(Guid transactionId, Guid userId)
     {
-        // Buscar a transação (já valida o usuário)
         var transaction = await _transactionRepository.GetByIdAsync(transactionId, userId);
         if (transaction == null)
         {
             return new ServiceResponse<bool> { Success = false, ErrorMessage = "Transação náo encontrada ou náo pertence ao usuário." };
         }
 
-        // Deletar
-        _transactionRepository.Delete(transaction);
-        await _transactionRepository.SaveChangesAsync();
+        var account = await _accountRepository.GetByIdAsync(transaction.AccountId, userId);
+        if (account == null)
+        {
+            return new ServiceResponse<bool> { Success = false, ErrorMessage = "Conta associada à transação não encontrada." };
+        }
+
+        // Reverter o efeito da transação no saldo (Amount já está normalizado com sinal)
+        account.UpdateBalance(-transaction.Amount);
+
+        await using var dbTransaction = await _transactionRepository.BeginTransactionAsync();
+        try
+        {
+            _transactionRepository.Delete(transaction);
+            _accountRepository.Update(account);
+
+            await _transactionRepository.SaveChangesAsync();
+            await dbTransaction.CommitAsync();
+        }
+        catch
+        {
+            await dbTransaction.RollbackAsync();
+            throw;
+        }
 
         return new ServiceResponse<bool> { Data = true };
     }

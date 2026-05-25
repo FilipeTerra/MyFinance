@@ -23,12 +23,12 @@ class CsvParser(IFileExtractor):
             # Mapeamos as colunas do seu Banco para o padrão que a IA e o C# esperam
             df_padronizado = df.rename(columns={
                 "Data Lançamento": "data",
+                "Histórico": "historico",
                 "Descrição": "descricao",
                 "Valor": "valor"
             })
-            
-            # Retornamos apenas as colunas úteis
-            return df_padronizado[["data", "descricao", "valor"]]
+
+            return df_padronizado[["data", "historico", "descricao", "valor"]]
             
         except Exception as e:
             print(f"Erro ao processar o CSV: {e}")

@@ -11,6 +11,7 @@ from src.Application.Agents.Tools.math_tools import (
     comparar_quitacao_vs_investimento,
 )
 from src.Infra.Logging.agent_logger import AgentCallbackLogger
+from src.Infra.Llm.ollama_provider import get_ollama_config, get_model
 
 _logger = logging.getLogger("myfinance.agent")
 
@@ -23,9 +24,6 @@ def _extract_user_id(jwt_token: str) -> str:
     if not user_id:
         raise ValueError("Token inválido: claim 'sub' não encontrado.")
     return user_id
-
-# LLM robusto reservado para raciocínio e conversação
-_MODEL_NAME = "gemma4:latest"
 
 _SYSTEM_PROMPT = (
     "Você é o Claudio, o assistente financeiro pessoal do usuário. "
@@ -42,27 +40,29 @@ _SYSTEM_PROMPT = (
     "6. SEMPRE que o usuário perguntar se deve pagar uma dívida ou investir, use OBRIGATORIAMENTE a ferramenta comparar_quitacao_vs_investimento. NUNCA opine sem os números. "
     "7. Só crie metas financeiras com criar_meta_financeira quando o usuário pedir EXPLICITAMENTE. Nunca crie sem confirmação. "
     "8. Após realizar qualquer ação de criação, confirme ao usuário o que foi criado com os detalhes retornados pela ferramenta. "
-    "9. Para qualquer conselho, estratégia ou princípio financeiro (reserva de emergência, regra 50/30/20, independência financeira, investimentos, orçamento), use SEMPRE a ferramenta consultar_teoria_financeira ANTES de responder. Baseie sua resposta nos trechos retornados. "
+    "9. Para qualquer conselho, conceito, princípio ou pergunta sobre livros financeiros (reserva de emergência, regra 50/30/20, independência financeira, Pai Rico Pai Pobre, etc.), use SEMPRE a ferramenta consultar_teoria_financeira ANTES de responder. "
+    "Quando a ferramenta retornar trechos dos livros, sua resposta DEVE explicar o que os livros ensinam, citando diretamente os conceitos retornados. NUNCA ignore o conteúdo dos trechos. "
 
-    "Nunca invente dados ou cálculos — use apenas as ferramentas disponíveis e a literatura financeira." \
+    "Nunca invente dados ou cálculos — use apenas as ferramentas disponíveis e a literatura financeira. "
     "NUNCA fale sobre as ferramentas ou detalhes técnicos. Apenas diga como você pode ajudar e entregue a resposta de forma clara, objetiva e acionável."
 )
 
-# Singletons: o LLM e a memória persistem entre requests
+# MemorySaver é singleton — histório de conversa persiste entre requests
 _memory = MemorySaver()
-_llm = ChatOllama(model=_MODEL_NAME)
 
 
 async def invoke_chat(message: str, jwt_token: str) -> str:
     """
     Invoca o agente consultor mantendo histórico de conversa por usuário.
-    O user_id é extraído do JWT — o frontend só precisa enviar o token.
-    O agente é recompilado por request para injetar as API tools com o JWT atual.
+    O LLM é criado por request para refletir o provedor ativo (remoto/local).
     O MemorySaver garante que a memória da conversa persiste entre as chamadas.
     """
     user_id = _extract_user_id(jwt_token)
 
-    _logger.info("📨 [CHAT] user=%s | mensagem: %s", user_id[:8], message[:120])
+    model_name = get_model("chat")
+    llm = ChatOllama(model=model_name, **get_ollama_config())
+
+    _logger.info("📨 [CHAT] user=%s | modelo=%s | mensagem: %s", user_id[:8], model_name, message[:120])
 
     api_tools = make_api_tools(jwt_token)
     all_tools = [
@@ -74,7 +74,7 @@ async def invoke_chat(message: str, jwt_token: str) -> str:
     _logger.info("⚙️  [AGENT] %d ferramentas registradas: %s", len(all_tools), [t.name for t in all_tools])
 
     agent = create_react_agent(
-        _llm,
+        llm,
         all_tools,
         prompt=SystemMessage(content=_SYSTEM_PROMPT),
         checkpointer=_memory,
@@ -82,7 +82,7 @@ async def invoke_chat(message: str, jwt_token: str) -> str:
 
     config = {
         "configurable": {"thread_id": user_id},
-        "callbacks": [AgentCallbackLogger(user_id, model_name=_MODEL_NAME)],
+        "callbacks": [AgentCallbackLogger(user_id, model_name=model_name)],
     }
     result = await agent.ainvoke(
         {"messages": [HumanMessage(content=message)]},

@@ -2,90 +2,128 @@ import json
 import re
 from langchain_ollama import OllamaLLM
 from src.Domain.interfaces import ILlmClassifier
+from src.Infra.Llm.ollama_provider import get_ollama_config, get_model
 
-# SLM rápido e determinístico para tarefas de classificação em background
-_MODEL_NAME = "llama3.2:3b"
+_BATCH_SIZE = 15
+
+# Vocabulário base de categorias financeiras.
+# Amplia as opções do modelo para reduzir alucinações sem impedir criação de novas.
+# O sistema ainda trata como "sugestão" qualquer categoria não criada pelo usuário.
+_SEED_CATEGORIES = [
+    "Alimentação", "Transporte", "Saúde", "Educação", "Lazer",
+    "Moradia", "Vestuário", "Salário", "Investimentos", "Fatura Cartão",
+    "Transferência", "Serviços", "Assinaturas", "Pet", "Beleza",
+    "Seguro", "Farmácia", "Combustível", "Streaming", "Família",
+]
 
 
 class OllamaClassifier(ILlmClassifier):
     def __init__(self):
-        self.llm = OllamaLLM(model=_MODEL_NAME, temperature=0.1, format="json")
+        self.llm = OllamaLLM(
+            model=get_model("classifier"),
+            temperature=0.3,
+            format="json",
+            **get_ollama_config(),
+        )
+
+    def _strip_markdown(self, text: str) -> str:
+        if text.startswith("```json"):
+            text = text[7:]
+        elif text.startswith("```"):
+            text = text[3:]
+        if text.endswith("```"):
+            text = text[:-3]
+        return text.strip()
+
+    def _fix_is_new(self, result: dict, existing_categories_lower: set) -> dict:
+        """Garante que isNew reflete a realidade: categoria não existe na lista = isNew True."""
+        name = result.get("categoryName", "")
+        result["isNew"] = name.strip().lower() not in existing_categories_lower
+        return result
+
+    def _expand_categories(self, existing_categories: list) -> str:
+        """Combina categorias do usuário com o vocabulário-base, sem duplicatas."""
+        existing_lower = {c.lower() for c in existing_categories}
+        seeds = [s for s in _SEED_CATEGORIES if s.lower() not in existing_lower]
+        combined = existing_categories + seeds
+        return ", ".join(combined)
 
     def classify_category(self, description: str, existing_categories: list) -> dict:
-        categories_str = ", ".join(existing_categories)
-        prompt = f"""
-        Você é um sistema de classificação financeira.
-        Analise a transação: '{description}'
+        categories_str = self._expand_categories(existing_categories)
+        existing_lower = {c.lower() for c in existing_categories}
 
-        Categorias existentes: [{categories_str}]
+        prompt = f"""Você é um classificador de transações financeiras. Responda APENAS com JSON puro.
 
-        Regras:
-        1. Se a transação pertencer a uma categoria existente, escolha-a.
-        2. Se for ambíguo ou novo, sugira uma NOVA categoria (máximo 2 palavras).
-        3. Responda APENAS com um JSON puro no formato:
-        {{"categoryName": "Nome", "isNew": true/false}}
-        """
+Transação: "{description}"
+
+Categorias disponíveis: [{categories_str}]
+
+Decisão:
+- Se a transação se encaixa CLARAMENTE em uma categoria disponível: use-a com isNew=false.
+- Se nenhuma categoria disponível descreve bem a transação: INVENTE uma nova (máximo 2 palavras, substantivo direto) com isNew=true.
+
+Formato de saída obrigatório:
+{{"categoryName": "Nome", "isNew": true}}"""
+
         try:
-            response = self.llm.invoke(prompt).strip()
+            response = self._strip_markdown(self.llm.invoke(prompt))
             json_match = re.search(r'\{.*\}', response, re.DOTALL)
             if json_match:
-                return json.loads(json_match.group())
+                result = json.loads(json_match.group())
+                return self._fix_is_new(result, existing_lower)
             return {"categoryName": "Outros", "isNew": False}
         except Exception:
             return {"categoryName": "Revisão Necessária", "isNew": True}
+
+    def _classify_chunk(self, descriptions: list, categories_str: str, existing_lower: set) -> list:
+        lista_transacoes = "\n".join([f"{i+1}. \"{desc}\"" for i, desc in enumerate(descriptions)])
+
+        prompt = f"""Você é um classificador de transações financeiras. Responda APENAS com JSON puro.
+
+Categorias disponíveis: [{categories_str}]
+
+Transações:
+{lista_transacoes}
+
+Para cada transação escolha a categoria mais específica e adequada da lista.
+Se nenhuma categoria descreve bem a transação, crie um nome novo (máximo 2 palavras).
+NUNCA use "Outros", "Diversos" ou "Geral".
+
+Retorne o JSON com exatamente {len(descriptions)} resultados:
+{{"resultados": [{{"description": "texto original", "categoryName": "Categoria", "isNew": false}}]}}"""
+
+        response = self._strip_markdown(self.llm.invoke(prompt))
+
+        try:
+            data = json.loads(response)
+        except json.JSONDecodeError:
+            json_match = re.search(r'\{.*\}', response, re.DOTALL)
+            if not json_match:
+                raise ValueError("JSON não encontrado na resposta.")
+            data = json.loads(json_match.group())
+
+        results = data.get("resultados", [])
+        return [self._fix_is_new(r, existing_lower) for r in results]
 
     def classify_batch(self, descriptions: list, existing_categories: list) -> list:
         if not descriptions:
             return []
 
         categories_str = ", ".join(existing_categories)
-        lista_transacoes = "\n".join([f"{i+1}. '{desc}'" for i, desc in enumerate(descriptions)])
+        existing_lower = {c.lower() for c in existing_categories}
+        all_results = []
 
-        prompt = f"""
-        Você é um classificador financeiro inteligente.
-        Seu objetivo é retornar EXATAMENTE um Objeto JSON.
+        chunks = [descriptions[i:i + _BATCH_SIZE] for i in range(0, len(descriptions), _BATCH_SIZE)]
 
-        Categorias existentes:
-        [{categories_str}]
-
-        Transações para classificar:
-        {lista_transacoes}
-
-        REGRAS:
-        1. Tente encaixar a transação nas categorias existentes.
-        2. PROIBIDO TER PREGUIÇA: Evite ao máximo classificar como "Outros", "Diversos" ou "Geral".
-        3. Se não houver uma categoria perfeita, CRIE uma nova (máximo 2 palavras) que vá direto ao ponto.
-        4. O retorno DEVE SER APENAS O OBJETO JSON, sem formatação markdown e sem conversinha.
-
-        Exemplo OBRIGATÓRIO de saída:
-        {{
-            "resultados": [
-                {{"description": "nome exato", "categoryName": "Categoria", "isNew": true}}
-            ]
-        }}
-        """
-
-        try:
-            response = self.llm.invoke(prompt).strip()
-
-            if response.startswith("```json"):
-                response = response[7:]
-            elif response.startswith("```"):
-                response = response[3:]
-            if response.endswith("```"):
-                response = response[:-3]
-            response = response.strip()
-
+        for chunk in chunks:
             try:
-                data = json.loads(response)
-                return data.get("resultados", [])
-            except json.JSONDecodeError:
-                json_match = re.search(r'\{.*\}', response, re.DOTALL)
-                if json_match:
-                    data = json.loads(json_match.group())
-                    return data.get("resultados", [])
-                raise ValueError("Objeto JSON não encontrado na resposta.")
+                results = self._classify_chunk(chunk, categories_str, existing_lower)
+                all_results.extend(results)
+            except Exception as e:
+                print(f"Erro no classify_batch (chunk): {e}")
+                all_results.extend([
+                    {"description": desc, "categoryName": "Revisão Necessária", "isNew": True}
+                    for desc in chunk
+                ])
 
-        except Exception as e:
-            print(f"Erro no classify_batch: {e}\nResposta original do LLM:\n{response}")
-            return [{"description": desc, "categoryName": "Revisão Necessária", "isNew": True} for desc in descriptions]
+        return all_results

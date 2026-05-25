@@ -1,12 +1,11 @@
 import os
 import logging
-from langchain_ollama import OllamaEmbeddings
+from langchain_core.embeddings import Embeddings
 from langchain_community.vectorstores import FAISS
 from langchain_community.document_loaders import DirectoryLoader, PyPDFLoader, TextLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from src.Infra.Llm.ollama_provider import get_embeddings
 
-# Modelo dedicado a embeddings — leve e eficiente
-_EMBEDDING_MODEL = "nomic-embed-text"
 _INDEX_PATH = "data/faiss_index"
 
 
@@ -14,7 +13,6 @@ class FinancialKnowledgeBase:
     """Gerencia o índice vetorial FAISS com literatura financeira."""
 
     def __init__(self):
-        self.embeddings = OllamaEmbeddings(model=_EMBEDDING_MODEL)
         self._vectorstore: FAISS | None = None
         if not os.path.exists(_INDEX_PATH):
             logging.getLogger("myfinance.agent").warning(
@@ -23,12 +21,16 @@ class FinancialKnowledgeBase:
                 _INDEX_PATH,
             )
 
+    def _make_embeddings(self) -> Embeddings:
+        """Retorna a instância de embeddings para o provedor ativo."""
+        return get_embeddings()
+
     def _load_index(self):
         """Carrega o índice do disco na primeira chamada (lazy-load)."""
         if self._vectorstore is None and os.path.exists(_INDEX_PATH):
             self._vectorstore = FAISS.load_local(
                 _INDEX_PATH,
-                self.embeddings,
+                self._make_embeddings(),
                 allow_dangerous_deserialization=True,
             )
 
@@ -52,8 +54,9 @@ class FinancialKnowledgeBase:
         splitter = RecursiveCharacterTextSplitter(chunk_size=600, chunk_overlap=80)
         chunks = splitter.split_documents(docs)
 
+        embeddings = self._make_embeddings()
         os.makedirs(_INDEX_PATH, exist_ok=True)
-        self._vectorstore = FAISS.from_documents(chunks, self.embeddings)
+        self._vectorstore = FAISS.from_documents(chunks, embeddings)
         self._vectorstore.save_local(_INDEX_PATH)
 
         return len(chunks)
@@ -66,5 +69,8 @@ class FinancialKnowledgeBase:
                 "Base de conhecimento ainda não inicializada. "
                 "Envie documentos para data/books/ e chame POST /api/ai/ingest."
             )
+        # Atualiza a função de embedding para usar o provedor atual
+        fresh = self._make_embeddings()
+        self._vectorstore.embedding_function = fresh.embed_query
         results = self._vectorstore.similarity_search(query, k=k)
         return "\n\n---\n\n".join(doc.page_content for doc in results)
