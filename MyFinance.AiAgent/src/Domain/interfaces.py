@@ -1,11 +1,24 @@
 # MyFinance.AiAgent/src/Domain/interfaces.py
 from abc import ABC, abstractmethod
+from typing import List
 import pandas as pd
+
 
 class IFileExtractor(ABC):
     @abstractmethod
     def extract(self, file_path: str) -> pd.DataFrame:
         pass
+
+
+class ISemanticExtractor(ABC):
+    @abstractmethod
+    def extract_from_text(self, raw_text: str) -> List:
+        """
+        raw_text: texto bruto de extrato/fatura (CSV, PDF convertido em string).
+        Retorna: List[ExtractedTransaction]
+        """
+        pass
+
 
 class ILlmClassifier(ABC):
     @abstractmethod

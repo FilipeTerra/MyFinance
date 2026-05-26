@@ -103,21 +103,36 @@ public class TransactionService : ITransactionService
 
     public async Task<ServiceResponse<TransactionResponseDto>> UpdateTransactionAsync(Guid transactionId, UpdateTransactionRequestDto dto, Guid userId)
     {
-        // Buscar a transação existente (já valida o usuário)
         var transaction = await _transactionRepository.GetByIdAsync(transactionId, userId);
         if (transaction == null)
         {
             return new ServiceResponse<TransactionResponseDto> { Success = false, ErrorMessage = "Transação náo encontrada ou náo pertence ao usuário." };
         }
 
-        // Validar a nova conta (caso tenha sido alterada)
-        if (transaction.AccountId != dto.AccountId)
+        // Buscar conta original para reverter o efeito do valor antigo
+        var oldAccount = await _accountRepository.GetByIdAsync(transaction.AccountId, userId);
+        if (oldAccount == null)
+        {
+            return new ServiceResponse<TransactionResponseDto> { Success = false, ErrorMessage = "Conta original não encontrada." };
+        }
+
+        var oldAmount = transaction.Amount; // já normalizado com sinal
+        bool accountChanged = transaction.AccountId != dto.AccountId;
+
+        // Resolver conta destino (pode ser a mesma ou uma nova)
+        Account targetAccount;
+        if (accountChanged)
         {
             var newAccount = await _accountRepository.GetByIdAsync(dto.AccountId, userId);
             if (newAccount == null)
             {
                 return new ServiceResponse<TransactionResponseDto> { Success = false, ErrorMessage = "Nova conta náo encontrada ou náo pertence ao usuário." };
             }
+            targetAccount = newAccount;
+        }
+        else
+        {
+            targetAccount = oldAccount;
         }
 
         if (transaction.CategoryId != dto.CategoryId)
@@ -129,24 +144,41 @@ public class TransactionService : ITransactionService
             }
         }
 
-        // Normalizar o sinal do valor conforme o tipo de transação
-        var normalizedAmount = dto.Type == TransactionType.Expense
+        var newNormalizedAmount = dto.Type == TransactionType.Expense
             ? -Math.Abs(dto.Amount)
             : Math.Abs(dto.Amount);
 
-        // Atualizar os dados da entidade
+        // Ajuste de saldo:
+        // 1. Desfaz o efeito do valor antigo na conta original
+        // 2. Aplica o novo valor na conta destino
+        // Ex: despesa(-50) → receita(+50): reverte +50, aplica +50 = saldo +100
+        oldAccount.UpdateBalance(-oldAmount);
+        targetAccount.UpdateBalance(newNormalizedAmount);
+
         transaction.Description = dto.Description;
-        transaction.Amount = normalizedAmount;
+        transaction.Amount = newNormalizedAmount;
         transaction.Type = dto.Type;
         transaction.Date = dto.Date.ToUniversalTime();
         transaction.AccountId = dto.AccountId;
         transaction.CategoryId = dto.CategoryId;
 
-        // Salvar
-        _transactionRepository.Update(transaction);
-        await _transactionRepository.SaveChangesAsync();
+        await using var dbTransaction = await _transactionRepository.BeginTransactionAsync();
+        try
+        {
+            _transactionRepository.Update(transaction);
+            _accountRepository.Update(oldAccount);
+            if (accountChanged)
+                _accountRepository.Update(targetAccount);
 
-        // Mapear e retornar (recarregando para pegar a Account atualizada se mudou)
+            await _transactionRepository.SaveChangesAsync();
+            await dbTransaction.CommitAsync();
+        }
+        catch
+        {
+            await dbTransaction.RollbackAsync();
+            throw;
+        }
+
         var updatedTransaction = await _transactionRepository.GetByIdAsync(transaction.Id, userId);
         var responseDto = MapTransactionToResponseDto(updatedTransaction!);
 
@@ -184,7 +216,7 @@ public class TransactionService : ITransactionService
             await dbTransaction.RollbackAsync();
             throw;
         }
-
+    
         return new ServiceResponse<bool> { Data = true };
     }
 

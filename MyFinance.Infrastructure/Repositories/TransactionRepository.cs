@@ -68,13 +68,18 @@ public class TransactionRepository : ITransactionRepository
             query = query.Where(t => t.Amount == filters.Amount.Value);
         }
 
-        // Filtro de Data
-        if (filters.Date.HasValue)
+        // Filtro de Tipo (Receita / Despesa)
+        if (filters.Type.HasValue)
         {
-            // O banco armazena como 'date' (sem hora)
-            var dateToFilter = filters.Date.Value.Date;
-            query = query.Where(t => t.Date == dateToFilter);
+            query = query.Where(t => t.Type == filters.Type.Value);
         }
+
+        // Filtro de Período (range de datas)
+        if (filters.StartDate.HasValue)
+            query = query.Where(t => t.Date >= filters.StartDate.Value.Date);
+
+        if (filters.EndDate.HasValue)
+            query = query.Where(t => t.Date <= filters.EndDate.Value.Date);
 
         // Incluir entidades relacionadas (essencial para o Mapeamento)
         query = query.Include(t => t.Account)

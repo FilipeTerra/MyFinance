@@ -13,18 +13,33 @@ export function TransactionFilter({ accounts, selectedAccountId = '', onFilterCh
     // Estado inicial dos filtros
     const [selectedAccount, setSelectedAccount] = useState<string>(selectedAccountId);
     const [searchText, setSearchText] = useState('');
-    const [date, setDate] = useState('');
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
     const [amount, setAmount] = useState('');
+    const [transactionType, setTransactionType] = useState('');
 
     const handleFilterSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         onFilterChange({
             accountId: selectedAccount,
             searchText: searchText || undefined,
-            date: date || undefined,
+            startDate: startDate || undefined,
+            endDate: endDate || undefined,
             amount: amount ? parseFloat(amount) : undefined,
+            type: transactionType ? parseInt(transactionType) : undefined,
         });
     };
+
+    const handleClearFilters = () => {
+        setSearchText('');
+        setStartDate('');
+        setEndDate('');
+        setAmount('');
+        setTransactionType('');
+        onFilterChange({ accountId: selectedAccount });
+    };
+
+    const hasActiveFilters = searchText || startDate || endDate || amount || transactionType;
 
     useEffect(() => {
         setSelectedAccount(selectedAccountId);
@@ -64,15 +79,26 @@ export function TransactionFilter({ accounts, selectedAccountId = '', onFilterCh
                 />
             </div>
 
-            {/* Filtro de Data */}
-            <div className="filter-group">
-                <label htmlFor="date-filter">Data</label>
-                <input
-                    type="date"
-                    id="date-filter"
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                />
+            {/* Filtro de Período */}
+            <div className="filter-group date-range">
+                <label>Período</label>
+                <div className="date-range-inputs">
+                    <input
+                        type="date"
+                        id="start-date-filter"
+                        value={startDate}
+                        max={endDate || undefined}
+                        onChange={(e) => setStartDate(e.target.value)}
+                    />
+                    <span>até</span>
+                    <input
+                        type="date"
+                        id="end-date-filter"
+                        value={endDate}
+                        min={startDate || undefined}
+                        onChange={(e) => setEndDate(e.target.value)}
+                    />
+                </div>
             </div>
 
             {/* Filtro de Valor */}
@@ -88,9 +114,29 @@ export function TransactionFilter({ accounts, selectedAccountId = '', onFilterCh
                 />
             </div>
 
+            {/* Filtro de Tipo */}
+            <div className="filter-group">
+                <label htmlFor="type-filter">Tipo</label>
+                <select
+                    id="type-filter"
+                    value={transactionType}
+                    onChange={(e) => setTransactionType(e.target.value)}
+                >
+                    <option value="">Todos</option>
+                    <option value="1">Receita</option>
+                    <option value="2">Despesa</option>
+                </select>
+            </div>
+
             <button type="submit" className="filter-button" disabled={isLoading || !selectedAccount}>
                 {isLoading ? 'Buscando...' : 'Buscar'}
             </button>
+
+            {hasActiveFilters && (
+                <button type="button" className="filter-button clear-button" onClick={handleClearFilters}>
+                    Limpar
+                </button>
+            )}
         </form>
     );
 }

@@ -21,7 +21,7 @@ class OllamaClassifier(ILlmClassifier):
     def __init__(self):
         self.llm = OllamaLLM(
             model=get_model("classifier"),
-            temperature=0.3,
+            temperature=0.2,
             format="json",
             **get_ollama_config(),
         )

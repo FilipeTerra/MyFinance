@@ -1,6 +1,7 @@
 // src/components/Transactions/UploadTransactionModal.tsx
 import React, { useState, useRef, useEffect } from 'react';
-import { transactionService, categoryService } from '../../services/Api'; 
+import { transactionService, categoryService } from '../../services/Api';
+import { learnFromBatch } from '../../services/AiApi';
 import { AccountSelectField } from '../Accounts/AccountSelectField';
 import { ReviewImportModal } from './ReviewImportModal';
 import type { AccountResponseDto } from '../../types/AccountResponseDto';
@@ -82,7 +83,22 @@ export function UploadTransactionModal({
         setIsLoading(true);
         try {
             await transactionService.saveBatchTransactions(finalTransactions);
-            
+
+            // Salva no KB somente o que o usuário confirmou/corrigiu.
+            // categoryId → resolve o nome pela lista local; newCategoryName → usa direto.
+            const rules = finalTransactions
+                .map(t => {
+                    const categoryName = t.isNewCategory
+                        ? t.newCategoryName
+                        : categories.find(c => c.id === t.categoryId)?.name ?? null;
+                    return categoryName ? { description: t.description, categoryName } : null;
+                })
+                .filter((r): r is { description: string; categoryName: string } => r !== null);
+
+            if (rules.length > 0) {
+                await learnFromBatch(accountId, rules);
+            }
+
             setIsReviewing(false);
             setAiTransactions([]);
             setFile(null);
@@ -137,7 +153,6 @@ export function UploadTransactionModal({
                     </div>
 
                     <div className="form-group">
-                        {/* 1. CORREÇÃO: O Label agora reflete as duas opções */}
                         <label style={{ fontWeight: 600, color: '#334155' }}>Arquivo (CSV ou PDF)</label>
                         
                         <div 
@@ -158,7 +173,6 @@ export function UploadTransactionModal({
                             }}
                             onClick={handleTriggerFile}
                         >
-                            {/* 2. CORREÇÃO: Restauramos o suporte ao .pdf no input */}
                             <input 
                                 type="file" 
                                 ref={fileInputRef}
@@ -177,7 +191,6 @@ export function UploadTransactionModal({
                             ) : (
                                 <>
                                     <svg width="28" height="28" fill="none" stroke="#64748b" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
-                                    {/* 3. CORREÇÃO: O texto descritivo avisa o usuário do PDF */}
                                     <span style={{ color: '#475569', fontSize: '0.9rem' }}>Clique aqui para selecionar seu CSV ou PDF</span>
                                 </>
                             )}

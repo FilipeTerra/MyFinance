@@ -44,6 +44,28 @@
         box-sizing: border-box;
     }
 
+.filter-group.date-range {
+    flex: 2;
+    min-width: 280px;
+}
+
+.date-range-inputs {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.date-range-inputs input {
+    flex: 1;
+    min-width: 0; /* Evita overflow em containers estreitos */
+}
+
+.date-range-inputs span {
+    color: #64748b;
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
+
 .filter-button {
     padding: 0.7rem 1.2rem;
     border: none;
@@ -64,4 +86,15 @@
     .filter-button:disabled {
         background-color: #94a3b8;
         cursor: not-allowed;
+    }
+
+.clear-button {
+    background-color: transparent;
+    color: #64748b;
+    border: 1px solid #cbd5e1;
+}
+
+    .clear-button:hover {
+        background-color: #f1f5f9;
+        border-color: #94a3b8;
     }

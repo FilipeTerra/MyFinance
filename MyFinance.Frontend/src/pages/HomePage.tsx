@@ -21,8 +21,10 @@ import { UploadTransactionModal } from '../components/Transactions/UploadTransac
 interface FiltersState {
     accountId: string;
     searchText?: string;
-    date?: string;
+    startDate?: string;
+    endDate?: string;
     amount?: number;
+    type?: number;
     page?: number;
     pageSize?: number;
 }
@@ -109,7 +111,7 @@ export function HomePage() {
         setActiveFilters({
             ...filters,
             page: 1,
-            pageSize: 20
+            pageSize: 500
         } as FiltersState);
     };
 
@@ -122,7 +124,7 @@ export function HomePage() {
             ...(prev || {}),
             accountId,
             page: 1,
-            pageSize: 20
+            pageSize: 500
         } as FiltersState));
     };
 

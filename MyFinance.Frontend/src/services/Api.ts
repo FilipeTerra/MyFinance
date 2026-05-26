@@ -79,8 +79,10 @@ const categoryService = {
 export interface TransactionFilterParams {
     accountId: string;
     searchText?: string;
-    date?: string; // Formato YYYY-MM-DD
+    startDate?: string; // Formato YYYY-MM-DD
+    endDate?: string;   // Formato YYYY-MM-DD
     amount?: number;
+    type?: number; // 1 = Income (Receita), 2 = Expense (Despesa)
     page?: number;
     pageSize?: number;
 }
@@ -91,12 +93,14 @@ const transactionService = {
         const queryParams = new URLSearchParams({
             accountId: filters.accountId,
             page: (filters.page || 1).toString(),
-            pageSize: (filters.pageSize || 20).toString(),
+            pageSize: (filters.pageSize || 500).toString(),
         });
 
         if (filters.searchText) queryParams.append('searchText', filters.searchText);
-        if (filters.date) queryParams.append('date', filters.date);
+        if (filters.startDate) queryParams.append('startDate', filters.startDate);
+        if (filters.endDate) queryParams.append('endDate', filters.endDate);
         if (filters.amount !== undefined && filters.amount !== null) queryParams.append('amount', filters.amount.toString());
+        if (filters.type !== undefined && filters.type !== null) queryParams.append('type', filters.type.toString());
 
         return apiClient.get<TransactionResponseDto[]>('/transactions/search', { params: queryParams });
     },

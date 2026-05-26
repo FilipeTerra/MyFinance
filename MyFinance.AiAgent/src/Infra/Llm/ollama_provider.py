@@ -30,6 +30,11 @@ _MODELS: dict[str, dict[str, str]] = {
         "local":  os.getenv("EMBEDDING_MODEL_LOCAL",  "nomic-embed-text"),
         "remote": os.getenv("EMBEDDING_MODEL_REMOTE", "nomic-embed-text:latest"),
     },
+    # Modelos que lidam bem com JSON estruturado para o SemanticExtractor
+    "extractor": {
+        "local":  os.getenv("EXTRACTOR_MODEL_LOCAL",  "qwen2.5:7b"),
+        "remote": os.getenv("EXTRACTOR_MODEL_REMOTE", "llama3.2:3b"),
+    },
 }
 
 # ── Cache do health check (TTL = 60 s) ────────────────────────────────────────

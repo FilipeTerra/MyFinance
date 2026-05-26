@@ -27,6 +27,26 @@ export class SessionExpiredError extends Error {
     }
 }
 
+export interface LearnRule {
+    description: string;
+    categoryName: string;
+}
+
+export async function learnFromBatch(accountId: string, rules: LearnRule[]): Promise<void> {
+    try {
+        await aiApiClient.post('/learn', {
+            account_id: accountId,
+            rules: rules.map(r => ({
+                description: r.description,
+                category_name: r.categoryName,
+            })),
+        });
+    } catch (error) {
+        // Falha no aprendizado não pode bloquear o fluxo principal
+        console.warn('[KB] Falha ao persistir aprendizado (non-blocking):', error);
+    }
+}
+
 export async function sendMessage(message: string): Promise<AiMessageResponse> {
     const jwtToken = localStorage.getItem('authToken');
     if (!jwtToken) throw new SessionExpiredError();

@@ -8,13 +8,14 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from typing import List
 
-from src.Infra.Llm.ollama_classifier import OllamaClassifier
 from src.Infra.Llm.ollama_utils import ensure_model
-from src.Infra.Parsers.csv_parser import CsvParser
+from src.Infra.Cache.knowledge_base import KnowledgeBase
+from src.Infra.Llm.semantic_extractor import SemanticExtractor
 from src.Infra.Data.financial_rag import FinancialKnowledgeBase
 from src.Infra.Logging.agent_logger import setup_logging
-from src.Application.UseCases.process_file import ProcessFileUseCase
+from src.Application.UseCases.process_file_semantic import ProcessFileSemanticUseCase
 import jwt
 from src.Application.Agents.chat_consultant_agent import invoke_chat
 
@@ -78,6 +79,16 @@ class IngestRequest(BaseModel):
     directory: str = "data/books"
 
 
+class LearnRule(BaseModel):
+    description: str
+    category_name: str
+
+
+class LearnRequest(BaseModel):
+    account_id: str
+    rules: List[LearnRule]
+
+
 @app.post("/api/ai/ingest")
 async def ingest_documents(request: IngestRequest):
     try:
@@ -102,6 +113,23 @@ async def consultant_chat(request: ChatRequest):
         return {"success": False, "erro": str(e)}
 
 
+@app.post("/api/ai/learn")
+async def learn_from_confirmed(request: LearnRequest):
+    """
+    Recebe as associações descrição→categoria confirmadas pelo usuário e
+    persiste no knowledge_base. Chamado pelo frontend após o batch save.
+    """
+    kb = KnowledgeBase()
+    saved = 0
+    for rule in request.rules:
+        if rule.description and rule.category_name:
+            kb.add_rule(request.account_id, rule.description, rule.category_name)
+            saved += 1
+            _logger.info("📚 [KB] Aprendi: '%s' → '%s'", rule.description, rule.category_name)
+
+    return {"success": True, "learned": saved}
+
+
 @app.post("/api/ai/process-file")
 async def process_statement(
     accountId: str = Form(...),
@@ -115,15 +143,43 @@ async def process_statement(
     try:
         existing_categories = json.loads(categoriesJson)
 
-        extractor = CsvParser()
-        classifier = OllamaClassifier()
-
-        use_case = ProcessFileUseCase(extractor, classifier)
+        extractor = SemanticExtractor()
+        use_case = ProcessFileSemanticUseCase(extractor)
 
         processed_transactions = use_case.execute(file_location, accountId, existing_categories)
 
         return {"success": True, "data": processed_transactions}
 
     except Exception as e:
-        print(f"Erro Crítico no Endpoint: {e}")
+        _logger.error("Erro Crítico no Endpoint: %s", e)
+        return {"success": False, "message": f"Erro interno na IA: {str(e)}"}
+
+
+@app.post("/api/ai/process-file-semantic")
+async def process_statement_semantic(
+    accountId: str = Form(...),
+    categoriesJson: str = Form(...),
+    file: UploadFile = File(...)
+):
+    """
+    Parser Semântico Universal: aceita qualquer CSV ou PDF de extrato bancário,
+    sem mapeamento hardcoded de colunas. O LLM interpreta o documento e extrai
+    data, descrição, valor, tipo e categoria diretamente do texto bruto.
+    """
+    file_location = f"/tmp/{file.filename}"
+    with open(file_location, "wb+") as file_object:
+        file_object.write(file.file.read())
+
+    try:
+        existing_categories = json.loads(categoriesJson)
+
+        extractor = SemanticExtractor()
+        use_case = ProcessFileSemanticUseCase(extractor)
+
+        processed_transactions = use_case.execute(file_location, accountId, existing_categories)
+
+        return {"success": True, "data": processed_transactions}
+
+    except Exception as e:
+        _logger.error("Erro Crítico no Endpoint Semântico: %s", e)
         return {"success": False, "message": f"Erro interno na IA: {str(e)}"}
