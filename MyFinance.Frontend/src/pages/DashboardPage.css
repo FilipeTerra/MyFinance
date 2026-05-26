@@ -1,0 +1,62 @@
+.dashboard-container {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background-color: #f1f5f9;
+}
+
+.dashboard-content {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+    box-sizing: border-box;
+}
+
+.dashboard-content h2 {
+    margin-top: 0;
+    color: #1e293b;
+    font-size: 1.8rem;
+    margin-bottom: 1.5rem;
+}
+
+.goals-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+}
+
+.dashboard-feedback {
+    color: #64748b;
+    font-size: 1rem;
+}
+
+.dashboard-empty {
+    background-color: white;
+    border: 1px dashed #cbd5e1;
+    border-radius: 8px;
+    padding: 3rem 2rem;
+    text-align: center;
+    color: #64748b;
+    max-width: 480px;
+}
+
+.dashboard-empty p {
+    margin: 0.5rem 0;
+    line-height: 1.6;
+}
+
+.dashboard-empty strong {
+    color: #3b82f6;
+}
+
+.error-message {
+    color: #ef4444;
+    background-color: #fee2e2;
+    padding: 1rem;
+    border-radius: 6px;
+    border: 1px solid #fca5a5;
+    margin-bottom: 1.5rem;
+    font-size: 1rem;
+    text-align: center;
+}

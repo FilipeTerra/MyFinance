@@ -10,6 +10,7 @@ import type { AccountRequestDto } from '../types/AccountRequestDto';
 import type { CategoryRequestDto } from '../types/CategoryRequestDto';
 import type { UpdateAccountRequestDto } from '../types/UpdateAccountRequestDto';
 import type { AiTransactionResponseDto, SaveBatchTransactionRequestDto } from '../types/AiIntegration';
+import type { FinancialGoalResponseDto } from '../types/FinancialGoalResponseDto';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -130,11 +131,19 @@ const transactionService = {
     }
 };
 
+const financialGoalService = {
+    getAll: async (): Promise<FinancialGoalResponseDto[]> => {
+        const response = await apiClient.get<FinancialGoalResponseDto[]>('/financial-goals');
+        return response.data;
+    },
+};
+
 export {
     authService,
     accountService,
     categoryService,
     transactionService,
+    financialGoalService,
     tokenManager,
     apiClient as api,
     AxiosError
