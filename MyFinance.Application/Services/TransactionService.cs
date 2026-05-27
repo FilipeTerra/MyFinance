@@ -15,12 +15,14 @@ public class TransactionService : ITransactionService
     private readonly ITransactionRepository _transactionRepository;
     private readonly IAccountRepository _accountRepository;
     private readonly ICategoryRepository _categoryRepository;
+    private readonly IFinancialGoalRepository _financialGoalRepository;
 
-    public TransactionService(ITransactionRepository transactionRepository, IAccountRepository accountRepository, ICategoryRepository categoryRepository)
+    public TransactionService(ITransactionRepository transactionRepository, IAccountRepository accountRepository, ICategoryRepository categoryRepository, IFinancialGoalRepository financialGoalRepository)
     {
         _transactionRepository = transactionRepository;
         _accountRepository = accountRepository;
         _categoryRepository = categoryRepository;
+        _financialGoalRepository = financialGoalRepository;
     }
 
     public async Task<ServiceResponse<TransactionResponseDto>> CreateTransactionAsync(CreateTransactionRequestDto dto, Guid userId)
@@ -38,8 +40,8 @@ public class TransactionService : ITransactionService
             return new ServiceResponse<TransactionResponseDto> { Success = false, ErrorMessage = "Categoria náo encontrada ou náo pertence ao usuário." };
         }
 
-        // Normalizar o sinal do valor conforme o tipo de transação
-        var normalizedAmount = dto.Type == TransactionType.Expense
+        // Normalizar o sinal do valor: Expense e Investment debitam da conta
+        var normalizedAmount = (dto.Type == TransactionType.Expense || dto.Type == TransactionType.Investment)
             ? -Math.Abs(dto.Amount)
             : Math.Abs(dto.Amount);
 
@@ -48,18 +50,34 @@ public class TransactionService : ITransactionService
             dto.Description,
             normalizedAmount,
             dto.Type,
-            dto.Date.ToUniversalTime(), // Armazenar em UTC
+            dto.Date.ToUniversalTime(),
             dto.AccountId,
-            dto.CategoryId
+            dto.CategoryId,
+            dto.FinancialGoalId
         );
 
         account.UpdateBalance(normalizedAmount);
+
+        // Se for um aporte numa meta, creditar o valor na meta
+        FinancialGoal? goal = null;
+        if (dto.Type == TransactionType.Investment && dto.FinancialGoalId.HasValue)
+        {
+            goal = await _financialGoalRepository.GetByIdAsync(dto.FinancialGoalId.Value);
+            if (goal == null)
+            {
+                return new ServiceResponse<TransactionResponseDto> { Success = false, ErrorMessage = "Meta financeira não encontrada." };
+            }
+            goal.AddContribution(Math.Abs(dto.Amount));
+        }
 
         await using var dbTransaction = await _transactionRepository.BeginTransactionAsync();
         try
         {
             await _transactionRepository.AddAsync(newTransaction);
             _accountRepository.Update(account);
+
+            if (goal != null)
+                await _financialGoalRepository.UpdateAsync(goal);
 
             await _transactionRepository.SaveChangesAsync();
             await dbTransaction.CommitAsync();
@@ -335,9 +353,10 @@ public class TransactionService : ITransactionService
             Date = transaction.Date,
             CreatedAt = transaction.CreatedAt,
             AccountId = transaction.AccountId,
-            AccountName = transaction.Account?.Name ?? "Conta náo encontrada", // Usa o objeto Account carregado
+            AccountName = transaction.Account?.Name ?? "Conta náo encontrada",
             CategoryId = transaction.CategoryId,
-            CategoryName = transaction.Category?.Name ?? "Sem categoria"
+            CategoryName = transaction.Category?.Name ?? "Sem categoria",
+            FinancialGoalId = transaction.FinancialGoalId
         };
     }    
 }

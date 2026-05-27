@@ -26,17 +26,24 @@ export function DashboardPage() {
     const [isLoading, setLoading] = useState(true);
     const [error, setError]       = useState<string | null>(null);
 
+    const fetchGoals = async () => {
+        setLoading(true);
+        try {
+            const data = await financialGoalService.getAll();
+            setGoals(data);
+        } catch {
+            setError('Não foi possível carregar as metas. Tente novamente mais tarde.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleContributionSuccess = async () => {
+        alert('Aporte realizado com sucesso! A barra de progresso foi atualizada.');
+        await fetchGoals();
+    };
+
     useEffect(() => {
-        const fetchGoals = async () => {
-            try {
-                const data = await financialGoalService.getAll();
-                setGoals(data);
-            } catch {
-                setError('Não foi possível carregar as metas. Tente novamente mais tarde.');
-            } finally {
-                setLoading(false);
-            }
-        };
         void fetchGoals();
     }, []);
 
@@ -106,7 +113,11 @@ export function DashboardPage() {
                 ) : (
                     <div className="goals-grid">
                         {goals.map(goal => (
-                            <FinancialGoalCard key={goal.id} goal={goal} />
+                            <FinancialGoalCard
+                                key={goal.id}
+                                goal={goal}
+                                onContributionSuccess={handleContributionSuccess}
+                            />
                         ))}
                     </div>
                 )}

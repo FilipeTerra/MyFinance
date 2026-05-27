@@ -1,8 +1,11 @@
+import { useState } from 'react';
 import type { FinancialGoalResponseDto } from '../../types/FinancialGoalResponseDto';
+import { ContributeToGoalModal } from './ContributeToGoalModal';
 import './FinancialGoalCard.css';
 
 interface FinancialGoalCardProps {
     goal: FinancialGoalResponseDto;
+    onContributionSuccess: () => void;
 }
 
 type GoalStatus = 'completed' | 'almost' | 'in_progress' | 'overdue';
@@ -49,7 +52,9 @@ function buildInsight(goal: FinancialGoalResponseDto, status: GoalStatus, daysLe
     return `Faltam ${remaining} · Prazo em ${timeText}`;
 }
 
-export function FinancialGoalCard({ goal }: FinancialGoalCardProps) {
+export function FinancialGoalCard({ goal, onContributionSuccess }: FinancialGoalCardProps) {
+    const [isContributeModalOpen, setIsContributeModalOpen] = useState(false);
+
     const progress  = Math.min((goal.currentAmount / goal.targetAmount) * 100, 100);
     const daysLeft  = getDaysLeft(goal.deadline);
     const status    = getStatus(goal, progress, daysLeft);
@@ -104,6 +109,26 @@ export function FinancialGoalCard({ goal }: FinancialGoalCardProps) {
                 <span className="goal-footer-label">Prazo</span>
                 <span className="goal-footer-value">{formatDate(goal.deadline)}</span>
             </div>
+
+            <button
+                className="goal-contribute-btn"
+                onClick={() => setIsContributeModalOpen(true)}
+                disabled={goal.isCompleted}
+                title={goal.isCompleted ? 'Meta já concluída' : 'Realizar aporte nesta meta'}
+            >
+                {goal.isCompleted ? 'Meta concluída' : 'Aportar'}
+            </button>
+
+            {isContributeModalOpen && (
+                <ContributeToGoalModal
+                    goalId={goal.id}
+                    onClose={() => setIsContributeModalOpen(false)}
+                    onSuccess={() => {
+                        setIsContributeModalOpen(false);
+                        onContributionSuccess();
+                    }}
+                />
+            )}
         </div>
     );
 }

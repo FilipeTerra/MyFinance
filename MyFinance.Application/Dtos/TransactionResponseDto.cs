@@ -16,4 +16,5 @@ public class TransactionResponseDto
     public string AccountName { get; set; } = string.Empty;
     public Guid CategoryId { get; set; }
     public string CategoryName { get; set; } = string.Empty;
+    public Guid? FinancialGoalId { get; set; }
 }

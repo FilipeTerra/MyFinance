@@ -63,6 +63,11 @@ namespace MyFinance.Infrastructure
                       .HasConversion(
                         v => v.ToUniversalTime(),
                         v => DateTime.SpecifyKind(v, DateTimeKind.Utc));
+
+                entity.HasOne(t => t.FinancialGoal)
+                      .WithMany()
+                      .HasForeignKey(t => t.FinancialGoalId)
+                      .OnDelete(DeleteBehavior.SetNull);
             });
                   modelBuilder.Entity<FinancialGoal>(entity =>
                   {

@@ -6,26 +6,28 @@ namespace MyFinance.Application.Dtos;
 
 public class CreateTransactionRequestDto
 {
-    [Required(ErrorMessage = "A Descrição é obrigatória.")]
-    [StringLength(150, MinimumLength = 2, ErrorMessage = "A Descrição deve ter entre 2 e 150 caracteres.")]
+    [Required(ErrorMessage = "A Descriï¿½ï¿½o ï¿½ obrigatï¿½ria.")]
+    [StringLength(150, MinimumLength = 2, ErrorMessage = "A Descriï¿½ï¿½o deve ter entre 2 e 150 caracteres.")]
     public string Description { get; set; } = string.Empty;
 
-    [Required(ErrorMessage = "O Valor é obrigatório.")]
+    [Required(ErrorMessage = "O Valor ï¿½ obrigatï¿½rio.")]
     [DataType(DataType.Currency)]
-    [Range(0.01, 10000000.00, ErrorMessage = "O Valor deve ser maior que zero.")] // Valor não pode ser zero ou negativo
+    [Range(0.01, 10000000.00, ErrorMessage = "O Valor deve ser maior que zero.")] // Valor nï¿½o pode ser zero ou negativo
     public decimal Amount { get; set; }
 
-    [Required(ErrorMessage = "O Tipo da transação é obrigatório (Income ou Expense).")]
-    [EnumDataType(typeof(TransactionType), ErrorMessage = "O Tipo de transação é inválido.")]
+    [Required(ErrorMessage = "O Tipo da transaï¿½ï¿½o ï¿½ obrigatï¿½rio (Income ou Expense).")]
+    [EnumDataType(typeof(TransactionType), ErrorMessage = "O Tipo de transaï¿½ï¿½o ï¿½ invï¿½lido.")]
     public TransactionType Type { get; set; }
 
-    [Required(ErrorMessage = "A Data da transação é obrigatória.")]
-    [DataType(DataType.Date)] // Apenas a data é relevante para o usuário informar
+    [Required(ErrorMessage = "A Data da transaï¿½ï¿½o ï¿½ obrigatï¿½ria.")]
+    [DataType(DataType.Date)] // Apenas a data ï¿½ relevante para o usuï¿½rio informar
     public DateTime Date { get; set; }
 
-    [Required(ErrorMessage = "A Conta é obrigatória.")]
+    [Required(ErrorMessage = "A Conta ï¿½ obrigatï¿½ria.")]
     public Guid AccountId { get; set; }
 
-    [Required(ErrorMessage = "A Categoria é obrigatória.")]
+    [Required(ErrorMessage = "A Categoria ï¿½ obrigatï¿½ria.")]
     public Guid CategoryId { get; set; }
+
+    public Guid? FinancialGoalId { get; set; }
 }

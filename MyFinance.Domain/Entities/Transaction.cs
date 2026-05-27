@@ -40,14 +40,27 @@ public class Transaction
     /// </summary>
     public Category Category { get; set; } = null!;
 
-    public Transaction(string description, decimal amount, TransactionType type, DateTime date, Guid accountId, Guid categoryId)
+    // --- Relacionamento com FinancialGoal (opcional) ---
+    /// <summary>
+    /// Chave Estrangeira (FK) opcional para a tabela FinancialGoals.
+    /// Preenchida apenas quando o tipo for Investment.
+    /// </summary>
+    public Guid? FinancialGoalId { get; private set; }
+
+    /// <summary>
+    /// Propriedade de Navegação para o EF Core.
+    /// </summary>
+    public FinancialGoal? FinancialGoal { get; private set; }
+
+    public Transaction(string description, decimal amount, TransactionType type, DateTime date, Guid accountId, Guid categoryId, Guid? financialGoalId = null)
     {
-        Id = Guid.NewGuid(); // Gerar um novo Id para cada transação
+        Id = Guid.NewGuid();
         Description = description;
         Amount = amount;
         Type = type;
         Date = date;
         AccountId = accountId;
         CategoryId = categoryId;
+        FinancialGoalId = financialGoalId;
     }
 }

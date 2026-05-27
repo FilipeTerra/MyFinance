@@ -270,6 +270,45 @@ def make_api_tools(jwt_token: str) -> list:
             return f"Erro inesperado ao gerar relatório: {e}"
 
     @tool
+    def realizar_aporte_meta(valor: float, goal_id: str, account_id: str) -> str:
+        """Use esta ferramenta para investir ou guardar dinheiro em uma meta financeira específica. Recebe o valor, o ID da meta e o ID da conta de origem. Retorna sucesso ou erro."""
+        try:
+            cat_response = requests.get(
+                f"{_API_BASE_URL}/categories", headers=_headers, timeout=10
+            )
+            if cat_response.status_code != 200 or not cat_response.json():
+                return "Erro: Nenhuma categoria encontrada. Crie pelo menos uma categoria antes de realizar um aporte."
+
+            category_id = cat_response.json()[0]["id"]
+
+            payload = {
+                "amount": valor,
+                "type": 3,
+                "accountId": account_id,
+                "financialGoalId": goal_id,
+                "description": "Aporte na meta",
+                "date": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S"),
+                "categoryId": category_id,
+            }
+            response = requests.post(
+                f"{_API_BASE_URL}/transactions",
+                json=payload,
+                headers=_headers,
+                timeout=10,
+            )
+            if response.status_code in (200, 201):
+                return f"✅ Aporte de R$ {valor:,.2f} realizado com sucesso na meta!"
+            if response.status_code == 401:
+                return "Sessão expirada. O usuário precisa fazer login novamente."
+            if response.status_code == 400:
+                return f"Dados inválidos: {response.text}"
+            return f"Erro ao realizar aporte (status {response.status_code})."
+        except requests.exceptions.ConnectionError:
+            return "Erro: A API financeira está offline ou inacessível."
+        except Exception as e:
+            return f"Erro inesperado ao realizar aporte: {e}"
+
+    @tool
     def calcular_resumo_financeiro(ultimos_dias: int = 30) -> str:
         """Use esta ferramenta para um resumo geral das finanças do usuário: total de receitas,
         total de despesas, saldo líquido e taxa de poupança no período. Use quando o usuário
@@ -314,6 +353,7 @@ def make_api_tools(jwt_token: str) -> list:
         consultar_metas_financeiras,
         consultar_transacoes_recentes,
         criar_meta_financeira,
+        realizar_aporte_meta,
         analisar_gastos_por_categoria,
         relatorio_mensal_por_categoria,
         calcular_resumo_financeiro,

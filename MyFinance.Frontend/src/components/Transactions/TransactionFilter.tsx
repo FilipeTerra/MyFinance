@@ -92,7 +92,7 @@ export function TransactionFilter({ accounts, categories, selectedAccountId = ''
         } : null,
         transactionType ? {
             key: 'type',
-            label: transactionType === '1' ? 'Receitas' : 'Despesas',
+            label: transactionType === '1' ? 'Receitas' : transactionType === '2' ? 'Despesas' : 'Investimentos',
             onRemove: () => { setTransactionType(''); onFilterChange(buildFilters({ type: undefined })); },
         } : null,
         categoryId ? {
@@ -237,6 +237,7 @@ export function TransactionFilter({ accounts, categories, selectedAccountId = ''
                                 <option value="">Todos</option>
                                 <option value="1">Receita</option>
                                 <option value="2">Despesa</option>
+                                <option value="3">Investimento</option>
                             </select>
                         </div>
 

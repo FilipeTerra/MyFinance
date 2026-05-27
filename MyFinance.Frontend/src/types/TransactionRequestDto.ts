@@ -7,4 +7,5 @@ export interface TransactionRequestDto {
     date: string;
     accountId: string;
     categoryId: string;
+    financialGoalId?: string;
 }

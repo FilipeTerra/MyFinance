@@ -33,5 +33,17 @@ namespace MyFinance.Domain.Entities
                 IsCompleted = true;
             }
         }
+
+        public void AddContribution(decimal amount)
+        {
+            if (amount <= 0)
+                throw new ArgumentException("O valor do aporte deve ser maior que zero.", nameof(amount));
+
+            CurrentAmount += amount;
+            if (CurrentAmount >= TargetAmount)
+            {
+                IsCompleted = true;
+            }
+        }
     }
 }
