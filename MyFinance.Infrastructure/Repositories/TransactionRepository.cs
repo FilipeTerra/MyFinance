@@ -74,6 +74,12 @@ public class TransactionRepository : ITransactionRepository
             query = query.Where(t => t.Type == filters.Type.Value);
         }
 
+        // Filtro de Categoria
+        if (filters.CategoryId.HasValue)
+        {
+            query = query.Where(t => t.CategoryId == filters.CategoryId.Value);
+        }
+
         // Filtro de Período (range de datas)
         if (filters.StartDate.HasValue)
             query = query.Where(t => t.Date >= filters.StartDate.Value.Date);

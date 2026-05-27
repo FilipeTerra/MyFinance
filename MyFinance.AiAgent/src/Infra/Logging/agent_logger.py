@@ -8,11 +8,16 @@ _LOGGER_NAME = "myfinance.agent"
 
 def setup_logging() -> None:
     """Configura o formato de log para toda a aplicação."""
+    import os
+
+    log_level = logging.DEBUG if os.getenv("MYFINANCE_DEBUG") else logging.INFO
+
     logging.basicConfig(
-        level=logging.INFO,
+        level=log_level,
         format="%(asctime)s | %(levelname)-5s | %(message)s",
         datefmt="%H:%M:%S",
     )
+    logging.getLogger(_LOGGER_NAME).setLevel(log_level)
     # Silencia logs verbosos de libs externas
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("httpcore").setLevel(logging.WARNING)

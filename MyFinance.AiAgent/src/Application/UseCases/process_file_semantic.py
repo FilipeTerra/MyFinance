@@ -1,12 +1,28 @@
 from __future__ import annotations
 
+import csv
 import logging
+import re
 from datetime import datetime
-from typing import List
+from io import StringIO
+from typing import List, Optional
 
 from src.Domain.interfaces import ISemanticExtractor
 from src.Domain.models import ExtractedTransaction
 from src.Infra.Cache.knowledge_base import KnowledgeBase
+
+# Colunas obrigatórias para o parser determinístico de CSV
+_CSV_REQUIRED_COLS = {"Data", "Lançamento", "Valor"}
+
+# Palavras-chave no campo "Tipo" do CSV → receita (crédito ao cartão)
+_RECEITA_KEYWORDS = frozenset([
+    "crédito", "credito", "estorno", "reembolso", "cashback",
+    "pix recebido", "ted recebida", "doc recebido", "rendimento",
+    "pagamento recebido",
+])
+
+# Categorias genéricas do banco que não ajudam o usuário
+_CATEGORIA_IGNORAR = frozenset(["OUTROS", "outros", "Outros", ""])
 
 _logger = logging.getLogger("myfinance.agent")
 
@@ -59,9 +75,18 @@ class ProcessFileSemanticUseCase:
         """
         Processa o arquivo e retorna lista de transações no formato esperado
         pelo backend C# (mesmo schema do ProcessFileUseCase).
+
+        Para CSVs estruturados, usa parsing determinístico (sem LLM).
+        Para PDFs ou CSVs não-reconhecidos, delega ao SemanticExtractor.
         """
-        raw_text = self._read_file(file_path)
-        extracted = self._extractor.extract_from_text(raw_text)
+        extracted: Optional[List[ExtractedTransaction]] = None
+
+        if file_path.lower().endswith(".csv"):
+            extracted = self._try_parse_csv(file_path)
+
+        if extracted is None:
+            raw_text = self._read_file(file_path)
+            extracted = self._extractor.extract_from_text(raw_text)
 
         _logger.info(
             "📊 [SEMANTIC UC] %d transações extraídas do arquivo '%s'.",
@@ -72,6 +97,78 @@ class ProcessFileSemanticUseCase:
         return self._map_to_output(extracted, account_id, existing_categories)
 
     # ── Internos ───────────────────────────────────────────────────────────────
+
+    def _try_parse_csv(self, file_path: str) -> Optional[List[ExtractedTransaction]]:
+        """
+        Tenta extrair transações diretamente do CSV sem usar o LLM.
+        Retorna None se o arquivo não tiver o formato esperado, forçando
+        o fallback para o SemanticExtractor.
+        """
+        try:
+            with open(file_path, "r", encoding="utf-8-sig", errors="replace") as fh:
+                content = fh.read()
+
+            reader = csv.DictReader(StringIO(content))
+            cols = set(reader.fieldnames or [])
+
+            if not _CSV_REQUIRED_COLS.issubset(cols):
+                _logger.info(
+                    "📋 [CSV] Colunas %s não encontradas (tem: %s). Usando LLM.",
+                    _CSV_REQUIRED_COLS - cols,
+                    cols,
+                )
+                return None
+
+            transactions: List[ExtractedTransaction] = []
+            for row in reader:
+                data = row.get("Data", "").strip()
+                descricao = row.get("Lançamento", "").strip()
+                valor_str = row.get("Valor", "").strip()
+                categoria_raw = row.get("Categoria", "").strip()
+                tipo_str = row.get("Tipo", "").strip().lower()
+
+                if not data or not descricao or not valor_str:
+                    continue
+
+                # Determina se é crédito (valor negativo no extrato = dinheiro de volta)
+                is_negative = valor_str.startswith("-")
+
+                # Remove "R$", "-", pontos de milhar; troca vírgula decimal por ponto
+                valor_clean = re.sub(r"[^\d,]", "", valor_str).replace(",", ".")
+                valor = float(valor_clean) if valor_clean else 0.0
+
+                # Tipo: sinal tem prioridade; depois palavras-chave do campo "Tipo"
+                if is_negative or any(kw in tipo_str for kw in _RECEITA_KEYWORDS):
+                    tipo = "receita"
+                else:
+                    tipo = "despesa"
+
+                # Categoria: descarta genéricas como "OUTROS"
+                categoria = (
+                    None if categoria_raw in _CATEGORIA_IGNORAR else categoria_raw
+                )
+
+                transactions.append(
+                    ExtractedTransaction(
+                        data=data,
+                        descricao=descricao,
+                        valor=valor,
+                        tipo=tipo,
+                        categoria=categoria,
+                    )
+                )
+
+            _logger.info(
+                "📋 [CSV] Parse determinístico: %d transações extraídas (sem LLM).",
+                len(transactions),
+            )
+            return transactions if transactions else None
+
+        except Exception as exc:
+            _logger.warning(
+                "⚠️  [CSV] Falha no parse direto (%s). Usando LLM como fallback.", exc
+            )
+            return None
 
     def _read_file(self, file_path: str) -> str:
         if file_path.lower().endswith(".pdf"):
@@ -95,7 +192,24 @@ class ProcessFileSemanticUseCase:
 
     def _read_text(self, file_path: str) -> str:
         with open(file_path, "r", encoding="utf-8", errors="replace") as fh:
-            return fh.read()
+            content = fh.read()
+
+        lines = content.splitlines()
+        non_blank = [l for l in lines if l.strip()]
+        _logger.info(
+            "📂 [SEMANTIC UC] Arquivo lido: %d chars | %d linhas totais | %d não-vazias",
+            len(content),
+            len(lines),
+            len(non_blank),
+        )
+        _logger.info("📂 [SEMANTIC UC] Primeiras 5 linhas do arquivo:")
+        for i, ln in enumerate(lines[:5], 1):
+            _logger.info("   [%02d] %s", i, ln[:150])
+        if len(lines) > 5:
+            _logger.info("📂 [SEMANTIC UC] Últimas 3 linhas do arquivo:")
+            for i, ln in enumerate(lines[-3:], len(lines) - 2):
+                _logger.info("   [%02d] %s", i, ln[:150])
+        return content
 
     def _map_to_output(
         self,

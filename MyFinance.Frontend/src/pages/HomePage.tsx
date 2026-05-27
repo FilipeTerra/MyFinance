@@ -25,6 +25,7 @@ interface FiltersState {
     endDate?: string;
     amount?: number;
     type?: number;
+    categoryId?: string;
     page?: number;
     pageSize?: number;
 }
@@ -282,6 +283,7 @@ export function HomePage() {
 
                 <TransactionFilter
                     accounts={accounts}
+                    categories={categories}
                     selectedAccountId={activeFilters?.accountId ?? ''}
                     onFilterChange={handleFilterChange}
                     isLoading={isLoadingTransactions}

@@ -1,5 +1,6 @@
 import os
 import requests
+from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
 from langchain_core.tools import tool
 
@@ -55,9 +56,10 @@ def make_api_tools(jwt_token: str) -> list:
 
     @tool
     def consultar_transacoes_recentes() -> str:
-        """Use esta ferramenta para ver os gastos, despesas e receitas recentes do usuário,
-        entender o seu comportamento financeiro ou identificar vazamentos de dinheiro.
-        Retorna as transações das contas do usuário."""
+        """Use esta ferramenta APENAS para listar transações individuais recentes quando o usuário
+        quiser ver o extrato ou histórico de movimentações específicas (ex: 'mostre minhas últimas transações',
+        'o que comprei recentemente'). NÃO use para análise de gastos por categoria ou resumo financeiro —
+        para isso use analisar_gastos_por_categoria e calcular_resumo_financeiro."""
         try:
             acc_response = requests.get(
                 f"{_API_BASE_URL}/accounts", headers=_headers, timeout=10
@@ -126,9 +128,193 @@ def make_api_tools(jwt_token: str) -> list:
         except Exception as e:
             return f"Erro inesperado ao criar meta: {e}"
 
+    def _buscar_todas_transacoes(ultimos_dias: int) -> list | str:
+        """Busca todas as transações de todas as contas num janela de dias."""
+        acc_response = requests.get(
+            f"{_API_BASE_URL}/accounts", headers=_headers, timeout=10
+        )
+        if acc_response.status_code != 200:
+            return "Não foi possível recuperar as contas do usuário."
+        contas = acc_response.json()
+        if not contas:
+            return "O usuário não possui contas cadastradas."
+
+        cutoff = datetime.now(timezone.utc) - timedelta(days=ultimos_dias)
+        todas = []
+        for conta in contas:
+            account_id = conta.get("id")
+            if not account_id:
+                continue
+            tx_response = requests.get(
+                f"{_API_BASE_URL}/transactions/account/{account_id}",
+                headers=_headers, timeout=10,
+            )
+            if tx_response.status_code == 200:
+                for t in (tx_response.json() or []):
+                    date_str = t.get("date", "")
+                    try:
+                        tx_date = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
+                        if tx_date >= cutoff:
+                            todas.append(t)
+                    except Exception:
+                        todas.append(t)
+        return todas
+
+    @tool
+    def analisar_gastos_por_categoria(ultimos_dias: int = 30) -> str:
+        """Use esta ferramenta para analisar onde o usuário está gastando mais dinheiro,
+        identificar padrões de consumo, responder 'onde gasto mais?', 'como melhorar meus gastos?'
+        ou qualquer pergunta sobre categorias de despesas. Agrupa despesas por categoria
+        e mostra os totais e percentuais. Parâmetro ultimos_dias define a janela de análise."""
+        try:
+            transacoes = _buscar_todas_transacoes(ultimos_dias)
+            if isinstance(transacoes, str):
+                return transacoes
+
+            gastos: dict[str, float] = {}
+            total_despesas = 0.0
+
+            for t in transacoes:
+                amount = t.get("amount", 0)
+                if amount >= 0:
+                    continue
+                categoria = (
+                    t.get("categoryName")
+                    or t.get("category")
+                    or "Sem categoria"
+                )
+                valor = abs(amount)
+                gastos[categoria] = gastos.get(categoria, 0.0) + valor
+                total_despesas += valor
+
+            if not gastos:
+                return f"Nenhuma despesa encontrada nos últimos {ultimos_dias} dias."
+
+            linhas = [f"📊 Gastos por categoria — últimos {ultimos_dias} dias\n"]
+            for cat, total in sorted(gastos.items(), key=lambda x: x[1], reverse=True):
+                pct = (total / total_despesas * 100) if total_despesas > 0 else 0
+                linhas.append(f"  • {cat}: R$ {total:,.2f} ({pct:.1f}%)")
+            linhas.append(f"\n  💸 Total gasto: R$ {total_despesas:,.2f}")
+            return "\n".join(linhas)
+
+        except requests.exceptions.ConnectionError:
+            return "Erro: A API financeira está offline ou inacessível."
+        except Exception as e:
+            return f"Erro inesperado ao analisar gastos: {e}"
+
+    @tool
+    def relatorio_mensal_por_categoria(filtro_categoria: str, ultimos_meses: int = 3) -> str:
+        """Use esta ferramenta quando o usuário quiser um relatório detalhado de gastos em uma
+        categoria ou tipo de gasto específico (ex: 'transporte', 'uber', 'alimentação', 'lazer')
+        quebrado mês a mês. Exemplos de uso: 'quanto gastei com uber nos últimos 3 meses?',
+        'me dê um relatório mensal de transporte', 'quanto gastei com alimentação por mês?'.
+        Parâmetros: filtro_categoria (palavra-chave para filtrar, ex: 'transporte', 'uber', 'alimentação'),
+        ultimos_meses (número de meses a analisar, padrão 3)."""
+        try:
+            transacoes = _buscar_todas_transacoes(ultimos_meses * 31)
+            if isinstance(transacoes, str):
+                return transacoes
+
+            filtro = filtro_categoria.lower().strip()
+
+            meses: dict[str, dict] = {}
+            for t in transacoes:
+                amount = t.get("amount", 0)
+                if amount >= 0:
+                    continue
+
+                categoria = (t.get("categoryName") or t.get("category") or "").lower()
+                descricao = (t.get("description") or "").lower()
+                if filtro not in categoria and filtro not in descricao:
+                    continue
+
+                date_str = t.get("date", "")
+                try:
+                    tx_date = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
+                    chave_mes = tx_date.strftime("%Y-%m")
+                    label_mes = tx_date.strftime("%B/%Y").capitalize()
+                except Exception:
+                    chave_mes = "desconhecido"
+                    label_mes = "Data desconhecida"
+
+                if chave_mes not in meses:
+                    meses[chave_mes] = {"label": label_mes, "total": 0.0, "transacoes": []}
+                valor = abs(amount)
+                meses[chave_mes]["total"] += valor
+                meses[chave_mes]["transacoes"].append({
+                    "data": tx_date.strftime("%d/%m") if date_str else "??",
+                    "descricao": t.get("description", "Sem descrição"),
+                    "categoria": t.get("categoryName") or t.get("category") or "Sem categoria",
+                    "valor": valor,
+                })
+
+            if not meses:
+                return f"Nenhuma despesa encontrada com o filtro '{filtro_categoria}' nos últimos {ultimos_meses} meses."
+
+            total_geral = sum(m["total"] for m in meses.values())
+            linhas = [f"📊 Relatório de '{filtro_categoria}' — últimos {ultimos_meses} meses\n"]
+
+            for chave in sorted(meses.keys(), reverse=True):
+                mes = meses[chave]
+                linhas.append(f"\n📅 {mes['label']} — R$ {mes['total']:,.2f}")
+                for tx in sorted(mes["transacoes"], key=lambda x: x["valor"], reverse=True):
+                    linhas.append(f"  • {tx['data']} | {tx['descricao'][:40]} | {tx['categoria']} | R$ {tx['valor']:,.2f}")
+
+            linhas.append(f"\n💸 Total no período: R$ {total_geral:,.2f}")
+            linhas.append(f"📈 Média mensal: R$ {total_geral / len(meses):,.2f}")
+            return "\n".join(linhas)
+
+        except requests.exceptions.ConnectionError:
+            return "Erro: A API financeira está offline ou inacessível."
+        except Exception as e:
+            return f"Erro inesperado ao gerar relatório: {e}"
+
+    @tool
+    def calcular_resumo_financeiro(ultimos_dias: int = 30) -> str:
+        """Use esta ferramenta para um resumo geral das finanças do usuário: total de receitas,
+        total de despesas, saldo líquido e taxa de poupança no período. Use quando o usuário
+        perguntar sobre saúde financeira, balanço do mês, situação financeira geral ou
+        quanto está conseguindo poupar."""
+        try:
+            transacoes = _buscar_todas_transacoes(ultimos_dias)
+            if isinstance(transacoes, str):
+                return transacoes
+
+            total_receitas = 0.0
+            total_despesas = 0.0
+            n = len(transacoes)
+
+            for t in transacoes:
+                amount = t.get("amount", 0)
+                if amount > 0:
+                    total_receitas += amount
+                else:
+                    total_despesas += abs(amount)
+
+            saldo_liquido = total_receitas - total_despesas
+            taxa_poupanca = (saldo_liquido / total_receitas * 100) if total_receitas > 0 else 0
+            situacao = "✅ positivo" if saldo_liquido >= 0 else "❌ negativo"
+
+            return (
+                f"📋 Resumo financeiro — últimos {ultimos_dias} dias\n"
+                f"  • Receitas:         R$ {total_receitas:,.2f}\n"
+                f"  • Despesas:         R$ {total_despesas:,.2f}\n"
+                f"  • Saldo líquido:    R$ {saldo_liquido:,.2f} ({situacao})\n"
+                f"  • Taxa de poupança: {taxa_poupanca:.1f}%\n"
+                f"  • Transações no período: {n}"
+            )
+
+        except requests.exceptions.ConnectionError:
+            return "Erro: A API financeira está offline ou inacessível."
+        except Exception as e:
+            return f"Erro inesperado ao calcular resumo: {e}"
+
     return [
         consultar_saldos_contas,
         consultar_metas_financeiras,
         consultar_transacoes_recentes,
         criar_meta_financeira,
+        analisar_gastos_por_categoria,
+        relatorio_mensal_por_categoria,
+        calcular_resumo_financeiro,
     ]

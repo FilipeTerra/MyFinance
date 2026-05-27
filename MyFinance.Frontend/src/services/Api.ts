@@ -84,6 +84,7 @@ export interface TransactionFilterParams {
     endDate?: string;   // Formato YYYY-MM-DD
     amount?: number;
     type?: number; // 1 = Income (Receita), 2 = Expense (Despesa)
+    categoryId?: string;
     page?: number;
     pageSize?: number;
 }
@@ -102,6 +103,7 @@ const transactionService = {
         if (filters.endDate) queryParams.append('endDate', filters.endDate);
         if (filters.amount !== undefined && filters.amount !== null) queryParams.append('amount', filters.amount.toString());
         if (filters.type !== undefined && filters.type !== null) queryParams.append('type', filters.type.toString());
+        if (filters.categoryId) queryParams.append('categoryId', filters.categoryId);
 
         return apiClient.get<TransactionResponseDto[]>('/transactions/search', { params: queryParams });
     },

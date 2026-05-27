@@ -54,7 +54,7 @@ class SemanticExtractor:
     def __init__(
         self,
         model: Optional[str] = None,
-        lines_per_chunk: int = 20,
+        lines_per_chunk: int = 5,
     ) -> None:
         self.lines_per_chunk = lines_per_chunk
 
@@ -111,13 +111,35 @@ class SemanticExtractor:
 
     def _chunk_text(self, text: str) -> List[str]:
         """Filtra linhas em branco e agrupa em blocos de `lines_per_chunk` linhas."""
-        lines = [line for line in text.splitlines() if line.strip()]
-        return [
+        all_lines = text.splitlines()
+        lines = [line for line in all_lines if line.strip()]
+        _logger.info(
+            "✂️  [EXTRATOR] Chunking: %d linhas brutas → %d não-vazias → %d chunk(s) de %d linhas",
+            len(all_lines),
+            len(lines),
+            -(-len(lines) // self.lines_per_chunk) if lines else 0,  # ceil division
+            self.lines_per_chunk,
+        )
+        _logger.info("✂️  [EXTRATOR] Todas as linhas não-vazias encontradas:")
+        for i, line in enumerate(lines):
+            _logger.info("   [%02d] %s", i + 1, line[:150])
+        chunks = [
             "\n".join(lines[i : i + self.lines_per_chunk])
             for i in range(0, len(lines), self.lines_per_chunk)
         ]
+        return chunks
 
     def _extract_chunk(self, chunk: str) -> List[ExtractedTransaction]:
+        chunk_lines = chunk.splitlines()
+        _logger.info(
+            "📨 [EXTRATOR] Enviando chunk ao LLM (%d linhas | %d chars).",
+            len(chunk_lines),
+            len(chunk),
+        )
+        _logger.info("📨 [EXTRATOR] Conteúdo do chunk:")
+        for i, ln in enumerate(chunk_lines, 1):
+            _logger.info("   [%02d] %s", i, ln[:150])
+
         messages = [
             SystemMessage(content=_SYSTEM_PROMPT),
             HumanMessage(
@@ -129,6 +151,11 @@ class SemanticExtractor:
         if self._structured_llm is not None:
             try:
                 result: TransactionList = self._structured_llm.invoke(messages)
+                _logger.info(
+                    "✅ [EXTRATOR] structured_output retornou %d transação(ões).",
+                    len(result.transacoes),
+                )
+                _logger.info("✅ [EXTRATOR] Transações extraídas: %s", [t.descricao for t in result.transacoes])
                 return result.transacoes
             except Exception as exc:
                 _logger.warning(
@@ -139,7 +166,10 @@ class SemanticExtractor:
 
         # Caminho 2: fallback — parse manual com validação Pydantic
         response = self._llm.invoke(messages)
-        return self._parse_fallback(response.content)
+        _logger.info("🔁 [EXTRATOR] Resposta raw do LLM (%d chars):\n%s", len(response.content), response.content[:2000])
+        result = self._parse_fallback(response.content)
+        _logger.info("✅ [EXTRATOR] fallback retornou %d transação(ões).", len(result))
+        return result
 
     def _parse_fallback(self, content: str) -> List[ExtractedTransaction]:
         """Tenta extrair JSON da resposta mesmo que o modelo devolva texto extra."""

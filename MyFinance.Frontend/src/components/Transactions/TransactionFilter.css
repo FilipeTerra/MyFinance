@@ -1,100 +1,383 @@
-.transaction-filter-form {
-    background: #fff;
-    padding: 1.5rem;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+/* ============================================================
+   TransactionFilter — Design moderno, fiel ao design system
+   Paleta: #f1f5f9 bg | #1e293b text | #3b82f6 primary | #e2e8f0 border
+   ============================================================ */
+
+.transaction-filter {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+    transition: box-shadow 0.2s ease;
+}
+
+.transaction-filter:focus-within {
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.07), 0 0 0 2px rgba(59, 130, 246, 0.08);
+}
+
+/* ── Header (botão de colapso) ─────────────────────────────── */
+
+.filter-header {
     display: flex;
-    flex-wrap: wrap; /* Permite que os itens quebrem a linha */
-    gap: 1rem; /* Espaço entre os grupos */
-    align-items: flex-end; /* Alinha os botíµes com a base dos inputs */
-    margin-bottom: 2rem;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 0.85rem 1.25rem;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.15s ease;
+    user-select: none;
 }
 
-    .transaction-filter-form h4 {
-        width: 100%; /* Ocupa a linha inteira */
-        margin-top: 0;
-        margin-bottom: 0.5rem;
-        color: #334155;
-    }
-
-.filter-group {
-    flex: 1; /* Faz com que os grupos cresçam para preencher o espaço */
-    min-width: 150px; /* Largura mí­nima antes de quebrar a linha */
-    display: flex;
-    flex-direction: column;
+.filter-header:hover {
+    background: #f8fafc;
 }
 
-    .filter-group label {
-        display: block;
-        margin-bottom: 0.4rem;
-        color: #64748b;
-        font-weight: 500;
-        font-size: 0.85rem;
-    }
-
-    .filter-group input,
-    .filter-group select {
-        width: 100%;
-        padding: 0.7rem 0.8rem;
-        border: 1px solid #cbd5e1;
-        border-radius: 6px;
-        background-color: #f8fafc;
-        color: #334155;
-        font-size: 0.95rem;
-        box-sizing: border-box;
-    }
-
-.filter-group.date-range {
-    flex: 2;
-    min-width: 280px;
-}
-
-.date-range-inputs {
+.filter-header-left {
     display: flex;
     align-items: center;
     gap: 0.5rem;
 }
 
+.filter-icon {
+    color: #64748b;
+    flex-shrink: 0;
+}
+
+.filter-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.filter-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #3b82f6;
+    color: #ffffff;
+    border-radius: 999px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    line-height: 1;
+    animation: badge-pop 0.18s ease;
+}
+
+@keyframes badge-pop {
+    from { transform: scale(0.6); opacity: 0; }
+    to   { transform: scale(1);   opacity: 1; }
+}
+
+.filter-chevron {
+    color: #94a3b8;
+    flex-shrink: 0;
+    transition: transform 0.22s ease;
+}
+
+.filter-chevron.open {
+    transform: rotate(180deg);
+}
+
+/* ── Chips de filtros ativos ───────────────────────────────── */
+
+.filter-chips {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0 1.25rem 0.8rem;
+}
+
+.filter-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    color: #1d4ed8;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    padding: 0.2rem 0.45rem 0.2rem 0.65rem;
+    line-height: 1.5;
+    transition: background 0.15s, border-color 0.15s;
+    animation: chip-in 0.15s ease;
+}
+
+@keyframes chip-in {
+    from { transform: scale(0.85); opacity: 0; }
+    to   { transform: scale(1);    opacity: 1; }
+}
+
+.filter-chip:hover {
+    background: #dbeafe;
+    border-color: #93c5fd;
+}
+
+.filter-chip-remove {
+    background: none;
+    border: none;
+    color: #93c5fd;
+    cursor: pointer;
+    padding: 0 0.1rem;
+    font-size: 1.05rem;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    transition: color 0.12s;
+}
+
+.filter-chip-remove:hover {
+    color: #1d4ed8;
+}
+
+/* ── Corpo colapsável ──────────────────────────────────────── */
+
+.filter-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.28s ease;
+}
+
+.filter-body.open {
+    max-height: 350px;
+}
+
+/* ── Divisor ───────────────────────────────────────────────── */
+
+.filter-divider {
+    height: 1px;
+    background: #f1f5f9;
+    margin: 0 1.25rem 0.8rem;
+}
+
+/* ── Grid de inputs ────────────────────────────────────────── */
+
+.filter-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.6rem 1rem;
+    padding: 0.75rem 1.25rem 0;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.filter-group label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.28rem;
+}
+
+.filter-group input,
+.filter-group select {
+    width: 100%;
+    padding: 0.52rem 0.75rem;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 8px;
+    background: #f8fafc;
+    color: #1e293b;
+    font-size: 0.875rem;
+    font-family: inherit;
+    outline: none;
+    box-sizing: border-box;
+    transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+    appearance: none;
+    -webkit-appearance: none;
+}
+
+/* Chevron personalizado nos selects */
+.filter-group select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.65rem center;
+    padding-right: 2rem;
+}
+
+.filter-group input:focus,
+.filter-group select:focus {
+    border-color: #3b82f6;
+    background: #ffffff;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.filter-group input:hover:not(:focus),
+.filter-group select:hover:not(:focus) {
+    border-color: #94a3b8;
+    background: #f1f5f9;
+}
+
+.filter-group input::placeholder {
+    color: #94a3b8;
+}
+
+/* Input com ícone de lupa */
+.input-with-icon {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.input-icon {
+    position: absolute;
+    left: 0.65rem;
+    color: #94a3b8;
+    pointer-events: none;
+    flex-shrink: 0;
+}
+
+.input-with-icon input {
+    padding-left: 2rem;
+}
+
+/* Período — ocupa 2 colunas */
+.filter-group.date-range {
+    grid-column: span 2;
+}
+
+.date-range-inputs {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
 .date-range-inputs input {
     flex: 1;
-    min-width: 0; /* Evita overflow em containers estreitos */
+    min-width: 0;
 }
 
-.date-range-inputs span {
-    color: #64748b;
+.date-sep {
+    color: #94a3b8;
     font-size: 0.85rem;
     white-space: nowrap;
+    flex-shrink: 0;
 }
 
-.filter-button {
-    padding: 0.7rem 1.2rem;
+/* ── Barra de ações ────────────────────────────────────────── */
+
+.filter-actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem 1rem;
+}
+
+/* Botão principal — Buscar */
+.btn-filter-submit {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.52rem 1.1rem;
     border: none;
-    border-radius: 6px;
-    background-color: #3b82f6;
-    color: white;
-    font-size: 0.95rem;
+    border-radius: 8px;
+    background: #3b82f6;
+    color: #ffffff;
+    font-size: 0.875rem;
     font-weight: 600;
+    font-family: inherit;
     cursor: pointer;
-    transition: background-color 0.2s ease;
-    height: 40px; /* Altura fixa para alinhar */
+    white-space: nowrap;
+    transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
 }
 
-    .filter-button:hover {
-        background-color: #2563eb;
-    }
+.btn-filter-submit:hover:not(:disabled) {
+    background: #2563eb;
+    box-shadow: 0 3px 10px rgba(37, 99, 235, 0.3);
+}
 
-    .filter-button:disabled {
-        background-color: #94a3b8;
-        cursor: not-allowed;
-    }
+.btn-filter-submit:active:not(:disabled) {
+    transform: scale(0.97);
+}
 
-.clear-button {
-    background-color: transparent;
+.btn-filter-submit:disabled {
+    background: #94a3b8;
+    cursor: not-allowed;
+}
+
+/* Botão secundário — Limpar tudo */
+.btn-filter-clear {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.52rem 0.9rem;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 8px;
+    background: transparent;
     color: #64748b;
-    border: 1px solid #cbd5e1;
+    font-size: 0.875rem;
+    font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
-    .clear-button:hover {
-        background-color: #f1f5f9;
-        border-color: #94a3b8;
+.btn-filter-clear:hover:not(:disabled) {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+    color: #334155;
+}
+
+.btn-filter-clear:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* Spinner de loading no botão */
+.btn-spinner {
+    width: 12px;
+    height: 12px;
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    border-top-color: #ffffff;
+    border-radius: 50%;
+    animation: spin 0.55s linear infinite;
+    flex-shrink: 0;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ── Responsivo ────────────────────────────────────────────── */
+
+@media (max-width: 900px) {
+    .filter-grid {
+        grid-template-columns: repeat(3, 1fr);
     }
+
+    .filter-group.date-range {
+        grid-column: span 2;
+    }
+}
+
+@media (max-width: 600px) {
+    .filter-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .filter-group.date-range {
+        grid-column: span 2;
+    }
+
+    .date-range-inputs {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .date-sep {
+        text-align: center;
+    }
+}
