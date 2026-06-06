@@ -17,7 +17,7 @@ export function Header() {
     return (
         <header className="app-header">
             <div className="header-logo">
-                MyFinance
+                FinAI
             </div>
             <nav className="header-nav">
                 {/* Usamos NavLink para que ele adicione a classe 'active' automaticamente */}

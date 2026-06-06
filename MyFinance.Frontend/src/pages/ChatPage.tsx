@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import './ChatPage.css';
@@ -15,6 +15,13 @@ interface Message {
 
 const TYPING_ID = 'typing-indicator';
 
+const QUICK_PROMPTS = [
+    { emoji: '📊', label: 'Resumo financeiro dos últimos 30 dias' },
+    { emoji: '💸', label: 'Onde eu gastei mais este mês?' },
+    { emoji: '🎯', label: 'Gostaria de criar uma nova meta' },
+    { emoji: '📉', label: 'Vale a pena financiar um carro?' },
+];
+
 export function ChatPage() {
     const navigate = useNavigate();
     const [messages, setMessages] = useState<Message[]>([
@@ -28,22 +35,23 @@ export function ChatPage() {
     const [isLoading, setIsLoading] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
-    useEffect(() => {
+    const scrollToBottom = () =>
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [messages]);
 
-    const handleSend = async () => {
-        if (!inputText.trim() || isLoading) return;
+    const sendText = async (text: string) => {
+        if (!text.trim() || isLoading) return;
 
-        const messageText = inputText.trim();
+        const messageText = text.trim();
 
         setMessages(prev => [
             ...prev,
             { id: Date.now().toString(), sender: 'user', text: messageText },
             { id: TYPING_ID, sender: 'agent', text: '', isTyping: true },
         ]);
-        setInputText('');
         setIsLoading(true);
+
+        // defer scroll so the new nodes are already in the DOM
+        setTimeout(scrollToBottom, 50);
 
         try {
             const response = await sendMessage(messageText);
@@ -74,7 +82,18 @@ export function ChatPage() {
             ]);
         } finally {
             setIsLoading(false);
+            setTimeout(scrollToBottom, 50);
         }
+    };
+
+    const handleSend = () => {
+        if (!inputText.trim() || isLoading) return;
+        sendText(inputText);
+        setInputText('');
+    };
+
+    const handleQuickPrompt = (text: string) => {
+        sendText(text);
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -90,80 +109,98 @@ export function ChatPage() {
 
             <div className="chat-content">
 
-                {/* ── Chat Panel ───────────────────────────────────── */}
-                <div className="chat-panel">
+                {/* ── 70 % — Área do Chat ─────────────────────────── */}
+                <div className="chat-area">
+                    <div className="chat-panel">
 
-                    <div className="chat-header">
-                        <div className="agent-avatar">F</div>
-                        <div className="agent-info">
-                            <span className="agent-name">FinAl</span>
-                            <span className="agent-status">
-                                <span className="status-dot" />
-                                Online
-                            </span>
-                        </div>
-                    </div>
-
-                    <div className="messages-container">
-                        {messages.map(message => (
-                            <div
-                                key={message.id}
-                                className={`message-row ${message.sender}`}
-                            >
-                                {message.sender === 'agent' && (
-                                    <div className="bubble-avatar">F</div>
-                                )}
-
-                                <div className={`bubble ${message.sender === 'user' ? 'bubble-user' : 'bubble-agent'}`}>
-                                    {message.isTyping ? (
-                                        <div className="typing-indicator">
-                                            <span /><span /><span />
-                                        </div>
-                                    ) : message.sender === 'agent' ? (
-                                        <ReactMarkdown>{message.text}</ReactMarkdown>
-                                    ) : (
-                                        message.text
-                                    )}
-                                </div>
+                        <div className="chat-header">
+                            <div className="agent-avatar">F</div>
+                            <div className="agent-info">
+                                <span className="agent-name">FinAl</span>
+                                <span className="agent-status">
+                                    <span className="status-dot" />
+                                    Online
+                                </span>
                             </div>
-                        ))}
-                        <div ref={messagesEndRef} />
-                    </div>
+                        </div>
 
-                    <div className="prompt-bar">
-                        <input
-                            type="text"
-                            className="prompt-input"
-                            value={inputText}
-                            onChange={e => setInputText(e.target.value)}
-                            onKeyDown={handleKeyDown}
-                            placeholder="Pergunte algo sobre suas finanças…"
-                            disabled={isLoading}
-                        />
-                        <button
-                            className="send-button"
-                            onClick={handleSend}
-                            disabled={isLoading || !inputText.trim()}
-                            aria-label="Enviar mensagem"
-                        >
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                <line x1="22" y1="2" x2="11" y2="13" />
-                                <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                            </svg>
-                        </button>
+                        <div className="messages-container">
+                            {messages.map(msg => (
+                                <div key={msg.id} className={`message-row ${msg.sender}`}>
+                                    {msg.sender === 'agent' && (
+                                        <div className="bubble-avatar">F</div>
+                                    )}
+                                    <div className={`bubble ${msg.sender === 'user' ? 'bubble-user' : 'bubble-agent'}`}>
+                                        {msg.isTyping ? (
+                                            <div className="typing-indicator">
+                                                <span /><span /><span />
+                                            </div>
+                                        ) : msg.sender === 'agent' ? (
+                                            <ReactMarkdown>{msg.text}</ReactMarkdown>
+                                        ) : (
+                                            msg.text
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                            <div ref={messagesEndRef} />
+                        </div>
+
+                        <div className="prompt-bar">
+                            <input
+                                type="text"
+                                className="prompt-input"
+                                value={inputText}
+                                onChange={e => setInputText(e.target.value)}
+                                onKeyDown={handleKeyDown}
+                                placeholder="Pergunte algo sobre suas finanças…"
+                                disabled={isLoading}
+                            />
+                            <button
+                                className="send-button"
+                                onClick={handleSend}
+                                disabled={isLoading || !inputText.trim()}
+                                aria-label="Enviar mensagem"
+                            >
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                    <line x1="22" y1="2" x2="11" y2="13" />
+                                    <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                                </svg>
+                            </button>
+                        </div>
+
                     </div>
                 </div>
 
-                {/* ── Stage Panel ──────────────────────────────────── */}
-                <div className="stage-panel">
-                    <div className="stage-content">
-                        <div className="stage-placeholder">
-                            <div className="stage-icon">📊</div>
-                            <h3>Visualização de Dados</h3>
-                            <p>Os gráficos e tabelas aparecerão aqui conforme nossa conversa.</p>
+                {/* ── 30 % — Barra Lateral de Ações Rápidas ──────── */}
+                <aside className="quick-prompts-sidebar">
+                    <div className="sidebar-header">
+                        <span className="sidebar-sparkle">✦</span>
+                        <div>
+                            <p className="sidebar-title">Sugestões para o FinAl</p>
+                            <p className="sidebar-subtitle">Clique para enviar ao chat</p>
                         </div>
                     </div>
-                </div>
+
+                    <div className="quick-prompts-list">
+                        {QUICK_PROMPTS.map(prompt => (
+                            <button
+                                key={prompt.label}
+                                className="quick-prompt-btn"
+                                onClick={() => handleQuickPrompt(prompt.label)}
+                                disabled={isLoading}
+                            >
+                                <span className="prompt-emoji">{prompt.emoji}</span>
+                                <span className="prompt-text">{prompt.label}</span>
+                            </button>
+                        ))}
+                    </div>
+
+                    <div className="sidebar-footer">
+                        <span>Desenvolvido com</span>
+                        <span className="footer-brand">FinAl IA</span>
+                    </div>
+                </aside>
 
             </div>
         </div>
