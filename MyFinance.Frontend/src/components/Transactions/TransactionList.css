@@ -44,6 +44,11 @@
     font-weight: 500;
 }
 
+.tx-amount.investment {
+    color: #ef4444; /* Vermelho */
+    font-weight: 500;
+}
+
 .tx-type {
     padding: 0.2rem 0.5rem;
     border-radius: 12px;
@@ -60,6 +65,11 @@
     .tx-type.expense {
         background-color: #fee2e2;
         color: #b91c1c;
+    }
+
+    .tx-type.investment {
+        background-color: #e9e288;
+        color: #2b4704;
     }
 
 .tx-actions {

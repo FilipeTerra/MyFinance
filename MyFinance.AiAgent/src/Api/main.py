@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List
 
 from src.Infra.Llm.ollama_utils import ensure_model
@@ -73,6 +73,7 @@ app.add_middleware(
 class ChatRequest(BaseModel):
     jwt_token: str
     prompt: str
+    context_payload: dict = Field(default_factory=dict)
 
 
 class IngestRequest(BaseModel):
@@ -107,7 +108,7 @@ async def consultant_chat(request: ChatRequest):
         if time.time() > payload.get("exp", 0):
             return {"success": False, "error_type": "session_expired", "erro": "Token expirado."}
 
-        response = await invoke_chat(request.prompt, request.jwt_token)
+        response = await invoke_chat(request.prompt, request.jwt_token, request.context_payload)
         return {"success": True, "resposta": response}
     except Exception as e:
         return {"success": False, "erro": str(e)}

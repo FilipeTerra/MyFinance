@@ -44,8 +44,25 @@ export function ContributeToGoalModal({ goalId, onClose, onSuccess }: Contribute
         void loadData();
     }, []);
 
+    const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        let digits = value.replace(/\D/g, '');
+
+        if (digits === '') { setAmount(''); setError(null); return; }
+
+        if (digits.length > 1) digits = digits.replace(/^0+/, '');
+        while (digits.length < 3) digits = '0' + digits;
+
+        const decimalIndex = digits.length - 2;
+        const integerPart = digits.slice(0, decimalIndex);
+        const decimalPart = digits.slice(decimalIndex);
+        const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        setAmount(formattedInteger + ',' + decimalPart);
+        setError(null);
+    };
+
     const selectedAccount = accounts.find(a => a.id === selectedAccountId) ?? null;
-    const parsedAmount = parseFloat(amount);
+    const parsedAmount = parseFloat(amount.replace(/\./g, '').replace(',', '.'));
     const hasInsufficientBalance =
         selectedAccount !== null &&
         !isNaN(parsedAmount) &&
@@ -128,12 +145,11 @@ export function ContributeToGoalModal({ goalId, onClose, onSuccess }: Contribute
                             <label htmlFor="contributeAmount">Valor (R$)</label>
                             <input
                                 id="contributeAmount"
-                                type="number"
-                                min="0.01"
-                                step="0.01"
-                                placeholder="0.00"
+                                type="text"
+                                inputMode="numeric"
+                                placeholder="0,00"
                                 value={amount}
-                                onChange={e => { setAmount(e.target.value); setError(null); }}
+                                onChange={handleAmountChange}
                                 disabled={isLoading}
                                 autoFocus
                             />

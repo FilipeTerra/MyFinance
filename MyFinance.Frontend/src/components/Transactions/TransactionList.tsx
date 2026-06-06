@@ -75,11 +75,11 @@ export function TransactionList({ transactions, isLoading, onDelete, onEdit }: T
                             <td>{tx.categoryName}</td>
                             <td>
                                 <span className={`tx-type ${tx.typeName.toLowerCase()}`}>
-                                    {tx.typeName === 'Income' ? 'Receita' : 'Despesa'}
+                                    {tx.typeName === 'Income' ? 'Receita' : tx.typeName === 'Expense' ? 'Despesa' : 'Investimento'    }
                                 </span>
                             </td>
                             <td className={`tx-amount ${tx.typeName.toLowerCase()}`}>
-                                {tx.typeName === 'Expense' ? '- ' : '+ '}
+                                {tx.typeName === 'Income' ? '+ ' : '- '}
                                 {Math.abs(tx.amount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                             </td>
                             <td className="tx-actions">
