@@ -49,7 +49,10 @@ def comparar_quitacao_vs_investimento(
 ) -> str:
     """Use esta ferramenta OBRIGATORIAMENTE quando o usuário perguntar se deve pagar uma dívida
     ou investir o dinheiro. Recebe o valor da dívida, a taxa anual da dívida e a taxa anual
-    do investimento pretendido. Retorna a recomendação matemática baseada nos números."""
+    do investimento pretendido. Retorna a recomendação matemática baseada nos números.
+    OBRIGATÓRIO: SÓ use esta ferramenta se o usuário fornecer explicitamente TODOS os 3 valores
+    numéricos necessários (valor da dívida, taxa da dívida e taxa de investimento).
+    NUNCA invente, deduza ou assuma valores zero para os parâmetros."""
     if taxa_juros_divida_anual <= 0 or taxa_rendimento_investimento_anual <= 0:
         return "Erro: as taxas devem ser maiores que zero."
 

@@ -1,16 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import ReactMarkdown from 'react-markdown';
 import './ChatPage.css';
 import { sendMessage, SessionExpiredError } from '../services/AiApi';
 import { Header } from '../components/Layout/Header';
-import ReactMarkdown from 'react-markdown';
 
 interface Message {
     id: string;
     sender: 'user' | 'agent';
     text: string;
     isTyping?: boolean;
-    dataPayload?: any;
+    dataPayload?: unknown;
 }
 
 const TYPING_ID = 'typing-indicator';
@@ -21,8 +21,8 @@ export function ChatPage() {
         {
             id: '1',
             sender: 'agent',
-            text: 'Olá! Sou FinAl, seu mentor financeiro pessoal. Como posso ajudar você hoje?'
-        }
+            text: 'Olá! Sou FinAl, seu mentor financeiro pessoal. Como posso ajudar você hoje?',
+        },
     ]);
     const [inputText, setInputText] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -35,21 +35,15 @@ export function ChatPage() {
     const handleSend = async () => {
         if (!inputText.trim() || isLoading) return;
 
-        const userMessage: Message = {
-            id: Date.now().toString(),
-            sender: 'user',
-            text: inputText.trim(),
-        };
-
         const messageText = inputText.trim();
-        setMessages(prev => [...prev, userMessage]);
-        setInputText('');
-        setIsLoading(true);
 
         setMessages(prev => [
             ...prev,
+            { id: Date.now().toString(), sender: 'user', text: messageText },
             { id: TYPING_ID, sender: 'agent', text: '', isTyping: true },
         ]);
+        setInputText('');
+        setIsLoading(true);
 
         try {
             const response = await sendMessage(messageText);
@@ -83,7 +77,7 @@ export function ChatPage() {
         }
     };
 
-    const handleKeyPress = (e: React.KeyboardEvent) => {
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             handleSend();
@@ -93,49 +87,74 @@ export function ChatPage() {
     return (
         <div className="chat-page">
             <Header />
+
             <div className="chat-content">
+
+                {/* ── Chat Panel ───────────────────────────────────── */}
                 <div className="chat-panel">
+
                     <div className="chat-header">
-                        <h2>Mentor Financeiro</h2>
+                        <div className="agent-avatar">F</div>
+                        <div className="agent-info">
+                            <span className="agent-name">FinAl</span>
+                            <span className="agent-status">
+                                <span className="status-dot" />
+                                Online
+                            </span>
+                        </div>
                     </div>
+
                     <div className="messages-container">
                         {messages.map(message => (
                             <div
                                 key={message.id}
-                                className={`message ${message.sender === 'user' ? 'user-message' : 'agent-message'}`}
+                                className={`message-row ${message.sender}`}
                             >
-                                {message.isTyping ? (
-                                    <div className="typing-indicator">
-                                        <span></span><span></span><span></span>
-                                    </div>
-                                ) : message.sender === 'agent' ? (
-                                    <div className="message-text markdown-body">
-                                        <ReactMarkdown>{message.text}</ReactMarkdown>
-                                    </div>
-                                ) : (
-                                    <div className="message-text">{message.text}</div>
+                                {message.sender === 'agent' && (
+                                    <div className="bubble-avatar">F</div>
                                 )}
+
+                                <div className={`bubble ${message.sender === 'user' ? 'bubble-user' : 'bubble-agent'}`}>
+                                    {message.isTyping ? (
+                                        <div className="typing-indicator">
+                                            <span /><span /><span />
+                                        </div>
+                                    ) : message.sender === 'agent' ? (
+                                        <ReactMarkdown>{message.text}</ReactMarkdown>
+                                    ) : (
+                                        message.text
+                                    )}
+                                </div>
                             </div>
                         ))}
                         <div ref={messagesEndRef} />
                     </div>
-                    <div className="input-container">
+
+                    <div className="prompt-bar">
                         <input
                             type="text"
+                            className="prompt-input"
                             value={inputText}
-                            onChange={(e) => setInputText(e.target.value)}
-                            onKeyPress={handleKeyPress}
-                            placeholder="Digite sua mensagem..."
+                            onChange={e => setInputText(e.target.value)}
+                            onKeyDown={handleKeyDown}
+                            placeholder="Pergunte algo sobre suas finanças…"
                             disabled={isLoading}
                         />
                         <button
+                            className="send-button"
                             onClick={handleSend}
                             disabled={isLoading || !inputText.trim()}
+                            aria-label="Enviar mensagem"
                         >
-                            {isLoading ? 'Gerando resposta...' : 'Enviar'}
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <line x1="22" y1="2" x2="11" y2="13" />
+                                <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                            </svg>
                         </button>
                     </div>
                 </div>
+
+                {/* ── Stage Panel ──────────────────────────────────── */}
                 <div className="stage-panel">
                     <div className="stage-content">
                         <div className="stage-placeholder">
@@ -145,6 +164,7 @@ export function ChatPage() {
                         </div>
                     </div>
                 </div>
+
             </div>
         </div>
     );

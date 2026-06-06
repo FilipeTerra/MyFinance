@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 from typing import List
 
 from src.Infra.Llm.ollama_utils import ensure_model
+from src.Infra.Llm.ollama_provider import list_models, get_model, is_remote, _MODELS
 from src.Infra.Cache.knowledge_base import KnowledgeBase
 from src.Infra.Llm.semantic_extractor import SemanticExtractor
 from src.Infra.Data.financial_rag import FinancialKnowledgeBase
@@ -88,6 +89,25 @@ class LearnRule(BaseModel):
 class LearnRequest(BaseModel):
     account_id: str
     rules: List[LearnRule]
+
+
+@app.get("/api/ai/models")
+async def get_available_models():
+    """Lista os modelos disponíveis no provedor Ollama ativo (remoto ou local)."""
+    try:
+        models = list_models()
+        provider = "remote" if is_remote() else "local"
+        return {"success": True, "provider": provider, "models": [m["name"] for m in models]}
+    except Exception as e:
+        return {"success": False, "message": str(e)}
+
+
+@app.get("/api/ai/models/roles")
+async def get_models_by_role():
+    """Retorna o modelo configurado para cada papel (chat, classifier, embedding, extractor)."""
+    provider = "remote" if is_remote() else "local"
+    roles = {role: get_model(role) for role in _MODELS}
+    return {"success": True, "provider": provider, "roles": roles}
 
 
 @app.post("/api/ai/ingest")

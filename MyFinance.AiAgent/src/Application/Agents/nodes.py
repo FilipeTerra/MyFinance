@@ -24,9 +24,11 @@ from src.Application.Agents.state import AgentState, ContextData, MAX_ITERATIONS
 from src.Application.Agents.Tools.tools import MATH_TOOLS
 from src.Application.Agents.Tools.financial_tools import consultar_teoria_financeira
 from src.Application.Agents.Tools.api_tools import make_api_tools
-from src.Infra.Llm.ollama_provider import get_ollama_config, get_model
+from src.Infra.Llm.ollama_provider import get_ollama_config
 
 _logger = logging.getLogger("myfinance.agent")
+
+_MODEL_NAME = "llama3.1:8b"
 
 
 # ===========================================================================
@@ -37,6 +39,11 @@ _logger = logging.getLogger("myfinance.agent")
 # ===========================================================================
 
 _SYSTEM_PROMPT = (
+    "⚠️ REGRA DE SEGURANÇA (CRÍTICA): NUNCA chame mais de 3 ferramentas na mesma iteração. "
+    "Se o usuário fizer uma pergunta ampla sobre seus gastos ou pedir uma análise geral, "
+    "priorize EXCLUSIVAMENTE o uso das ferramentas analisar_gastos_por_categoria ou "
+    "calcular_resumo_financeiro. NUNCA tente puxar listas longas de transações para análises amplas. "
+
     "Você é o Claudio, o assistente financeiro pessoal do usuário. "
     "IDIOMA OBRIGATÓRIO: Responda SEMPRE em português do Brasil, sem exceção. "
     "Seja EXTREMAMENTE objetivo, moderno e orientado à ação. "
@@ -215,8 +222,14 @@ def make_nodes(jwt_token: str) -> tuple:
     """
     # ── Lista unificada de ferramentas ───────────────────────────────────────
     # Ordem: matemática pura → conhecimento RAG → API .NET (autenticada)
+    # consultar_transacoes_recentes e relatorio_mensal_por_categoria são excluídas:
+    # devolvem JSONs longos que causam overflow de contexto em perguntas amplas.
+    _EXCLUDED_TOOLS = {"consultar_transacoes_recentes", "relatorio_mensal_por_categoria"}
     api_tools = make_api_tools(jwt_token)
-    all_tools = MATH_TOOLS + [consultar_teoria_financeira] + api_tools
+    all_tools = [
+        t for t in MATH_TOOLS + [consultar_teoria_financeira] + api_tools
+        if t.name not in _EXCLUDED_TOOLS
+    ]
 
     _logger.info(
         "⚙️  [NODES] %d ferramentas registradas: %s",
@@ -227,7 +240,7 @@ def make_nodes(jwt_token: str) -> tuple:
     # ── LLM com ferramentas vinculadas — instanciado UMA VEZ por request ────
     # get_model / get_ollama_config resolvem o provedor ativo (local ou remoto)
     # e cachearão o resultado por 60 s (health check TTL do ollama_provider).
-    model_name = get_model("chat")
+    model_name = _MODEL_NAME
     _llm = ChatOllama(
         model=model_name,
         **get_ollama_config(),

@@ -132,6 +132,16 @@ class _RemoteEmbeddings(Embeddings):
         return self._embed_one(text)
 
 
+def list_models() -> list[dict]:
+    """Retorna os modelos disponíveis no provedor ativo (remote ou local)."""
+    config = get_ollama_config()
+    base_url = config["base_url"]
+    headers = config.get("client_kwargs", {}).get("headers", {})
+    r = requests.get(f"{base_url}/api/tags", headers=headers, timeout=10)
+    r.raise_for_status()
+    return r.json().get("models", [])
+
+
 def get_embeddings() -> Embeddings:
     """
     Retorna a instância de embeddings correta para o provedor ativo:
