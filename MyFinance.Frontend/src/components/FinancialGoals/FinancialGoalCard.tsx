@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import type { FinancialGoalResponseDto } from '../../types/FinancialGoalResponseDto';
 import { ContributeToGoalModal } from './ContributeToGoalModal';
+import { financialGoalService } from '../../services/Api';
 import './FinancialGoalCard.css';
 
 interface FinancialGoalCardProps {
     goal: FinancialGoalResponseDto;
     onContributionSuccess: () => void;
+    onDeleteSuccess: () => void;
 }
 
 type GoalStatus = 'completed' | 'almost' | 'in_progress' | 'overdue';
@@ -52,8 +54,23 @@ function buildInsight(goal: FinancialGoalResponseDto, status: GoalStatus, daysLe
     return `Faltam ${remaining} · Prazo em ${timeText}`;
 }
 
-export function FinancialGoalCard({ goal, onContributionSuccess }: FinancialGoalCardProps) {
+export function FinancialGoalCard({ goal, onContributionSuccess, onDeleteSuccess }: FinancialGoalCardProps) {
     const [isContributeModalOpen, setIsContributeModalOpen] = useState(false);
+    const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    const handleDelete = async () => {
+        setIsDeleting(true);
+        try {
+            await financialGoalService.delete(goal.id);
+            onDeleteSuccess();
+        } catch {
+            alert('Não foi possível excluir a meta. Tente novamente.');
+            setIsConfirmingDelete(false);
+        } finally {
+            setIsDeleting(false);
+        }
+    };
 
     const progress  = Math.min((goal.currentAmount / goal.targetAmount) * 100, 100);
     const daysLeft  = getDaysLeft(goal.deadline);
@@ -110,14 +127,46 @@ export function FinancialGoalCard({ goal, onContributionSuccess }: FinancialGoal
                 <span className="goal-footer-value">{formatDate(goal.deadline)}</span>
             </div>
 
-            <button
-                className="goal-contribute-btn"
-                onClick={() => setIsContributeModalOpen(true)}
-                disabled={goal.isCompleted}
-                title={goal.isCompleted ? 'Meta já concluída' : 'Realizar aporte nesta meta'}
-            >
-                {goal.isCompleted ? 'Meta concluída' : 'Aportar'}
-            </button>
+            {goal.isCompleted ? (
+                <button className="goal-contribute-btn" disabled title="Meta já concluída">
+                    Meta concluída
+                </button>
+            ) : isConfirmingDelete ? (
+                <div className="goal-delete-confirm">
+                    <span className="goal-delete-confirm-text">Excluir meta e estornar aportes?</span>
+                    <button
+                        className="goal-delete-confirm-no"
+                        onClick={() => setIsConfirmingDelete(false)}
+                        disabled={isDeleting}
+                    >
+                        Cancelar
+                    </button>
+                    <button
+                        className="goal-delete-confirm-yes"
+                        onClick={handleDelete}
+                        disabled={isDeleting}
+                    >
+                        {isDeleting ? 'Excluindo...' : 'Confirmar'}
+                    </button>
+                </div>
+            ) : (
+                <div className="goal-actions">
+                    <button
+                        className="goal-contribute-btn"
+                        onClick={() => setIsContributeModalOpen(true)}
+                        title="Realizar aporte nesta meta"
+                    >
+                        Aportar
+                    </button>
+                    <button
+                        className="goal-delete-btn"
+                        onClick={() => setIsConfirmingDelete(true)}
+                        title="Excluir esta meta"
+                    >
+                        Excluir
+                    </button>
+                </div>
+            )}
 
             {isContributeModalOpen && (
                 <ContributeToGoalModal

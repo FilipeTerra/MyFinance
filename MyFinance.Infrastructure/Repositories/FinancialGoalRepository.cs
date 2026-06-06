@@ -36,5 +36,10 @@ namespace MyFinance.Infrastructure.Repositories
             _context.FinancialGoals.Update(goal);
             await _context.SaveChangesAsync();
         }
+
+        public void Delete(FinancialGoal goal)
+        {
+            _context.FinancialGoals.Remove(goal);
+        }
     }
 }

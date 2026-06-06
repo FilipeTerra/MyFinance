@@ -245,8 +245,15 @@
     color: #64748b;
 }
 
+/* ── Actions area ──────────────────────────────────────────────────────── */
+.goal-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
 /* ── Contribute button ─────────────────────────────────────────────────── */
 .goal-contribute-btn {
+    flex: 1;
     width: 100%;
     padding: 0.6rem 1rem;
     background: var(--s-color);
@@ -273,4 +280,83 @@
     color: #94a3b8;
     cursor: not-allowed;
     transform: none;
+}
+
+/* ── Delete button ─────────────────────────────────────────────────────── */
+.goal-delete-btn {
+    padding: 0.6rem 0.875rem;
+    background: transparent;
+    color: #ef4444;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.goal-delete-btn:hover {
+    background: #fee2e2;
+    border-color: #f87171;
+}
+
+.goal-delete-btn:active {
+    background: #fecaca;
+}
+
+/* ── Delete confirmation ───────────────────────────────────────────────── */
+.goal-delete-confirm {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.goal-delete-confirm-text {
+    flex: 1;
+    font-size: 0.78rem;
+    color: #ef4444;
+    font-weight: 600;
+    min-width: 0;
+}
+
+.goal-delete-confirm-no {
+    padding: 0.55rem 0.875rem;
+    background: transparent;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.2s ease;
+}
+
+.goal-delete-confirm-no:hover:not(:disabled) {
+    background: #f8fafc;
+}
+
+.goal-delete-confirm-yes {
+    padding: 0.55rem 0.875rem;
+    background: #ef4444;
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: opacity 0.2s ease;
+}
+
+.goal-delete-confirm-yes:hover:not(:disabled) {
+    opacity: 0.85;
+}
+
+.goal-delete-confirm-yes:disabled,
+.goal-delete-confirm-no:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }

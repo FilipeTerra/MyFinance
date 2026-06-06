@@ -55,4 +55,6 @@ public interface ITransactionRepository
     Task<IEnumerable<Transaction>> GetByFilterAsync(Guid userId, TransactionSearchRequestDto filters);
 
     Task AddRangeAsync(IEnumerable<Transaction> transactions);
+
+    Task<IEnumerable<Transaction>> GetByFinancialGoalIdAsync(Guid goalId);
 }

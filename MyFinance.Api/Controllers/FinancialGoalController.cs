@@ -76,4 +76,23 @@ public class FinancialGoalController : ControllerBase
         await _financialGoalService.AddFundsToGoalAsync(id, userId, request.Amount);
         return Ok();
     }
+
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> DeleteGoal(Guid id)
+    {
+        var userId = GetUserIdFromToken();
+        try
+        {
+            await _financialGoalService.DeleteGoalAsync(id, userId);
+            return NoContent();
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
 }

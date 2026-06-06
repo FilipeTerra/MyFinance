@@ -107,6 +107,14 @@ public class TransactionRepository : ITransactionRepository
         await _context.Transactions.AddRangeAsync(transactions);
     }
 
+    public async Task<IEnumerable<Transaction>> GetByFinancialGoalIdAsync(Guid goalId)
+    {
+        return await _context.Transactions
+            .Where(t => t.FinancialGoalId == goalId)
+            .Include(t => t.Account)
+            .ToListAsync();
+    }
+
     public async Task AddAsync(Transaction transaction)
     {
         await _context.Transactions.AddAsync(transaction);

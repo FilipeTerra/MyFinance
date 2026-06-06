@@ -43,6 +43,10 @@ export function DashboardPage() {
         await fetchGoals();
     };
 
+    const handleGoalDeleted = async () => {
+        await fetchGoals();
+    };
+
     useEffect(() => {
         void fetchGoals();
     }, []);
@@ -117,6 +121,7 @@ export function DashboardPage() {
                                 key={goal.id}
                                 goal={goal}
                                 onContributionSuccess={handleContributionSuccess}
+                                onDeleteSuccess={handleGoalDeleted}
                             />
                         ))}
                     </div>

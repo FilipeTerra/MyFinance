@@ -11,5 +11,6 @@ namespace MyFinance.Application.Interfaces.Repositories
         Task<IEnumerable<FinancialGoal>> GetAllByUserIdAsync(Guid userId);
         Task AddAsync(FinancialGoal goal);
         Task UpdateAsync(FinancialGoal goal);
+        void Delete(FinancialGoal goal);
     }
 }

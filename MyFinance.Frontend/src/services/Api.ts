@@ -138,6 +138,9 @@ const financialGoalService = {
         const response = await apiClient.get<FinancialGoalResponseDto[]>('/financial-goals');
         return response.data;
     },
+    delete: (id: string) => {
+        return apiClient.delete<void>(`/financial-goals/${id}`);
+    },
 };
 
 export {
