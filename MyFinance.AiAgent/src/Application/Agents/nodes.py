@@ -24,11 +24,9 @@ from src.Application.Agents.state import AgentState, ContextData, MAX_ITERATIONS
 from src.Application.Agents.Tools.tools import MATH_TOOLS
 from src.Application.Agents.Tools.financial_tools import consultar_teoria_financeira
 from src.Application.Agents.Tools.api_tools import make_api_tools
-from src.Infra.Llm.ollama_provider import get_ollama_config
+from src.Infra.Llm.ollama_provider import get_ollama_config, get_model
 
 _logger = logging.getLogger("myfinance.agent")
-
-_MODEL_NAME = "llama3.1:8b"
 
 
 # ===========================================================================
@@ -52,7 +50,10 @@ _SYSTEM_PROMPT = (
     "1. Sem introduções longas. Vá direto ao ponto. "
     "2. Use emojis estratégicos (📊, 🎯, 🛡️, 💰) para destacar tópicos. "
     "3. Prefira listas e negrito a parágrafos corridos. "
-    "4. Sempre finalize sugerindo 2 a 3 ações concretas que o usuário pode tomar agora. "
+    "4. OBRIGATÓRIO: quando uma ferramenta retornar dados (saldo, receitas, despesas, metas, "
+    "   simulações), SEMPRE apresente TODOS os valores retornados antes de qualquer análise. "
+    "   Nunca omita números, percentuais ou datas vindos das ferramentas. "
+    "5. Sempre finalize sugerindo 2 a 3 ações concretas que o usuário pode tomar agora. "
 
     "Regras de uso de ferramentas: "
     "5. Para simular rendimentos futuros ou projetar investimentos, use SEMPRE "
@@ -240,7 +241,7 @@ def make_nodes(jwt_token: str) -> tuple:
     # ── LLM com ferramentas vinculadas — instanciado UMA VEZ por request ────
     # get_model / get_ollama_config resolvem o provedor ativo (local ou remoto)
     # e cachearão o resultado por 60 s (health check TTL do ollama_provider).
-    model_name = _MODEL_NAME
+    model_name = get_model("chat")
     _llm = ChatOllama(
         model=model_name,
         **get_ollama_config(),

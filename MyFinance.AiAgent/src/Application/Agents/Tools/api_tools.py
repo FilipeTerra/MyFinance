@@ -154,10 +154,13 @@ def make_api_tools(jwt_token: str) -> list:
                     date_str = t.get("date", "")
                     try:
                         tx_date = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
+                        # Datas sem timezone (naive) são tratadas como UTC
+                        if tx_date.tzinfo is None:
+                            tx_date = tx_date.replace(tzinfo=timezone.utc)
                         if tx_date >= cutoff:
                             todas.append(t)
                     except Exception:
-                        todas.append(t)
+                        pass  # Descarta transações com data inválida
         return todas
 
     @tool
@@ -175,8 +178,10 @@ def make_api_tools(jwt_token: str) -> list:
             total_despesas = 0.0
 
             for t in transacoes:
+                tx_type = t.get("type", 0)
                 amount = t.get("amount", 0)
-                if amount >= 0:
+                # Exclui receitas (amount >= 0) e investimentos (type=3, amount < 0)
+                if amount >= 0 or tx_type == 3:
                     continue
                 categoria = (
                     t.get("categoryName")
@@ -219,8 +224,10 @@ def make_api_tools(jwt_token: str) -> list:
 
             meses: dict[str, dict] = {}
             for t in transacoes:
+                tx_type = t.get("type", 0)
                 amount = t.get("amount", 0)
-                if amount >= 0:
+                # Exclui receitas (amount >= 0) e investimentos (type=3, amount < 0)
+                if amount >= 0 or tx_type == 3:
                     continue
 
                 categoria = (t.get("categoryName") or t.get("category") or "").lower()
@@ -310,38 +317,70 @@ def make_api_tools(jwt_token: str) -> list:
 
     @tool
     def calcular_resumo_financeiro(ultimos_dias: int = 30) -> str:
-        """Use esta ferramenta para um resumo geral das finanças do usuário: total de receitas,
-        total de despesas, saldo líquido e taxa de poupança no período. Use quando o usuário
-        perguntar sobre saúde financeira, balanço do mês, situação financeira geral ou
-        quanto está conseguindo poupar."""
+        """Use esta ferramenta para obter um raio-x completo das finanças do usuário: receitas,
+        despesas, investimentos, saldo líquido, gasto médio diário, categoria com maior gasto,
+        maior despesa única e taxa de poupança. Use quando o usuário perguntar sobre saúde financeira,
+        balanço do mês, situação financeira geral, quanto está poupando ou investindo."""
         try:
             transacoes = _buscar_todas_transacoes(ultimos_dias)
             if isinstance(transacoes, str):
                 return transacoes
 
+            if not transacoes:
+                return f"Nenhuma transação encontrada nos últimos {ultimos_dias} dias."
+
             total_receitas = 0.0
             total_despesas = 0.0
-            n = len(transacoes)
+            total_investimentos = 0.0
+            gastos_categoria: dict[str, float] = {}
+            maior_despesa_valor = 0.0
+            maior_despesa_desc = "N/A"
 
             for t in transacoes:
+                tx_type = t.get("type", 0)
                 amount = t.get("amount", 0)
-                if amount > 0:
-                    total_receitas += amount
-                else:
-                    total_despesas += abs(amount)
+                categoria = t.get("categoryName") or t.get("category") or "Sem categoria"
+                descricao = (t.get("description") or "Sem descrição")[:50]
 
-            saldo_liquido = total_receitas - total_despesas
-            taxa_poupanca = (saldo_liquido / total_receitas * 100) if total_receitas > 0 else 0
+                if tx_type == 3:
+                    total_investimentos += abs(amount)
+                elif tx_type == 2 or (tx_type not in (1, 3) and amount < 0):
+                    valor = abs(amount)
+                    total_despesas += valor
+                    gastos_categoria[categoria] = gastos_categoria.get(categoria, 0.0) + valor
+                    if valor > maior_despesa_valor:
+                        maior_despesa_valor = valor
+                        maior_despesa_desc = descricao
+                elif tx_type == 1 or (tx_type not in (2, 3) and amount > 0):
+                    total_receitas += amount
+
+            saldo_liquido = total_receitas - total_despesas - total_investimentos
+            gasto_medio_diario = total_despesas / ultimos_dias if ultimos_dias > 0 else 0.0
+            taxa_poupanca = (total_investimentos / total_receitas * 100) if total_receitas > 0 else 0.0
             situacao = "✅ positivo" if saldo_liquido >= 0 else "❌ negativo"
 
-            return (
-                f"📋 Resumo financeiro — últimos {ultimos_dias} dias\n"
-                f"  • Receitas:         R$ {total_receitas:,.2f}\n"
-                f"  • Despesas:         R$ {total_despesas:,.2f}\n"
-                f"  • Saldo líquido:    R$ {saldo_liquido:,.2f} ({situacao})\n"
-                f"  • Taxa de poupança: {taxa_poupanca:.1f}%\n"
-                f"  • Transações no período: {n}"
-            )
+            if gastos_categoria:
+                cat_vila = max(gastos_categoria, key=lambda k: gastos_categoria[k])
+                cat_vila_valor = gastos_categoria[cat_vila]
+            else:
+                cat_vila, cat_vila_valor = "N/A", 0.0
+
+            linhas = [
+                f"## 📋 Raio-X Financeiro — últimos {ultimos_dias} dias\n",
+                "### 💰 Fluxo de Caixa",
+                f"- **Receitas:** R$ {total_receitas:,.2f}",
+                f"- **Despesas:** R$ {total_despesas:,.2f}",
+                f"- **Investimentos/Aportes:** R$ {total_investimentos:,.2f}",
+                f"- **Saldo líquido:** R$ {saldo_liquido:,.2f} ({situacao})\n",
+                "### 📊 Indicadores",
+                f"- **Gasto médio diário:** R$ {gasto_medio_diario:,.2f}",
+                f"- **Taxa de poupança (investido/receita):** {taxa_poupanca:.1f}%\n",
+                "### 🚨 Destaques",
+                f"- **Categoria vilã:** {cat_vila} — R$ {cat_vila_valor:,.2f}",
+                f"- **Maior despesa única:** {maior_despesa_desc} — R$ {maior_despesa_valor:,.2f}",
+            ]
+
+            return "\n".join(linhas)
 
         except requests.exceptions.ConnectionError:
             return "Erro: A API financeira está offline ou inacessível."

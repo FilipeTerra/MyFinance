@@ -117,10 +117,6 @@ export function ChatPage() {
                             <div className="agent-avatar">F</div>
                             <div className="agent-info">
                                 <span className="agent-name">FinAl</span>
-                                <span className="agent-status">
-                                    <span className="status-dot" />
-                                    Online
-                                </span>
                             </div>
                         </div>
 

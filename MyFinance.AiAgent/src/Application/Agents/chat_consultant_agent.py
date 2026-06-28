@@ -24,13 +24,26 @@ Extensão futura — context_payload:
 import logging
 
 import jwt
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, ToolMessage
 
 from src.Application.Agents.graph import create_agent_graph
 from src.Infra.Llm.ollama_provider import get_model
 from src.Infra.Logging.agent_logger import AgentCallbackLogger
 
 _logger = logging.getLogger("myfinance.agent")
+
+# Ferramentas que retornam dados estruturados com valores monetários.
+# Se o LLM (especialmente modelos pequenos) ignorar o output dessas ferramentas,
+# o dado é injetado diretamente na resposta final antes de enviar ao frontend.
+_DATA_TOOLS = frozenset({
+    "calcular_resumo_financeiro",
+    "analisar_gastos_por_categoria",
+    "simular_investimento",
+    "consultar_metas_financeiras",
+    "consultar_saldos_contas",
+    "buscar_taxa_selic",
+    "relatorio_mensal_por_categoria",
+})
 
 
 # ===========================================================================
@@ -55,17 +68,17 @@ def _extract_user_id(jwt_token: str) -> str:
 
 def _extract_final_response(messages: list[BaseMessage]) -> str:
     """
-    Extrai o conteúdo textual da última mensagem do estado final do grafo.
+    Extrai a resposta final do grafo, garantindo que dados retornados por
+    ferramentas de dados cheguem ao usuário mesmo quando o LLM os ignora.
 
-    Garante que o retorno seja sempre uma string não-vazia, mesmo em edge cases:
-      - Lista de mensagens vazia (não deveria ocorrer em operação normal).
-      - Última mensagem com content vazio (tool_call residual não tratado).
-
-    Args:
-        messages: Lista de BaseMessage do campo "messages" do AgentState final.
-
-    Returns:
-        Conteúdo textual da última mensagem, ou string de erro controlada.
+    Fluxo:
+      1. Pega o conteúdo da última mensagem (resposta do LLM).
+      2. Identifica mensagens do turno atual (após o último HumanMessage).
+      3. Coleta outputs de ferramentas de dados (_DATA_TOOLS) desse turno.
+      4. Se o LLM não incluiu valores monetários (R$) mas a ferramenta os
+         retornou, injeta o output da ferramenta antes da resposta do LLM.
+         Isso é necessário especialmente em modelos pequenos (≤7b) que tendem
+         a parafrasear ou ignorar dados estruturados retornados pelas tools.
     """
     if not messages:
         _logger.error("❌ [CHAT] Estado final sem mensagens — retornando fallback de emergência")
@@ -74,13 +87,37 @@ def _extract_final_response(messages: list[BaseMessage]) -> str:
     last: BaseMessage = messages[-1]
     content = last.content
 
-    # AIMessage pode ter content vazio quando apenas gerou tool_calls
-    # (edge case: o grafo encerrou antes do fallback_node ser executado)
     if not content:
         _logger.warning("⚠️  [CHAT] Última mensagem com content vazio — tipo: %s", type(last).__name__)
         return "Não consegui gerar uma resposta. Tente reformular sua pergunta."
 
-    return str(content)
+    ai_response = str(content)
+
+    # Localiza o início do turno atual (mensagens após o último HumanMessage)
+    last_human_idx = next(
+        (i for i in range(len(messages) - 1, -1, -1) if isinstance(messages[i], HumanMessage)),
+        -1,
+    )
+    current_turn = messages[last_human_idx + 1 :]
+
+    # Coleta outputs de ferramentas de dados do turno atual
+    tool_outputs = [
+        str(msg.content)
+        for msg in current_turn
+        if isinstance(msg, ToolMessage)
+        and getattr(msg, "name", None) in _DATA_TOOLS
+        and msg.content
+    ]
+
+    # Injeta os dados da ferramenta se o LLM não os incluiu na resposta
+    tool_data = "\n\n".join(tool_outputs)
+    if tool_data and "R$" in tool_data and "R$" not in ai_response:
+        _logger.info(
+            "🔧 [CHAT] LLM não incluiu dados da ferramenta — injetando na resposta final"
+        )
+        ai_response = tool_data + "\n\n---\n\n" + ai_response
+
+    return ai_response
 
 
 # ===========================================================================

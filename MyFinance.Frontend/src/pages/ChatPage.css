@@ -86,22 +86,6 @@
     line-height: 1;
 }
 
-.agent-status {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 0.75rem;
-    color: #6b7280;
-}
-
-.status-dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: #22c55e;
-    box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.2);
-}
-
 
 /* ── Messages Container (único scroll da página) ─────────────── */
 
