@@ -7,15 +7,19 @@ Este módulo é o ponto de montagem: conecta todos os artefatos dos passos
 anteriores (AgentState, ferramentas, nós) em um grafo executável.
 
 Topologia do grafo:
-                          ┌──────────────────────────────────┐
-                          │                                  │
-    START → inject_context → agent ──tool_calls──→ tools ───┘
-                                  │
-                                  ├── sem tool_calls ──→ END  (resposta normal)
-                                  │
-                                  └── guardrail ──→ fallback ──→ END
-                                      (iterations >=
-                                       MAX_ITERATIONS)
+                          ┌─────────────────────────────────────────┐
+                          │                                         │
+    START → inject_context → agent → fix_agent_output ─tool_calls──→ tools
+                                              │
+                                              ├── sem tool_calls ──→ END
+                                              │
+                                              └── guardrail ──→ fallback ──→ END
+                                                  (iterations >= MAX_ITERATIONS)
+
+    fix_agent_output (Camada 1 anti-leak):
+      Converte tool_calls emitidos como texto pelo LLM em AIMessage estruturada
+      antes que o roteador tome sua decisão. Modelos pequenos (≤7b) frequentemente
+      emitem JSON cru no .content em vez de popular o .tool_calls.
 
 Responsabilidades deste módulo:
   - fallback_node        : barreira de segurança contra exaustão cognitiva.
@@ -32,6 +36,7 @@ from langgraph.graph import END, START, StateGraph
 
 from src.Application.Agents.nodes import inject_context, make_nodes
 from src.Application.Agents.state import AgentState, MAX_ITERATIONS
+from src.Application.Agents.tool_call_parser import fix_agent_output
 
 _logger = logging.getLogger("myfinance.agent")
 
@@ -186,9 +191,9 @@ def create_agent_graph(jwt_token: str):
       que é singleton e sobrevive entre requests do mesmo usuário.
 
     Topologia montada:
-      START → inject_context → agent ──────────────────────────────────────→ END
-                                     └─ tool_calls ──→ tools ──→ agent ...
-                                     └─ guardrail ──→ fallback ──────────→ END
+      START → inject_context → agent → fix_agent_output ───────────────────→ END
+                                                        └─ tool_calls → tools → agent ...
+                                                        └─ guardrail → fallback ──────→ END
 
     Nota sobre inject_context:
       O spec do Passo 4 define o entry_point como "agent". Este módulo inclui
@@ -214,6 +219,7 @@ def create_agent_graph(jwt_token: str):
     # Registro dos nós
     workflow.add_node("inject_context", inject_context)
     workflow.add_node("agent", agent_node)
+    workflow.add_node("fix_agent_output", fix_agent_output)
     workflow.add_node("tools", tool_node)
     workflow.add_node("fallback", fallback_node)
 
@@ -221,9 +227,14 @@ def create_agent_graph(jwt_token: str):
     workflow.add_edge(START, "inject_context")
     workflow.add_edge("inject_context", "agent")
 
-    # Aresta condicional: decisão após cada ciclo de raciocínio do LLM
+    # Camada 1 anti-leak: toda saída do LLM passa pelo interceptor antes do roteador.
+    # fix_agent_output converte tool_calls textuais em AIMessage estruturada (no-op
+    # quando o modelo emite corretamente).
+    workflow.add_edge("agent", "fix_agent_output")
+
+    # Aresta condicional: decisão após o interceptor garantir formato correto
     workflow.add_conditional_edges(
-        "agent",
+        "fix_agent_output",
         _route,
         {
             "tools":    "tools",    # há tool_calls + budget → executa ferramentas

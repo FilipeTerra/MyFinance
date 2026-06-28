@@ -27,6 +27,7 @@ import jwt
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, ToolMessage
 
 from src.Application.Agents.graph import create_agent_graph
+from src.Application.Agents.tool_call_parser import is_leaked_tool_call
 from src.Infra.Llm.ollama_provider import get_model
 from src.Infra.Logging.agent_logger import AgentCallbackLogger
 
@@ -41,9 +42,18 @@ _DATA_TOOLS = frozenset({
     "simular_investimento",
     "consultar_metas_financeiras",
     "consultar_saldos_contas",
+    "consultar_transacoes_recentes",
     "buscar_taxa_selic",
     "relatorio_mensal_por_categoria",
 })
+
+# Mensagens de fallback — centralizadas para manutenção e consistência.
+_MSG_EMERGENCIA  = "Ocorreu um erro interno. Por favor, tente novamente."
+_MSG_VAZIO       = "Não consegui gerar uma resposta. Tente reformular sua pergunta."
+_MSG_LEAK_DIRETO = (
+    "Não consegui formatar a resposta desta vez. "
+    "Tente reformular a pergunta ou divida-a em partes menores."
+)
 
 
 # ===========================================================================
@@ -68,39 +78,52 @@ def _extract_user_id(jwt_token: str) -> str:
 
 def _extract_final_response(messages: list[BaseMessage]) -> str:
     """
-    Extrai a resposta final do grafo, garantindo que dados retornados por
-    ferramentas de dados cheguem ao usuário mesmo quando o LLM os ignora.
+    Extrai e sanitiza a resposta final do grafo antes de enviá-la ao usuário.
 
-    Fluxo:
-      1. Pega o conteúdo da última mensagem (resposta do LLM).
-      2. Identifica mensagens do turno atual (após o último HumanMessage).
-      3. Coleta outputs de ferramentas de dados (_DATA_TOOLS) desse turno.
-      4. Se o LLM não incluiu valores monetários (R$) mas a ferramenta os
-         retornou, injeta o output da ferramenta antes da resposta do LLM.
-         Isso é necessário especialmente em modelos pequenos (≤7b) que tendem
-         a parafrasear ou ignorar dados estruturados retornados pelas tools.
+    Pipeline de 4 estágios executados em ordem fixa:
+
+      [0] Guarda básica — mensagens vazias e content nulo.
+
+      [1] Coleta de contexto do turno — outputs de ferramentas de dados
+          (_DATA_TOOLS) são coletados ANTES de qualquer decisão sobre
+          ai_response. Isso é crítico: os dados de ferramenta são a fonte
+          de recuperação quando a resposta do LLM está corrompida.
+
+      [2] Detecção e recuperação de tool-call leakage (Camada 2) —
+          ativada quando fix_agent_output (Camada 1) não conseguiu parsear
+          o JSON emitido pelo LLM no campo .content. Dois cenários:
+            A) tool_data disponível → retorna só os dados (limpo, direto).
+            B) sem tool_data → retorna _MSG_LEAK_DIRETO (amigável, sem JSON).
+          Em ambos os casos, nenhum JSON técnico chega ao usuário.
+
+      [3] Injeção de dados de ferramenta — se o LLM produziu uma resposta
+          legítima mas não incluiu os valores monetários retornados pelas
+          ferramentas, injeta o dado antes da análise do LLM. Necessário
+          especialmente em modelos ≤7b que tendem a parafrasear os dados.
     """
+    # ── [0] Guarda básica ────────────────────────────────────────────────────
     if not messages:
         _logger.error("❌ [CHAT] Estado final sem mensagens — retornando fallback de emergência")
-        return "Ocorreu um erro interno. Por favor, tente novamente."
+        return _MSG_EMERGENCIA
 
     last: BaseMessage = messages[-1]
     content = last.content
 
     if not content:
         _logger.warning("⚠️  [CHAT] Última mensagem com content vazio — tipo: %s", type(last).__name__)
-        return "Não consegui gerar uma resposta. Tente reformular sua pergunta."
+        return _MSG_VAZIO
 
     ai_response = str(content)
 
-    # Localiza o início do turno atual (mensagens após o último HumanMessage)
+    # ── [1] Coleta de contexto do turno ─────────────────────────────────────
+    # Deve ocorrer antes do leak check: os dados de ferramenta são usados como
+    # fonte de recuperação no estágio 2 quando ai_response está corrompido.
     last_human_idx = next(
         (i for i in range(len(messages) - 1, -1, -1) if isinstance(messages[i], HumanMessage)),
         -1,
     )
-    current_turn = messages[last_human_idx + 1 :]
+    current_turn = messages[last_human_idx + 1:]
 
-    # Coleta outputs de ferramentas de dados do turno atual
     tool_outputs = [
         str(msg.content)
         for msg in current_turn
@@ -108,13 +131,28 @@ def _extract_final_response(messages: list[BaseMessage]) -> str:
         and getattr(msg, "name", None) in _DATA_TOOLS
         and msg.content
     ]
-
-    # Injeta os dados da ferramenta se o LLM não os incluiu na resposta
     tool_data = "\n\n".join(tool_outputs)
-    if tool_data and "R$" in tool_data and "R$" not in ai_response:
-        _logger.info(
-            "🔧 [CHAT] LLM não incluiu dados da ferramenta — injetando na resposta final"
+
+    # ── [2] Detecção e recuperação de tool-call leakage (Camada 2) ──────────
+    if is_leaked_tool_call(ai_response):
+        if tool_data:
+            # Caso A: ferramentas já executaram e retornaram dados neste turno.
+            # Exibe apenas os dados — sem rastreio do leak, sem mensagem confusa.
+            _logger.warning(
+                "🛡️  [CHAT] tool_call leak — recuperando com %d output(s) de ferramenta",
+                len(tool_outputs),
+            )
+            return tool_data
+
+        # Caso B: nenhum dado de ferramenta disponível — retorna fallback limpo.
+        _logger.warning(
+            "🛡️  [CHAT] tool_call leak — sem dados disponíveis, retornando fallback"
         )
+        return _MSG_LEAK_DIRETO
+
+    # ── [3] Injeção de dados de ferramenta ──────────────────────────────────
+    if tool_data and "R$" in tool_data and "R$" not in ai_response:
+        _logger.info("🔧 [CHAT] LLM não incluiu dados da ferramenta — injetando na resposta final")
         ai_response = tool_data + "\n\n---\n\n" + ai_response
 
     return ai_response

@@ -73,6 +73,16 @@ _SYSTEM_PROMPT = (
     "11. Só crie metas com criar_meta_financeira quando solicitado EXPLICITAMENTE. "
     "12. Após qualquer ação de criação ou aporte, confirme os detalhes ao usuário. "
 
+    "13. Quando o usuário mencionar um mês ou período específico (ex: 'maio de 2026', "
+    "    'primeiro trimestre', 'semana passada', 'de janeiro a março'), converta para "
+    "    data_inicio e data_fim no formato YYYY-MM-DD e passe às ferramentas de análise. "
+    "    Exemplos de conversão: "
+    "    'maio de 2026' → data_inicio='2026-05-01', data_fim='2026-05-31'; "
+    "    'primeiro trimestre de 2026' → data_inicio='2026-01-01', data_fim='2026-03-31'; "
+    "    'junho' (mês corrente sem ano) → data_inicio='2026-06-01', data_fim='2026-06-30'. "
+    "    Se o usuário não mencionar nenhum período, omita data_inicio e data_fim "
+    "    (as ferramentas usam os últimos 30 dias por padrão). "
+
     "Nunca invente dados nem faça cálculos mentais. "
     "Nunca mencione nomes de ferramentas ou detalhes técnicos ao usuário."
 )
@@ -223,14 +233,8 @@ def make_nodes(jwt_token: str) -> tuple:
     """
     # ── Lista unificada de ferramentas ───────────────────────────────────────
     # Ordem: matemática pura → conhecimento RAG → API .NET (autenticada)
-    # consultar_transacoes_recentes e relatorio_mensal_por_categoria são excluídas:
-    # devolvem JSONs longos que causam overflow de contexto em perguntas amplas.
-    _EXCLUDED_TOOLS = {"consultar_transacoes_recentes", "relatorio_mensal_por_categoria"}
     api_tools = make_api_tools(jwt_token)
-    all_tools = [
-        t for t in MATH_TOOLS + [consultar_teoria_financeira] + api_tools
-        if t.name not in _EXCLUDED_TOOLS
-    ]
+    all_tools = MATH_TOOLS + [consultar_teoria_financeira] + api_tools
 
     _logger.info(
         "⚙️  [NODES] %d ferramentas registradas: %s",

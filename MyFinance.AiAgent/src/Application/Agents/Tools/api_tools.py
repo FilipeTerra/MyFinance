@@ -1,6 +1,23 @@
+"""
+api_tools.py — Ferramentas de API autenticadas para o Agente Financeiro
+
+Arquitetura HTTP:
+  Todas as ferramentas são async, usando httpx.AsyncClient em vez de requests.
+  Isso evita que chamadas HTTP bloqueiem o event loop durante graph.ainvoke().
+
+  _buscar_todas_transacoes usa asyncio.gather para disparar as requisições de
+  transações de todas as contas em paralelo — para um usuário com N contas,
+  o tempo de resposta cai de N × latência para 1 × latência (maior conta).
+
+  O AsyncClient é criado uma vez por invocação de make_api_tools e compartilhado
+  por todas as closures da mesma sessão (JWT compartilhado, pool de conexões reutilizado).
+"""
+
+import asyncio
 import os
-import requests
 from datetime import datetime, timedelta, timezone
+
+import httpx
 from dotenv import load_dotenv
 from langchain_core.tools import tool
 
@@ -8,169 +25,277 @@ load_dotenv()
 
 _API_BASE_URL = os.getenv("API_URL", "http://localhost:5088/api")
 
+_ERR_OFFLINE = "Erro: A API financeira está offline ou inacessível."
+_ERR_SESSAO  = "Sessão expirada. O usuário precisa fazer login novamente."
+
 
 def make_api_tools(jwt_token: str) -> list:
     """
     Factory que cria as ferramentas HTTP com o JWT baked-in via closure.
     O LLM nunca vê o token — ele apenas chama as ferramentas pelo nome.
+
+    Um único AsyncClient é criado por chamada a make_api_tools. Todas as tools
+    da mesma requisição reutilizam esse cliente (headers e pool de conexão
+    compartilhados). O cliente é finalizado pelo GC quando o grafo encerra.
     """
-    _headers = {"Authorization": f"Bearer {jwt_token}"}
+    _client = httpx.AsyncClient(
+        headers={"Authorization": f"Bearer {jwt_token}"},
+        timeout=10.0,
+    )
+
+    # =========================================================================
+    # Helpers HTTP privados — thin wrappers sobre o AsyncClient
+    # =========================================================================
+
+    async def _get(path: str) -> httpx.Response:
+        return await _client.get(f"{_API_BASE_URL}{path}")
+
+    async def _post(path: str, payload: dict) -> httpx.Response:
+        return await _client.post(f"{_API_BASE_URL}{path}", json=payload)
+
+    # =========================================================================
+    # Helper de período — pura computação, permanece síncrono
+    # =========================================================================
+
+    def _resolver_periodo(
+        data_inicio: str,
+        data_fim: str,
+        ultimos_dias: int = 30,
+    ) -> tuple:
+        """
+        Converte parâmetros do usuário em um intervalo de datas concreto.
+
+        Prioridade:
+          1. data_inicio (YYYY-MM-DD) fornecida → usa data_inicio + (data_fim ou agora).
+          2. Nenhuma data → janela relativa de ultimos_dias a partir de agora.
+
+        Returns:
+            (dt_inicio, dt_fim, label, dias_periodo)
+        """
+        utc = timezone.utc
+        agora = datetime.now(utc)
+
+        if data_inicio.strip():
+            try:
+                dt_i = datetime.strptime(data_inicio.strip(), "%Y-%m-%d").replace(tzinfo=utc)
+            except ValueError:
+                dt_i = agora - timedelta(days=ultimos_dias)
+
+            if data_fim.strip():
+                try:
+                    dt_f = datetime.strptime(data_fim.strip(), "%Y-%m-%d").replace(
+                        hour=23, minute=59, second=59, tzinfo=utc
+                    )
+                except ValueError:
+                    dt_f = agora
+            else:
+                dt_f = agora
+
+            label = f"{dt_i.strftime('%d/%m/%Y')} a {dt_f.strftime('%d/%m/%Y')}"
+        else:
+            dt_f = agora
+            dt_i = agora - timedelta(days=ultimos_dias)
+            label = f"últimos {ultimos_dias} dias"
+
+        dias_periodo = max(1, (dt_f - dt_i).days + 1)
+        return dt_i, dt_f, label, dias_periodo
+
+    # =========================================================================
+    # Helper de busca concorrente — núcleo da otimização async
+    # =========================================================================
+
+    async def _buscar_transacoes_conta(
+        account_id: str,
+        dt_inicio: datetime,
+        dt_fim: datetime,
+    ) -> list:
+        """
+        Busca as transações de UMA conta no período e filtra pelo intervalo.
+        Projetada para ser executada em paralelo via asyncio.gather — cada
+        conta dispara sua própria requisição sem esperar as demais.
+        Falhas individuais retornam lista vazia, não propagam exceção.
+        """
+        try:
+            r = await _client.get(
+                f"{_API_BASE_URL}/transactions/account/{account_id}"
+            )
+            if r.status_code != 200:
+                return []
+            resultado = []
+            for t in (r.json() or []):
+                date_str = t.get("date", "")
+                try:
+                    tx_date = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
+                    if tx_date.tzinfo is None:
+                        tx_date = tx_date.replace(tzinfo=timezone.utc)
+                    if dt_inicio <= tx_date <= dt_fim:
+                        resultado.append(t)
+                except Exception:
+                    pass
+            return resultado
+        except Exception:
+            return []
+
+    async def _buscar_todas_transacoes(
+        dt_inicio: datetime,
+        dt_fim: datetime,
+    ) -> list | str:
+        """
+        Busca transações de TODAS as contas do usuário em paralelo.
+
+        Fluxo:
+          1. Busca lista de contas (1 requisição sequencial obrigatória).
+          2. Dispara 1 requisição por conta simultaneamente via asyncio.gather.
+          3. Agrega os resultados, ignorando contas que falharam.
+
+        Ganho: para N contas, o tempo de resposta é 1 × latência (maior conta)
+        em vez de N × latência (sequencial com requests síncrono).
+        """
+        try:
+            r = await _get("/accounts")
+        except httpx.RequestError:
+            return _ERR_OFFLINE
+
+        if r.status_code == 401:
+            return _ERR_SESSAO
+        if r.status_code != 200:
+            return "Não foi possível recuperar as contas do usuário."
+
+        contas = r.json() or []
+        if not contas:
+            return "O usuário não possui contas cadastradas."
+
+        ids = [c["id"] for c in contas if c.get("id")]
+        if not ids:
+            return "Nenhuma conta com ID válido encontrada."
+
+        # Todas as requisições de transações em paralelo
+        grupos = await asyncio.gather(
+            *[_buscar_transacoes_conta(aid, dt_inicio, dt_fim) for aid in ids],
+            return_exceptions=True,
+        )
+
+        todas = []
+        for grupo in grupos:
+            if isinstance(grupo, list):
+                todas.extend(grupo)
+        return todas
+
+    # =========================================================================
+    # Ferramentas de consulta simples
+    # =========================================================================
 
     @tool
-    def consultar_saldos_contas() -> str:
+    async def consultar_saldos_contas() -> str:
         """Use esta ferramenta para verificar o saldo atual, listar as contas bancárias
         do usuário ou ver quanto dinheiro ele tem disponível. Retorna uma lista de contas e saldos."""
         try:
-            response = requests.get(
-                f"{_API_BASE_URL}/accounts", headers=_headers, timeout=10
-            )
-            if response.status_code == 200:
-                contas = response.json()
+            r = await _get("/accounts")
+            if r.status_code == 200:
+                contas = r.json()
                 return contas if contas else "O usuário ainda não possui contas cadastradas."
-            if response.status_code == 401:
-                return "Sessão expirada. O usuário precisa fazer login novamente."
-            return f"Erro ao consultar contas (status {response.status_code})."
-        except requests.exceptions.ConnectionError:
-            return "Erro: A API financeira está offline ou inacessível."
+            if r.status_code == 401:
+                return _ERR_SESSAO
+            return f"Erro ao consultar contas (status {r.status_code})."
+        except httpx.RequestError:
+            return _ERR_OFFLINE
         except Exception as e:
             return f"Erro inesperado ao consultar contas: {e}"
 
     @tool
-    def consultar_metas_financeiras() -> str:
+    async def consultar_metas_financeiras() -> str:
         """Use esta ferramenta para verificar as metas financeiras do usuário
         (ex: comprar carro, fundo de emergência), ver o progresso, valores alvo e se a meta foi concluída."""
         try:
-            response = requests.get(
-                f"{_API_BASE_URL}/financial-goals", headers=_headers, timeout=10
-            )
-            if response.status_code == 200:
-                metas = response.json()
+            r = await _get("/financial-goals")
+            if r.status_code == 200:
+                metas = r.json()
                 return metas if metas else "O usuário ainda não possui metas financeiras cadastradas."
-            if response.status_code == 401:
-                return "Sessão expirada. O usuário precisa fazer login novamente."
-            return f"Erro ao consultar metas (status {response.status_code})."
-        except requests.exceptions.ConnectionError:
-            return "Erro: A API financeira está offline ou inacessível."
+            if r.status_code == 401:
+                return _ERR_SESSAO
+            return f"Erro ao consultar metas (status {r.status_code})."
+        except httpx.RequestError:
+            return _ERR_OFFLINE
         except Exception as e:
             return f"Erro inesperado ao consultar metas: {e}"
 
+    # =========================================================================
+    # Ferramentas de análise (usam _buscar_todas_transacoes em paralelo)
+    # =========================================================================
+
     @tool
-    def consultar_transacoes_recentes() -> str:
-        """Use esta ferramenta APENAS para listar transações individuais recentes quando o usuário
-        quiser ver o extrato ou histórico de movimentações específicas (ex: 'mostre minhas últimas transações',
-        'o que comprei recentemente'). NÃO use para análise de gastos por categoria ou resumo financeiro —
-        para isso use analisar_gastos_por_categoria e calcular_resumo_financeiro."""
+    async def consultar_transacoes_recentes(
+        limite: int = 15,
+        data_inicio: str = "",
+        data_fim: str = "",
+    ) -> str:
+        """Use esta ferramenta APENAS para listar transações individuais quando o usuário quiser
+        ver o extrato ou histórico de movimentações específicas (ex: 'mostre minhas últimas transações',
+        'o que comprei em maio', 'qual foi minha última compra'). NÃO use para análise de gastos
+        por categoria ou resumo — use analisar_gastos_por_categoria e calcular_resumo_financeiro.
+        Parâmetros: limite (padrão 15); data_inicio e data_fim em YYYY-MM-DD para períodos específicos
+        (ex: maio de 2026 → data_inicio='2026-05-01', data_fim='2026-05-31')."""
+        _TIPO_EMOJI = {1: "💰", 2: "💸", 3: "📈"}
+
+        def _parse_date(t: dict) -> datetime:
+            try:
+                return datetime.fromisoformat(t.get("date", "").replace("Z", "+00:00"))
+            except Exception:
+                return datetime.min.replace(tzinfo=timezone.utc)
+
         try:
-            acc_response = requests.get(
-                f"{_API_BASE_URL}/accounts", headers=_headers, timeout=10
-            )
-            if acc_response.status_code != 200:
-                return "Não foi possível recuperar as contas do usuário para buscar transações."
+            dt_i, dt_f, label, _ = _resolver_periodo(data_inicio, data_fim, 90)
+            transacoes = await _buscar_todas_transacoes(dt_i, dt_f)
+            if isinstance(transacoes, str):
+                return transacoes
+            if not transacoes:
+                return f"Nenhuma transação encontrada no período {label}."
 
-            contas = acc_response.json()
-            if not contas:
-                return "O usuário não possui contas cadastradas para consultar transações."
+            transacoes.sort(key=_parse_date, reverse=True)
+            total = len(transacoes)
+            exibidas = transacoes[:limite]
 
-            todas_transacoes = []
-            for conta in contas:
-                account_id = conta.get("id")
-                if not account_id:
-                    continue
-                tx_response = requests.get(
-                    f"{_API_BASE_URL}/transactions/account/{account_id}",
-                    headers=_headers,
-                    timeout=10,
+            linhas = [f"📋 {len(exibidas)} transações — {label}\n"]
+            for t in exibidas:
+                tx_type = t.get("type", 0)
+                amount = t.get("amount", 0.0)
+                emoji = _TIPO_EMOJI.get(tx_type, "•")
+                sinal = "+" if amount > 0 else ""
+                try:
+                    data_fmt = _parse_date(t).strftime("%d/%m")
+                except Exception:
+                    data_fmt = "??"
+                descricao = (t.get("description") or "Sem descrição")[:40]
+                categoria = t.get("categoryName") or t.get("category") or "Sem categoria"
+                linhas.append(
+                    f"  {emoji} {data_fmt} | {descricao} | {categoria} | {sinal}R$ {abs(amount):,.2f}"
                 )
-                if tx_response.status_code == 200:
-                    todas_transacoes.extend(tx_response.json() or [])
 
-            if not todas_transacoes:
-                return "Nenhuma transação encontrada para as contas do usuário."
-            return todas_transacoes
+            if total > limite:
+                linhas.append(f"\n  ℹ️ Exibindo {limite} de {total} transações no período.")
 
-        except requests.exceptions.ConnectionError:
-            return "Erro: A API financeira está offline ou inacessível."
+            return "\n".join(linhas)
+
+        except httpx.RequestError:
+            return _ERR_OFFLINE
         except Exception as e:
             return f"Erro inesperado ao consultar transações: {e}"
 
     @tool
-    def criar_meta_financeira(nome: str, valor_alvo: float, data_limite: str) -> str:
-        """Use esta ferramenta para criar uma nova meta financeira para o usuário APENAS quando
-        ele pedir explicitamente. Exemplos: 'Quero criar uma meta para comprar um carro de 50000
-        até dezembro', 'Cria uma meta de viagem de R$5000 para junho de 2026'.
-        Recebe o nome da meta, o valor alvo e a data limite no formato 'YYYY-MM-DD'."""
-        payload = {
-            "name": nome,
-            "targetAmount": valor_alvo,
-            "deadline": f"{data_limite}T00:00:00",
-        }
-        try:
-            response = requests.post(
-                f"{_API_BASE_URL}/financial-goals",
-                json=payload,
-                headers=_headers,
-                timeout=10,
-            )
-            if response.status_code in (200, 201):
-                return (
-                    f"✅ Meta criada com sucesso!\n"
-                    f"  • Nome: {nome}\n"
-                    f"  • Valor alvo: R$ {valor_alvo:,.2f}\n"
-                    f"  • Prazo: {data_limite}"
-                )
-            if response.status_code == 401:
-                return "Sessão expirada. O usuário precisa fazer login novamente."
-            if response.status_code == 400:
-                return f"Dados inválidos para criar a meta: {response.text}"
-            return f"Erro ao criar meta (status {response.status_code})."
-        except requests.exceptions.ConnectionError:
-            return "Erro: A API financeira está offline ou inacessível."
-        except Exception as e:
-            return f"Erro inesperado ao criar meta: {e}"
-
-    def _buscar_todas_transacoes(ultimos_dias: int) -> list | str:
-        """Busca todas as transações de todas as contas num janela de dias."""
-        acc_response = requests.get(
-            f"{_API_BASE_URL}/accounts", headers=_headers, timeout=10
-        )
-        if acc_response.status_code != 200:
-            return "Não foi possível recuperar as contas do usuário."
-        contas = acc_response.json()
-        if not contas:
-            return "O usuário não possui contas cadastradas."
-
-        cutoff = datetime.now(timezone.utc) - timedelta(days=ultimos_dias)
-        todas = []
-        for conta in contas:
-            account_id = conta.get("id")
-            if not account_id:
-                continue
-            tx_response = requests.get(
-                f"{_API_BASE_URL}/transactions/account/{account_id}",
-                headers=_headers, timeout=10,
-            )
-            if tx_response.status_code == 200:
-                for t in (tx_response.json() or []):
-                    date_str = t.get("date", "")
-                    try:
-                        tx_date = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
-                        # Datas sem timezone (naive) são tratadas como UTC
-                        if tx_date.tzinfo is None:
-                            tx_date = tx_date.replace(tzinfo=timezone.utc)
-                        if tx_date >= cutoff:
-                            todas.append(t)
-                    except Exception:
-                        pass  # Descarta transações com data inválida
-        return todas
-
-    @tool
-    def analisar_gastos_por_categoria(ultimos_dias: int = 30) -> str:
+    async def analisar_gastos_por_categoria(
+        ultimos_dias: int = 30,
+        data_inicio: str = "",
+        data_fim: str = "",
+    ) -> str:
         """Use esta ferramenta para analisar onde o usuário está gastando mais dinheiro,
         identificar padrões de consumo, responder 'onde gasto mais?', 'como melhorar meus gastos?'
-        ou qualquer pergunta sobre categorias de despesas. Agrupa despesas por categoria
-        e mostra os totais e percentuais. Parâmetro ultimos_dias define a janela de análise."""
+        ou qualquer pergunta sobre categorias de despesas. Agrupa despesas por categoria e mostra
+        totais e percentuais. Use data_inicio e data_fim (YYYY-MM-DD) para períodos específicos
+        (ex: maio de 2026 → data_inicio='2026-05-01', data_fim='2026-05-31'); omita para usar
+        ultimos_dias (padrão 30)."""
         try:
-            transacoes = _buscar_todas_transacoes(ultimos_dias)
+            dt_i, dt_f, label, _ = _resolver_periodo(data_inicio, data_fim, ultimos_dias)
+            transacoes = await _buscar_todas_transacoes(dt_i, dt_f)
             if isinstance(transacoes, str):
                 return transacoes
 
@@ -180,7 +305,6 @@ def make_api_tools(jwt_token: str) -> list:
             for t in transacoes:
                 tx_type = t.get("type", 0)
                 amount = t.get("amount", 0)
-                # Exclui receitas (amount >= 0) e investimentos (type=3, amount < 0)
                 if amount >= 0 or tx_type == 3:
                     continue
                 categoria = (
@@ -193,40 +317,47 @@ def make_api_tools(jwt_token: str) -> list:
                 total_despesas += valor
 
             if not gastos:
-                return f"Nenhuma despesa encontrada nos últimos {ultimos_dias} dias."
+                return f"Nenhuma despesa encontrada no período {label}."
 
-            linhas = [f"📊 Gastos por categoria — últimos {ultimos_dias} dias\n"]
+            linhas = [f"📊 Gastos por categoria — {label}\n"]
             for cat, total in sorted(gastos.items(), key=lambda x: x[1], reverse=True):
                 pct = (total / total_despesas * 100) if total_despesas > 0 else 0
                 linhas.append(f"  • {cat}: R$ {total:,.2f} ({pct:.1f}%)")
             linhas.append(f"\n  💸 Total gasto: R$ {total_despesas:,.2f}")
             return "\n".join(linhas)
 
-        except requests.exceptions.ConnectionError:
-            return "Erro: A API financeira está offline ou inacessível."
+        except httpx.RequestError:
+            return _ERR_OFFLINE
         except Exception as e:
             return f"Erro inesperado ao analisar gastos: {e}"
 
     @tool
-    def relatorio_mensal_por_categoria(filtro_categoria: str, ultimos_meses: int = 3) -> str:
+    async def relatorio_mensal_por_categoria(
+        filtro_categoria: str,
+        ultimos_meses: int = 3,
+        data_inicio: str = "",
+        data_fim: str = "",
+    ) -> str:
         """Use esta ferramenta quando o usuário quiser um relatório detalhado de gastos em uma
         categoria ou tipo de gasto específico (ex: 'transporte', 'uber', 'alimentação', 'lazer')
-        quebrado mês a mês. Exemplos de uso: 'quanto gastei com uber nos últimos 3 meses?',
-        'me dê um relatório mensal de transporte', 'quanto gastei com alimentação por mês?'.
-        Parâmetros: filtro_categoria (palavra-chave para filtrar, ex: 'transporte', 'uber', 'alimentação'),
-        ultimos_meses (número de meses a analisar, padrão 3)."""
+        quebrado mês a mês. Exemplos: 'quanto gastei com uber nos últimos 3 meses?',
+        'relatório de alimentação em maio de 2026', 'quanto gastei com transporte por mês?'.
+        Parâmetros: filtro_categoria (palavra-chave, ex: 'uber', 'alimentação'), ultimos_meses
+        (padrão 3); use data_inicio e data_fim (YYYY-MM-DD) para períodos específicos."""
         try:
-            transacoes = _buscar_todas_transacoes(ultimos_meses * 31)
+            dt_i, dt_f, label, _ = _resolver_periodo(data_inicio, data_fim, ultimos_meses * 31)
+            if not data_inicio.strip():
+                label = f"últimos {ultimos_meses} meses"
+            transacoes = await _buscar_todas_transacoes(dt_i, dt_f)
             if isinstance(transacoes, str):
                 return transacoes
 
             filtro = filtro_categoria.lower().strip()
-
             meses: dict[str, dict] = {}
+
             for t in transacoes:
                 tx_type = t.get("type", 0)
                 amount = t.get("amount", 0)
-                # Exclui receitas (amount >= 0) e investimentos (type=3, amount < 0)
                 if amount >= 0 or tx_type == 3:
                     continue
 
@@ -256,78 +387,56 @@ def make_api_tools(jwt_token: str) -> list:
                 })
 
             if not meses:
-                return f"Nenhuma despesa encontrada com o filtro '{filtro_categoria}' nos últimos {ultimos_meses} meses."
+                return f"Nenhuma despesa encontrada com o filtro '{filtro_categoria}' no período {label}."
+
+            _MAX_TX_POR_MES = 5
 
             total_geral = sum(m["total"] for m in meses.values())
-            linhas = [f"📊 Relatório de '{filtro_categoria}' — últimos {ultimos_meses} meses\n"]
+            linhas = [f"📊 Relatório de '{filtro_categoria}' — {label}\n"]
 
             for chave in sorted(meses.keys(), reverse=True):
                 mes = meses[chave]
                 linhas.append(f"\n📅 {mes['label']} — R$ {mes['total']:,.2f}")
-                for tx in sorted(mes["transacoes"], key=lambda x: x["valor"], reverse=True):
-                    linhas.append(f"  • {tx['data']} | {tx['descricao'][:40]} | {tx['categoria']} | R$ {tx['valor']:,.2f}")
+                ordenadas = sorted(mes["transacoes"], key=lambda x: x["valor"], reverse=True)
+                for tx in ordenadas[:_MAX_TX_POR_MES]:
+                    linhas.append(
+                        f"  • {tx['data']} | {tx['descricao'][:40]} | {tx['categoria']} | R$ {tx['valor']:,.2f}"
+                    )
+                resto = ordenadas[_MAX_TX_POR_MES:]
+                if resto:
+                    valor_resto = sum(r["valor"] for r in resto)
+                    linhas.append(f"  ... e mais {len(resto)} transação(ões) — R$ {valor_resto:,.2f}")
 
             linhas.append(f"\n💸 Total no período: R$ {total_geral:,.2f}")
             linhas.append(f"📈 Média mensal: R$ {total_geral / len(meses):,.2f}")
             return "\n".join(linhas)
 
-        except requests.exceptions.ConnectionError:
-            return "Erro: A API financeira está offline ou inacessível."
+        except httpx.RequestError:
+            return _ERR_OFFLINE
         except Exception as e:
             return f"Erro inesperado ao gerar relatório: {e}"
 
     @tool
-    def realizar_aporte_meta(valor: float, goal_id: str, account_id: str) -> str:
-        """Use esta ferramenta para investir ou guardar dinheiro em uma meta financeira específica. Recebe o valor, o ID da meta e o ID da conta de origem. Retorna sucesso ou erro."""
-        try:
-            cat_response = requests.get(
-                f"{_API_BASE_URL}/categories", headers=_headers, timeout=10
-            )
-            if cat_response.status_code != 200 or not cat_response.json():
-                return "Erro: Nenhuma categoria encontrada. Crie pelo menos uma categoria antes de realizar um aporte."
-
-            category_id = cat_response.json()[0]["id"]
-
-            payload = {
-                "amount": valor,
-                "type": 3,
-                "accountId": account_id,
-                "financialGoalId": goal_id,
-                "description": "Aporte na meta",
-                "date": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S"),
-                "categoryId": category_id,
-            }
-            response = requests.post(
-                f"{_API_BASE_URL}/transactions",
-                json=payload,
-                headers=_headers,
-                timeout=10,
-            )
-            if response.status_code in (200, 201):
-                return f"✅ Aporte de R$ {valor:,.2f} realizado com sucesso na meta!"
-            if response.status_code == 401:
-                return "Sessão expirada. O usuário precisa fazer login novamente."
-            if response.status_code == 400:
-                return f"Dados inválidos: {response.text}"
-            return f"Erro ao realizar aporte (status {response.status_code})."
-        except requests.exceptions.ConnectionError:
-            return "Erro: A API financeira está offline ou inacessível."
-        except Exception as e:
-            return f"Erro inesperado ao realizar aporte: {e}"
-
-    @tool
-    def calcular_resumo_financeiro(ultimos_dias: int = 30) -> str:
+    async def calcular_resumo_financeiro(
+        ultimos_dias: int = 30,
+        data_inicio: str = "",
+        data_fim: str = "",
+    ) -> str:
         """Use esta ferramenta para obter um raio-x completo das finanças do usuário: receitas,
         despesas, investimentos, saldo líquido, gasto médio diário, categoria com maior gasto,
         maior despesa única e taxa de poupança. Use quando o usuário perguntar sobre saúde financeira,
-        balanço do mês, situação financeira geral, quanto está poupando ou investindo."""
+        balanço do mês, situação geral, quanto está poupando ou investindo.
+        Use data_inicio e data_fim (YYYY-MM-DD) para períodos específicos
+        (ex: maio de 2026 → data_inicio='2026-05-01', data_fim='2026-05-31'); omita para usar
+        ultimos_dias (padrão 30)."""
         try:
-            transacoes = _buscar_todas_transacoes(ultimos_dias)
+            dt_i, dt_f, label, dias_periodo = _resolver_periodo(data_inicio, data_fim, ultimos_dias)
+            transacoes = await _buscar_todas_transacoes(dt_i, dt_f)
             if isinstance(transacoes, str):
                 return transacoes
 
             if not transacoes:
-                return f"Nenhuma transação encontrada nos últimos {ultimos_dias} dias."
+                return f"Nenhuma transação encontrada no período {label}."
 
             total_receitas = 0.0
             total_despesas = 0.0
@@ -355,7 +464,7 @@ def make_api_tools(jwt_token: str) -> list:
                     total_receitas += amount
 
             saldo_liquido = total_receitas - total_despesas - total_investimentos
-            gasto_medio_diario = total_despesas / ultimos_dias if ultimos_dias > 0 else 0.0
+            gasto_medio_diario = total_despesas / dias_periodo
             taxa_poupanca = (total_investimentos / total_receitas * 100) if total_receitas > 0 else 0.0
             situacao = "✅ positivo" if saldo_liquido >= 0 else "❌ negativo"
 
@@ -366,7 +475,7 @@ def make_api_tools(jwt_token: str) -> list:
                 cat_vila, cat_vila_valor = "N/A", 0.0
 
             linhas = [
-                f"## 📋 Raio-X Financeiro — últimos {ultimos_dias} dias\n",
+                f"## 📋 Raio-X Financeiro — {label}\n",
                 "### 💰 Fluxo de Caixa",
                 f"- **Receitas:** R$ {total_receitas:,.2f}",
                 f"- **Despesas:** R$ {total_despesas:,.2f}",
@@ -382,10 +491,76 @@ def make_api_tools(jwt_token: str) -> list:
 
             return "\n".join(linhas)
 
-        except requests.exceptions.ConnectionError:
-            return "Erro: A API financeira está offline ou inacessível."
+        except httpx.RequestError:
+            return _ERR_OFFLINE
         except Exception as e:
             return f"Erro inesperado ao calcular resumo: {e}"
+
+    # =========================================================================
+    # Ferramentas de mutação (POST)
+    # =========================================================================
+
+    @tool
+    async def criar_meta_financeira(nome: str, valor_alvo: float, data_limite: str) -> str:
+        """Use esta ferramenta para criar uma nova meta financeira para o usuário APENAS quando
+        ele pedir explicitamente. Exemplos: 'Quero criar uma meta para comprar um carro de 50000
+        até dezembro', 'Cria uma meta de viagem de R$5000 para junho de 2026'.
+        Recebe o nome da meta, o valor alvo e a data limite no formato 'YYYY-MM-DD'."""
+        payload = {
+            "name": nome,
+            "targetAmount": valor_alvo,
+            "deadline": f"{data_limite}T00:00:00",
+        }
+        try:
+            r = await _post("/financial-goals", payload)
+            if r.status_code in (200, 201):
+                return (
+                    f"✅ Meta criada com sucesso!\n"
+                    f"  • Nome: {nome}\n"
+                    f"  • Valor alvo: R$ {valor_alvo:,.2f}\n"
+                    f"  • Prazo: {data_limite}"
+                )
+            if r.status_code == 401:
+                return _ERR_SESSAO
+            if r.status_code == 400:
+                return f"Dados inválidos para criar a meta: {r.text}"
+            return f"Erro ao criar meta (status {r.status_code})."
+        except httpx.RequestError:
+            return _ERR_OFFLINE
+        except Exception as e:
+            return f"Erro inesperado ao criar meta: {e}"
+
+    @tool
+    async def realizar_aporte_meta(valor: float, goal_id: str, account_id: str) -> str:
+        """Use esta ferramenta para investir ou guardar dinheiro em uma meta financeira específica.
+        Recebe o valor, o ID da meta e o ID da conta de origem. Retorna sucesso ou erro."""
+        try:
+            r_cat = await _get("/categories")
+            if r_cat.status_code != 200 or not r_cat.json():
+                return "Erro: Nenhuma categoria encontrada. Crie pelo menos uma categoria antes de realizar um aporte."
+
+            category_id = r_cat.json()[0]["id"]
+            payload = {
+                "amount": valor,
+                "type": 3,
+                "accountId": account_id,
+                "financialGoalId": goal_id,
+                "description": "Aporte na meta",
+                "date": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S"),
+                "categoryId": category_id,
+            }
+            r = await _post("/transactions", payload)
+            if r.status_code in (200, 201):
+                return f"✅ Aporte de R$ {valor:,.2f} realizado com sucesso na meta!"
+            if r.status_code == 401:
+                return _ERR_SESSAO
+            if r.status_code == 400:
+                return f"Dados inválidos: {r.text}"
+            return f"Erro ao realizar aporte (status {r.status_code})."
+        except httpx.RequestError:
+            return _ERR_OFFLINE
+        except Exception as e:
+            return f"Erro inesperado ao realizar aporte: {e}"
 
     return [
         consultar_saldos_contas,
