@@ -87,3 +87,5 @@ Thumbs.db
 # Arquivos relacionados a IA e agentes (Logs, dados de treinamento, etc.)
 ai_logs/
 faiss_index/
+
+teste.ipynb
