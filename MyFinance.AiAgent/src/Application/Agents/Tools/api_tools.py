@@ -20,6 +20,7 @@ from datetime import datetime, timedelta, timezone
 import httpx
 from dotenv import load_dotenv
 from langchain_core.tools import tool
+from pydantic import BaseModel, Field
 
 load_dotenv()
 
@@ -28,6 +29,19 @@ _API_BASE_URL = os.getenv("API_URL", "http://localhost:5088/api")
 _ERR_OFFLINE = "Erro: A API financeira está offline ou inacessível."
 _ERR_SESSAO  = "Sessão expirada. O usuário precisa fazer login novamente."
 
+class SimularEstresseOrcamentoInput(BaseModel):
+    descricao_nova_despesa: str = Field(
+        ...,
+        description="O que o usuário deseja assumir. Ex: 'Financiamento do carro', 'Aluguel mais caro'."
+    )
+    valor_mensal: float = Field(
+        ...,
+        description="O valor mensal da nova despesa em reais. Ex: 1200.00"
+    )
+    tipo_despesa: str = Field(
+        ...,
+        description="Classifique a despesa em: 'essencial' (moradia, transporte, saúde), 'estilo_de_vida' (lazer, assinaturas) ou 'divida'."
+    )
 
 def make_api_tools(jwt_token: str) -> list:
     """
@@ -561,6 +575,59 @@ def make_api_tools(jwt_token: str) -> list:
             return _ERR_OFFLINE
         except Exception as e:
             return f"Erro inesperado ao realizar aporte: {e}"
+        
+    @tool(args_schema=SimularEstresseOrcamentoInput)
+    async def simular_impacto_nova_despesa(descricao_nova_despesa: str, valor_mensal: float, tipo_despesa: str) -> dict:
+        """
+        Use esta ferramenta quando o usuário perguntar se 'dá conta' de assumir uma nova conta, 
+        se o orçamento aguenta uma nova parcela, ou simular o impacto de um novo gasto fixo.
+        """
+        try:
+            dt_fim = datetime.now(timezone.utc)
+            dt_inicio = dt_fim - timedelta(days=30)
+            
+            transacoes = await _buscar_todas_transacoes(dt_inicio=dt_inicio, dt_fim=dt_fim)
+            
+            if isinstance(transacoes, str):
+                return {"erro": transacoes}
+
+            total_receitas = sum(t.get("amount", 0) for t in transacoes if t.get("type") == 1 or t.get("amount", 0) > 0)
+            despesas_atuais = sum(abs(t.get("amount", 0)) for t in transacoes if t.get("type") == 2 or t.get("amount", 0) < 0)
+            
+            # Matemática determinística do cenário
+            novo_total_despesas = despesas_atuais + valor_mensal
+            saldo_liquido_atual = total_receitas - despesas_atuais
+            novo_saldo_liquido = total_receitas - novo_total_despesas
+            
+            comprometimento_atual_pct = (despesas_atuais / total_receitas * 100) if total_receitas > 0 else 0
+            novo_comprometimento_pct = (novo_total_despesas / total_receitas * 100) if total_receitas > 0 else 0
+
+            # Classificação de Risco
+            status_risco = "SEGURO"
+            if novo_saldo_liquido < 0:
+                status_risco = "CRÍTICO - Orçamento ficará negativo"
+            elif novo_comprometimento_pct > 80:
+                status_risco = "ALTO RISCO - Restará pouca margem de segurança"
+
+            return {
+                "analise": f"Impacto de assumir: {descricao_nova_despesa}",
+                "cenario_atual": {
+                    "receita_mensal": round(total_receitas, 2),
+                    "despesa_mensal": round(despesas_atuais, 2),
+                    "saldo_livre": round(saldo_liquido_atual, 2),
+                    "comprometimento_renda_pct": round(comprometimento_atual_pct, 1)
+                },
+                "cenario_simulado": {
+                    "nova_despesa": round(valor_mensal, 2),
+                    "novo_total_despesas": round(novo_total_despesas, 2),
+                    "novo_saldo_livre": round(novo_saldo_liquido, 2),
+                    "novo_comprometimento_renda_pct": round(novo_comprometimento_pct, 1)
+                },
+                "status_de_risco": status_risco
+            }
+            
+        except Exception as e:
+            return {"erro": f"Falha ao simular cenário: {str(e)}"}
 
     return [
         consultar_saldos_contas,
@@ -571,4 +638,5 @@ def make_api_tools(jwt_token: str) -> list:
         analisar_gastos_por_categoria,
         relatorio_mensal_por_categoria,
         calcular_resumo_financeiro,
+        simular_impacto_nova_despesa
     ]
