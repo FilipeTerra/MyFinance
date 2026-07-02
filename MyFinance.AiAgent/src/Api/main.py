@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import tempfile
 import time
 import asyncio
 from contextlib import asynccontextmanager
@@ -31,6 +32,16 @@ _EMBEDDING_MODEL = "nomic-embed-text"
 
 def _startup_sync() -> None:
     """Executado em thread separada: garante o modelo de embeddings e ingere documentos."""
+    try:
+        provider = "remoto" if is_remote() else "local"
+        _logger.info(
+            "🤖 [STARTUP] Modelo de chat ativo: %s (provedor: %s)",
+            get_model("chat"),
+            provider,
+        )
+    except Exception as e:
+        _logger.warning("⚠️  [STARTUP] Não foi possível resolver o modelo de chat: %s", e)
+
     ensure_model(_EMBEDDING_MODEL)
 
     if not os.path.isdir(_BOOKS_DIR):
@@ -130,8 +141,14 @@ async def consultant_chat(request: ChatRequest):
 
         response = await invoke_chat(request.prompt, request.jwt_token, request.context_payload)
         return {"success": True, "resposta": response}
-    except Exception as e:
-        return {"success": False, "erro": str(e)}
+    except Exception:
+        # Log completo no servidor; mensagem genérica ao cliente — detalhes
+        # internos (URLs, stack, credenciais de conexão) não vazam na API.
+        _logger.exception("❌ [CHAT] Erro não tratado no endpoint /api/ai/chat")
+        return {
+            "success": False,
+            "erro": "Erro interno ao processar a mensagem. Tente novamente em instantes.",
+        }
 
 
 @app.post("/api/ai/learn")
@@ -151,29 +168,54 @@ async def learn_from_confirmed(request: LearnRequest):
     return {"success": True, "learned": saved}
 
 
+async def _process_statement_impl(accountId: str, categoriesJson: str, file: UploadFile) -> dict:
+    """
+    Implementação única do Parser Semântico Universal: aceita qualquer CSV ou PDF
+    de extrato bancário, sem mapeamento hardcoded de colunas. O LLM interpreta o
+    documento e extrai data, descrição, valor, tipo e categoria do texto bruto.
+
+    Compartilhada pelas rotas /process-file e /process-file-semantic (eram
+    duplicadas linha a linha — agora há um único ponto de manutenção).
+    """
+    # basename() neutraliza path traversal (ex: filename="../../etc/cron.d/x")
+    safe_name = os.path.basename(file.filename or "upload.tmp")
+    file_location = os.path.join(tempfile.gettempdir(), f"myfinance_{safe_name}")
+
+    try:
+        with open(file_location, "wb+") as file_object:
+            file_object.write(await file.read())
+
+        existing_categories = json.loads(categoriesJson)
+
+        extractor = SemanticExtractor()
+        use_case = ProcessFileSemanticUseCase(extractor)
+
+        # A extração chama o LLM de forma síncrona e pode levar minutos —
+        # roda em thread para não bloquear o event loop da API.
+        processed_transactions = await asyncio.to_thread(
+            use_case.execute, file_location, accountId, existing_categories
+        )
+
+        return {"success": True, "data": processed_transactions}
+
+    except Exception:
+        _logger.exception("❌ [FILE] Erro crítico ao processar extrato '%s'", safe_name)
+        return {"success": False, "message": "Erro interno ao processar o arquivo. Tente novamente."}
+    finally:
+        # Não acumula uploads no diretório temporário
+        try:
+            os.remove(file_location)
+        except OSError:
+            pass
+
+
 @app.post("/api/ai/process-file")
 async def process_statement(
     accountId: str = Form(...),
     categoriesJson: str = Form(...),
     file: UploadFile = File(...)
 ):
-    file_location = f"/tmp/{file.filename}"
-    with open(file_location, "wb+") as file_object:
-        file_object.write(file.file.read())
-
-    try:
-        existing_categories = json.loads(categoriesJson)
-
-        extractor = SemanticExtractor()
-        use_case = ProcessFileSemanticUseCase(extractor)
-
-        processed_transactions = use_case.execute(file_location, accountId, existing_categories)
-
-        return {"success": True, "data": processed_transactions}
-
-    except Exception as e:
-        _logger.error("Erro Crítico no Endpoint: %s", e)
-        return {"success": False, "message": f"Erro interno na IA: {str(e)}"}
+    return await _process_statement_impl(accountId, categoriesJson, file)
 
 
 @app.post("/api/ai/process-file-semantic")
@@ -182,25 +224,4 @@ async def process_statement_semantic(
     categoriesJson: str = Form(...),
     file: UploadFile = File(...)
 ):
-    """
-    Parser Semântico Universal: aceita qualquer CSV ou PDF de extrato bancário,
-    sem mapeamento hardcoded de colunas. O LLM interpreta o documento e extrai
-    data, descrição, valor, tipo e categoria diretamente do texto bruto.
-    """
-    file_location = f"/tmp/{file.filename}"
-    with open(file_location, "wb+") as file_object:
-        file_object.write(file.file.read())
-
-    try:
-        existing_categories = json.loads(categoriesJson)
-
-        extractor = SemanticExtractor()
-        use_case = ProcessFileSemanticUseCase(extractor)
-
-        processed_transactions = use_case.execute(file_location, accountId, existing_categories)
-
-        return {"success": True, "data": processed_transactions}
-
-    except Exception as e:
-        _logger.error("Erro Crítico no Endpoint Semântico: %s", e)
-        return {"success": False, "message": f"Erro interno na IA: {str(e)}"}
+    return await _process_statement_impl(accountId, categoriesJson, file)

@@ -1,21 +1,29 @@
 """
 nodes.py — Nós e Lógica de Roteamento do Grafo LangGraph
 
-Passo 3 da refatoração para Workflow Determinístico com ciclo ReAct.
-
-Este módulo define os nós (nodes) e o roteador condicional (edge) que compõem
-o grafo. A construção do StateGraph em si está no Passo 4 (graph.py).
+Este módulo define os nós (nodes) que compõem o grafo. A construção do
+StateGraph e o roteador condicional estão em graph.py.
 
 Responsabilidades:
-  - inject_context   : hidrata AgentState com o pacote enviado pelo backend .NET.
-  - make_nodes       : factory que produz agent_node + tool_node via closure JWT.
-  - route_after_agent: guardrail operacional + roteador condicional pós-agent.
+  - inject_context : hidrata AgentState com o pacote enviado pelo backend .NET.
+  - make_nodes     : factory que produz agent_node + tool_node via closure JWT.
+
+Decisões de performance (correções críticas):
+  C1. agent_node é ASYNC e usa await _llm.ainvoke() — a chamada ao LLM é a
+      operação mais longa do sistema; com invoke() síncrono ela bloqueava o
+      event loop inteiro (nenhum outro usuário era atendido durante a geração).
+  C2. ChatOllama com temperature=0 e num_ctx=8192 — o default do Ollama é
+      temperature≈0.8 (tool_calls instáveis/malformados) e num_ctx=2048
+      (o system prompt era truncado silenciosamente em conversas longas).
+  C3. Trimming de histórico — o MemorySaver acumula a conversa inteira;
+      _trim_history limita o que é ENVIADO ao LLM às últimas N interações,
+      sempre começando em uma HumanMessage (nunca corta um turno no meio).
 """
 
 import logging
-from typing import Literal
+from datetime import datetime, timezone
 
-from langchain_core.messages import AIMessage, SystemMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langchain_core.runnables import RunnableConfig
 from langchain_ollama import ChatOllama
 from langgraph.prebuilt import ToolNode
@@ -29,79 +37,84 @@ from src.Infra.Llm.ollama_provider import get_ollama_config, get_model
 
 _logger = logging.getLogger("myfinance.agent")
 
+# ---------------------------------------------------------------------------
+# Parâmetros de geração e de janela de contexto
+# ---------------------------------------------------------------------------
+
+# temperature=0: agente de tool-calling precisa de saída determinística.
+# O default do Ollama (~0.8) é uma causa direta de JSON malformado em tool_calls.
+_LLM_TEMPERATURE = 0.0
+
+# num_ctx=8192: default do Ollama é 2048 tokens — com system prompt + contexto
+# financeiro + histórico, o início do prompt (as regras!) era truncado em silêncio.
+_LLM_NUM_CTX = 8192
+
+# Quantos turnos de usuário (HumanMessage) são enviados ao LLM por invocação.
+# O histórico completo permanece no MemorySaver; isto limita apenas a janela
+# visível pelo modelo, evitando estouro de contexto em conversas longas.
+_MAX_HISTORY_TURNS = 5
+
+# Timeout do cliente HTTP do Ollama (segundos). Sem isso, um provedor travado
+# prende a requisição até o timeout de 10 min do HttpClient do .NET.
+_LLM_TIMEOUT_S = 120.0
+
 
 # ===========================================================================
-# System Prompt Base
-# Centralizado aqui: nodes.py é o único módulo que invoca o LLM diretamente.
-# O bloco de contexto financeiro (context_data) é anexado dinamicamente
-# por _format_context_block antes de cada invocação.
+# System Prompt — caminho de decisão + formato de resposta fixo
+#
+# Estruturado em 3 blocos para um modelo pequeno (3b):
+#   COMO AGIR    → tabela intenção→ferramenta (caminho bem definido)
+#   REGRAS       → restrições operacionais (anti-alucinação)
+#   FORMATO      → template fixo de resposta (📊 Dados / 💡 Análise / ✅ Ações)
+# Detalhes de cada ferramenta ficam nas docstrings (enviadas via bind_tools);
+# aqui fica apenas o roteamento de intenção, curto e sem duplicação.
 # ===========================================================================
 
 _SYSTEM_PROMPT = (
-    "⚠️ REGRA DE SEGURANÇA (CRÍTICA): NUNCA chame mais de 3 ferramentas na mesma iteração. "
-    "Se o usuário fizer uma pergunta ampla sobre seus gastos ou pedir uma análise geral, "
-    "priorize EXCLUSIVAMENTE o uso das ferramentas analisar_gastos_por_categoria ou "
-    "calcular_resumo_financeiro. NUNCA tente puxar listas longas de transações para análises amplas. "
-
-    "Você é o Claudio, o assistente financeiro pessoal do usuário. "
-    "IDIOMA OBRIGATÓRIO: Responda SEMPRE em português do Brasil, sem exceção. "
-    "Seja EXTREMAMENTE objetivo, moderno e orientado à ação. "
-
-    "Regras de formatação: "
-    "1. Sem introduções longas. Vá direto ao ponto. "
-    "2. Use emojis estratégicos (📊, 🎯, 🛡️, 💰) para destacar tópicos. "
-    "3. Prefira listas e negrito a parágrafos corridos. "
-    "4. OBRIGATÓRIO: quando uma ferramenta retornar dados (saldo, receitas, despesas, metas, "
-    "   simulações), SEMPRE apresente TODOS os valores retornados antes de qualquer análise. "
-    "   Nunca omita números, percentuais ou datas vindos das ferramentas. "
-    "5. Sempre finalize sugerindo 2 a 3 ações concretas que o usuário pode tomar agora. "
-
-    "Regras de uso de ferramentas: "
-    "5. Para simular rendimentos futuros ou projetar investimentos, use SEMPRE "
-    "   simular_investimento. Se o usuário não informar a taxa, chame buscar_taxa_selic "
-    "   primeiro para obter SELIC/CDI atuais. NUNCA calcule de cabeça. "
-    "6. Para calcular parcelas, custo total ou juros de um financiamento, use "
-    "   calcular_juros_financiamento (Tabela Price). "
-    "7. Para comparar quitar dívida vs investir, use comparar_quitacao_vs_investimento "
-    "   SOMENTE se o usuário já informou AMBAS as taxas. Caso contrário, pergunte primeiro. "
-    "8. Para relatório mês a mês de uma categoria (uber, alimentação, transporte), use "
-    "   relatorio_mensal_por_categoria(filtro_categoria=..., ultimos_meses=...). "
-    "9. Para análise geral de gastos sem filtro, chame AMBAS: analisar_gastos_por_categoria "
-    "   E calcular_resumo_financeiro com o mesmo número de dias. "
-    "10. Para qualquer conselho, princípio ou teoria financeira (50/30/20, reserva de emergência, "
-    "    independência financeira, juros compostos, ativos vs passivos), use SEMPRE "
-    "    consultar_teoria_financeira antes de responder. Cite os conceitos dos livros. "
-    "11. Só crie metas com criar_meta_financeira quando solicitado EXPLICITAMENTE. "
-    "12. Após qualquer ação de criação ou aporte, confirme os detalhes ao usuário. "
-
-    "13. Quando o usuário mencionar um mês ou período específico (ex: 'maio de 2026', "
-    "    'primeiro trimestre', 'semana passada', 'de janeiro a março'), converta para "
-    "    data_inicio e data_fim no formato YYYY-MM-DD e passe às ferramentas de análise. "
-    "    Exemplos de conversão: "
-    "    'maio de 2026' → data_inicio='2026-05-01', data_fim='2026-05-31'; "
-    "    'primeiro trimestre de 2026' → data_inicio='2026-01-01', data_fim='2026-03-31'; "
-    "    'junho' (mês corrente sem ano) → data_inicio='2026-06-01', data_fim='2026-06-30'. "
-    "    Se o usuário não mencionar nenhum período, omita data_inicio e data_fim "
-    "    (as ferramentas usam os últimos 30 dias por padrão). "
-    
-    "14. Para analisar ações da bolsa brasileira (B3), avaliar valuation ou "
-        "discutir se uma empresa está barata/cara, use SEMPRE a ferramenta "
-        "consultar_indicadores_b3. Se o usuário falar o nome de uma empresa "
-        "sem informar o ticker, identifique o ticker correspondente de 4 a 6 letras "
-        "antes de chamar a ferramenta."
-        
-    "15. FLUXO DE CRIAÇÃO DE METAS (HUMAN-IN-THE-LOOP): "
-        "Quando o usuário quiser criar uma meta, se organizar, ou pedir conselhos sobre o que fazer com a sobra do salário, "
-        "SIGA ESTRITAMENTE ESTES 3 PASSOS:\n"
-        "   Passo 1: Chame a ferramenta `simular_meta_ideal`. Leia a proposta matemática gerada por ela.\n"
-        "   Passo 2: Apresente a proposta ao usuário (mostrando o valor alvo, o aporte sugerido e o prazo). "
-        "PAUSE O SEU RACIOCÍNIO e pergunte explicitamente: 'Posso criar essa meta no sistema para você agora?'. "
-        "NÃO chame a ferramenta de criação ainda.\n"
-        "   Passo 3: Apenas se o usuário responder positivamente (ex: 'Sim', 'Pode criar'), "
-        "chame a ferramenta `criar_meta_financeira` usando os valores exatos que você simulou no Passo 1."
-
-    "Nunca invente dados nem faça cálculos mentais. "
-    "Nunca mencione nomes de ferramentas ou detalhes técnicos ao usuário."
+    "Você é o Claudio, assistente financeiro pessoal do usuário. "
+    "Responda SEMPRE em português do Brasil. Seja objetivo e orientado à ação.\n"
+    "\n"
+    "== COMO AGIR ==\n"
+    "Identifique a intenção do usuário e siga o caminho correspondente:\n"
+    "1. Saldo ou contas → os dados já estão no CONTEXTO abaixo; "
+    "use consultar_saldos_contas apenas se o contexto estiver vazio.\n"
+    "2. Metas (progresso, status) → CONTEXTO; se vazio, consultar_metas_financeiras.\n"
+    "3. Análise geral de gastos ('onde gasto mais?') → chame "
+    "analisar_gastos_por_categoria E calcular_resumo_financeiro (mesmo período).\n"
+    "4. Extrato / transações específicas → consultar_transacoes_recentes.\n"
+    "5. Gasto de UMA categoria mês a mês (uber, alimentação) → relatorio_mensal_por_categoria.\n"
+    "6. Simular investimento/rendimento → se o usuário não informou a taxa, chame "
+    "buscar_taxa_selic primeiro; depois simular_investimento.\n"
+    "7. Financiamento/parcelas → calcular_juros_financiamento.\n"
+    "8. Ação da B3 / valuation → consultar_indicadores_b3 (ticker de 4-6 letras; "
+    "se o usuário deu o nome da empresa, deduza o ticker).\n"
+    "9. Conselho ou teoria financeira (50/30/20, reserva de emergência, juros "
+    "compostos, ativos vs passivos) → consultar_teoria_financeira antes de responder.\n"
+    "10. Criar meta / organizar sobra do salário → PROCESSO EM 3 PASSOS: "
+    "(a) chame simular_meta_ideal; "
+    "(b) apresente a proposta (valor alvo, aporte, prazo) e pergunte "
+    "'Posso criar essa meta no sistema para você agora?' e PARE — não crie ainda; "
+    "(c) somente se o usuário confirmar, chame criar_meta_financeira com os valores simulados.\n"
+    "11. Impacto de assumir uma nova despesa → simular_impacto_nova_despesa.\n"
+    "12. Aporte em meta existente → realizar_aporte_meta (confirme os detalhes depois).\n"
+    "\n"
+    "== REGRAS ==\n"
+    "• Máximo de 3 chamadas de ferramenta por vez.\n"
+    "• Períodos: converta para data_inicio/data_fim no formato YYYY-MM-DD "
+    "(ex: 'maio de 2026' → 2026-05-01 a 2026-05-31). "
+    "Se o usuário não mencionar período, OMITA esses parâmetros.\n"
+    "• NUNCA calcule de cabeça — use as ferramentas de cálculo.\n"
+    "• NUNCA invente números, datas ou dados. Se uma ferramenta falhar ou não "
+    "retornar dados, diga isso claramente ao usuário.\n"
+    "\n"
+    "== FORMATO DA RESPOSTA ==\n"
+    "Estruture a resposta final SEMPRE assim:\n"
+    "📊 **Dados**: TODOS os valores retornados pelas ferramentas "
+    "(números, percentuais, datas) — nunca omita nenhum.\n"
+    "💡 **Análise**: 1 a 3 frases objetivas.\n"
+    "✅ **Próximas ações**: 2 a 3 sugestões concretas.\n"
+    "Use listas e negrito; sem introduções longas. "
+    "Nunca mencione nomes de ferramentas, JSON ou detalhes técnicos."
 )
 
 
@@ -167,6 +180,37 @@ def _format_context_block(context: ContextData) -> str:
 
 
 # ===========================================================================
+# Helper privado: janela de histórico enviada ao LLM (correção C3)
+# ===========================================================================
+
+def _trim_history(messages: list[BaseMessage], max_turns: int = _MAX_HISTORY_TURNS) -> list[BaseMessage]:
+    """
+    Limita o histórico enviado ao LLM às últimas `max_turns` interações do usuário.
+
+    Por que por TURNOS e não por número de mensagens:
+      Um turno é [HumanMessage, AIMessage(tool_calls), ToolMessage..., AIMessage].
+      Cortar no meio de um turno deixaria ToolMessages órfãs no início da janela
+      (sem a AIMessage com os tool_calls correspondentes), o que confunde o modelo
+      e quebra provedores que validam o encadeamento de mensagens.
+
+    A janela sempre começa em uma HumanMessage. O turno corrente nunca é cortado,
+    pois é sempre o último. O histórico COMPLETO permanece intocado no MemorySaver —
+    isto afeta apenas o que o modelo enxerga nesta invocação.
+    """
+    human_indices = [i for i, m in enumerate(messages) if isinstance(m, HumanMessage)]
+    if len(human_indices) <= max_turns:
+        return list(messages)
+
+    start = human_indices[-max_turns]
+    trimmed = list(messages[start:])
+    _logger.info(
+        "✂️  [TRIM] Histórico: %d → %d mensagens (janela de %d turnos)",
+        len(messages), len(trimmed), max_turns,
+    )
+    return trimmed
+
+
+# ===========================================================================
 # Nó 1: inject_context
 # ===========================================================================
 
@@ -189,13 +233,6 @@ def inject_context(state: AgentState, config: RunnableConfig) -> dict:
       recentTransactions → recent_transactions
       gamification       → gamification  (mesmo nome, sem conversão)
       monthlySummary     → monthly_summary
-
-    Args:
-        state : AgentState — não lido neste nó, presente por conformidade de assinatura.
-        config: RunnableConfig com configurable["context_payload"] opcional.
-
-    Returns:
-        dict parcial {"context_data": ContextData} para merge no AgentState.
     """
     raw: dict = config.get("configurable", {}).get("context_payload", {})
     context: ContextData = {}
@@ -249,11 +286,9 @@ def make_nodes(jwt_token: str) -> tuple:
         (agent_node, tool_node): callables prontos para registro no StateGraph.
     """
     # ── Lista unificada de ferramentas ───────────────────────────────────────
-    # Ordem: matemática pura → conhecimento RAG → API .NET (autenticada)
+    # Ordem: matemática pura → quant/B3 → conhecimento RAG → API .NET (autenticada)
     api_tools = make_api_tools(jwt_token)
-    all_tools = [
-        t for t in MATH_TOOLS + QUANT_TOOLS + [consultar_teoria_financeira] + api_tools
-    ]
+    all_tools = MATH_TOOLS + QUANT_TOOLS + [consultar_teoria_financeira] + api_tools
 
     _logger.info(
         "⚙️  [NODES] %d ferramentas registradas: %s",
@@ -262,70 +297,78 @@ def make_nodes(jwt_token: str) -> tuple:
     )
 
     # ── LLM com ferramentas vinculadas — instanciado UMA VEZ por request ────
-    # get_model / get_ollama_config resolvem o provedor ativo (local ou remoto)
-    # e cachearão o resultado por 60 s (health check TTL do ollama_provider).
+    # temperature=0 e num_ctx=8192: ver constantes no topo do módulo (C2).
+    # O timeout entra via client_kwargs (repassado ao httpx.Client interno do
+    # ollama): geração que exceder _LLM_TIMEOUT_S falha rápido em vez de
+    # pendurar a requisição indefinidamente.
     model_name = get_model("chat")
+    ollama_config = get_ollama_config()
+    ollama_config.setdefault("client_kwargs", {})["timeout"] = _LLM_TIMEOUT_S
+
     _llm = ChatOllama(
         model=model_name,
-        **get_ollama_config(),
+        temperature=_LLM_TEMPERATURE,
+        num_ctx=_LLM_NUM_CTX,
+        **ollama_config,
     ).bind_tools(all_tools)
 
     # ── Nó 3: tool_node ─────────────────────────────────────────────────────
     # ToolNode nativo do LangGraph:
     #   - Recebe AIMessage com tool_calls (Thought do agente).
-    #   - Despacha para a função Python correspondente (Action).
+    #   - Despacha para a função Python correspondente (Action) — ferramentas
+    #     async são aguardadas nativamente quando o grafo roda via ainvoke.
     #   - Retorna uma ou mais ToolMessages com os resultados (Observation).
     #   - Captura exceções de ferramenta e retorna ToolMessage de erro sem
     #     crashar o grafo — o agente vê o erro e pode tentar outra estratégia.
     tool_node = ToolNode(all_tools)
 
-    # ── Nó 2: agent_node ────────────────────────────────────────────────────
-    def agent_node(state: AgentState, config: RunnableConfig) -> dict:
+    # ── Nó 2: agent_node (ASYNC — correção C1) ──────────────────────────────
+    async def agent_node(state: AgentState, config: RunnableConfig) -> dict:
         """
         Nó de raciocínio (Thought) do ciclo ReAct.
 
         A cada chamada, este nó:
-          1. Monta o system prompt final (base + bloco de contexto financeiro).
-          2. Invoca o LLM com o histórico completo de mensagens.
-          3. Retorna a resposta como nova mensagem e incrementa iterations.
+          1. Monta o system prompt final (base + data de hoje + contexto financeiro).
+          2. Aplica a janela de histórico (_trim_history) sobre as mensagens.
+          3. Invoca o LLM de forma ASSÍNCRONA (await ainvoke) — não bloqueia
+             o event loop; outros usuários seguem sendo atendidos em paralelo.
+          4. Retorna a resposta como nova mensagem e incrementa iterations.
 
         O LLM pode retornar:
           a) AIMessage sem tool_calls → resposta final ao usuário.
           b) AIMessage com tool_calls → solicitação de ação ao tool_node.
-
-        IMPORTANTE sobre iterations:
-          O campo não usa reducer no AgentState (ver state.py, linha ~137).
-          O LangGraph substitui o valor diretamente com o que retornamos.
-          Portanto, retornamos o VALOR ABSOLUTO já incrementado:
-            {"iterations": state["iterations"] + 1}
-          e NÃO o delta {"iterations": 1} — que produziria o mesmo efeito
-          mas é semânticamente errado sem um reducer de soma.
-
-        Args:
-            state : AgentState com histórico e contexto atual.
-            config: RunnableConfig — pode carregar callbacks (AgentCallbackLogger),
-                    tags e metadados que são propagados ao LLM via .invoke(config=).
-
-        Returns:
-            dict parcial {"messages": [AIMessage], "iterations": int}.
         """
         context = state.get("context_data", {})
         new_iteration = state["iterations"] + 1
 
-        # System prompt enriquecido com o snapshot financeiro do usuário
-        enriched_system = _SYSTEM_PROMPT + _format_context_block(context)
-        messages_to_send = [SystemMessage(content=enriched_system)] + list(state["messages"])
-
-        _logger.info(
-            "🤖 [AGENT] iteração=%d/%d | hist=%d msgs",
-            new_iteration,
-            MAX_ITERATIONS,
-            len(state["messages"]),
+        # Data corrente: essencial para o modelo converter períodos relativos
+        # ('mês passado', 'este ano') em data_inicio/data_fim corretos.
+        hoje = datetime.now(timezone.utc).strftime("%d/%m/%Y")
+        enriched_system = (
+            f"{_SYSTEM_PROMPT}\n\nHoje é {hoje}."
+            + _format_context_block(context)
         )
 
-        # Propaga o RunnableConfig ao LLM para que callbacks (logger, tracer)
-        # registrem esta invocação com o contexto correto da thread.
-        response: AIMessage = _llm.invoke(messages_to_send, config=config)
+        history = _trim_history(list(state["messages"]))
+        messages_to_send = [SystemMessage(content=enriched_system)] + history
+
+        _logger.info(
+            "🤖 [AGENT] iteração=%d/%d | janela=%d msgs",
+            new_iteration,
+            MAX_ITERATIONS,
+            len(history),
+        )
+
+        # await + ainvoke: a geração do LLM roda sem travar o event loop.
+        # O RunnableConfig é propagado para callbacks (logger, tracer).
+        # Retry único: falhas transitórias (rede, provedor reiniciando) são
+        # comuns com Ollama remoto; uma segunda tentativa resolve a maioria
+        # sem custo perceptível. Falha dupla propaga para o endpoint.
+        try:
+            response: AIMessage = await _llm.ainvoke(messages_to_send, config=config)
+        except Exception as e:
+            _logger.warning("🔁 [AGENT] Falha na chamada ao LLM (%s) — 2ª tentativa...", e)
+            response = await _llm.ainvoke(messages_to_send, config=config)
 
         tool_calls = getattr(response, "tool_calls", []) or []
         _logger.info(
@@ -340,75 +383,3 @@ def make_nodes(jwt_token: str) -> tuple:
         }
 
     return agent_node, tool_node
-
-
-# ===========================================================================
-# Roteador condicional
-# ===========================================================================
-
-def route_after_agent(state: AgentState) -> Literal["tools", "__end__"]:
-    """
-    Guardrail operacional e roteador condicional.
-
-    Executado após cada passagem pelo nó agent para decidir o próximo
-    destino no grafo. Atua como a 'consciência' do ciclo ReAct em duas camadas:
-
-    ┌─────────────────────────────────────────────────────────────────────┐
-    │  CAMADA 1 — Verificação de tool_calls                               │
-    │                                                                     │
-    │  Se a AIMessage retornada pelo LLM não contém tool_calls, o agente  │
-    │  chegou à sua resposta final natural → roteamento para END.         │
-    ├─────────────────────────────────────────────────────────────────────┤
-    │  CAMADA 2 — Guardrail contra exaustão cognitiva                     │
-    │                                                                     │
-    │  Um LLM pode entrar em loop quando:                                 │
-    │    • Uma ferramenta retorna erro repetidamente (ex: API offline).   │
-    │    • O LLM raciocina em círculo sem chegar a uma conclusão.         │
-    │    • Tool_calls mal formados são gerados e re-tentados infinitamente.│
-    │                                                                     │
-    │  Se iterations >= MAX_ITERATIONS, mesmo havendo tool_calls, o grafo │
-    │  é encerrado para evitar consumo indefinido de tokens e degradação  │
-    │  da experiência do usuário (exaustão cognitiva do agente).          │
-    │                                                                     │
-    │  NOTA para o Passo 4 (graph.py):                                    │
-    │  Quando este guardrail dispara, a última mensagem no estado ainda   │
-    │  contém tool_calls não resolvidos. Adicione um nó `fallback_node`   │
-    │  antes de END que injeta uma AIMessage de fallback amigável,        │
-    │  garantindo que o usuário receba uma resposta controlada.           │
-    └─────────────────────────────────────────────────────────────────────┘
-
-    Args:
-        state: AgentState com o histórico atualizado pelo agent_node.
-
-    Returns:
-        "tools"    — há tool_calls E iterations < MAX_ITERATIONS.
-        "__end__"  — sem tool_calls (resposta final gerada normalmente).
-        "__end__"  — guardrail ativado (iterations >= MAX_ITERATIONS).
-    """
-    last_message: AIMessage = state["messages"][-1]
-    tool_calls: list = getattr(last_message, "tool_calls", []) or []
-
-    # ── Camada 1: sem chamadas de ferramentas ────────────────────────────────
-    if not tool_calls:
-        _logger.info("✅ [ROUTER] Sem tool_calls → END (resposta final)")
-        return "__end__"
-
-    # ── Camada 2: guardrail de iterações ─────────────────────────────────────
-    if state["iterations"] >= MAX_ITERATIONS:
-        _logger.warning(
-            "🚨 [ROUTER] Guardrail ativado | iterations=%d/%d | "
-            "%d tool_call(s) pendente(s) descartados → END forçado",
-            state["iterations"],
-            MAX_ITERATIONS,
-            len(tool_calls),
-        )
-        return "__end__"
-
-    # ── Budget OK: executa ferramentas ───────────────────────────────────────
-    _logger.info(
-        "🔧 [ROUTER] %d tool_call(s) → tools | iteração %d/%d",
-        len(tool_calls),
-        state["iterations"],
-        MAX_ITERATIONS,
-    )
-    return "tools"

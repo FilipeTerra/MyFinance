@@ -7,8 +7,7 @@ No LangGraph, todos os nós (nodes) leem e escrevem neste único objeto de estad
 Nenhum nó passa dados diretamente para outro; toda comunicação acontece
 através deste estado centralizado, o que torna o fluxo auditável e previsível.
 """
-import operator
-from typing import Annotated, Any, Sequence, TypedDict
+from typing import Annotated, Any, TypedDict
 
 from langchain_core.messages import BaseMessage
 from langgraph.graph.message import add_messages

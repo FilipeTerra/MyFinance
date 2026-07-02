@@ -121,9 +121,9 @@ def fallback_node(state: AgentState) -> dict:
 # ===========================================================================
 # Roteador condicional local
 #
-# Versão expandida do route_after_agent (nodes.py) que inclui o destino
-# "fallback" explícito. Mantida aqui (e não em nodes.py) para não alterar
-# o contrato do Passo 3 — nodes.py permanece independente do grafo.
+# Roteador único do grafo, com o destino "fallback" explícito.
+# Vive aqui (e não em nodes.py) porque roteamento é decisão de topologia:
+# nodes.py define os nós; graph.py define como eles se conectam.
 # ===========================================================================
 
 def _route(state: AgentState) -> Literal["tools", "fallback", "__end__"]:

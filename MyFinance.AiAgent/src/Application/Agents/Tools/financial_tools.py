@@ -1,4 +1,6 @@
+import asyncio
 import logging
+
 from langchain_core.tools import tool
 from src.Infra.Data.financial_rag import FinancialKnowledgeBase
 
@@ -9,14 +11,19 @@ _kb = FinancialKnowledgeBase()
 
 
 @tool
-def consultar_teoria_financeira(query: str) -> str:
+async def consultar_teoria_financeira(query: str) -> str:
     """Use esta ferramenta SEMPRE que precisar dar um conselho financeiro, sugerir cortes de gastos,
     falar sobre investimentos, ativos vs passivos, independência financeira, orçamento pessoal,
     regra dos 50/30/20, juros compostos, reserva de emergência, ou qualquer princípio e regra
     financeira consagrada. Recebe uma dúvida ou contexto do usuário e devolve trechos relevantes
     extraídos de livros de finanças pessoais."""
     _logger.info("📚 [RAG]  Consultando base de conhecimento: '%s'", query[:80])
-    result = _kb.search(query)
+
+    # A busca envolve gerar o embedding da query (HTTP síncrono para o Ollama,
+    # timeout de até 30s) + busca FAISS — roda em thread para não bloquear
+    # o event loop enquanto outros usuários são atendidos.
+    result = await asyncio.to_thread(_kb.search, query)
+
     if "não inicializada" in result:
         _logger.warning("⚠️  [RAG]  Índice FAISS ausente. Adicione livros em data/books/ e chame POST /api/ai/ingest.")
         return result

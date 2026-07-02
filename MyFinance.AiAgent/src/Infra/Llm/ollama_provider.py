@@ -12,8 +12,16 @@ _logger = logging.getLogger("myfinance.agent")
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 _REMOTE_URL = os.getenv("REMOTE_OLLAMA_URL", "http://ollama.futurelab.dcc.ufmg.br")
-_REMOTE_API_KEY = os.getenv("REMOTE_OLLAMA_API_KEY", "pedrobarrosnvk58n6f")
+# Sem fallback hardcoded: credencial vive APENAS no .env. Se ausente, o health
+# check do remoto falha naturalmente e o sistema cai para o Ollama local.
+_REMOTE_API_KEY = os.getenv("REMOTE_OLLAMA_API_KEY", "")
 _LOCAL_URL = os.getenv("LOCAL_OLLAMA_URL", "http://localhost:11434")
+
+if not _REMOTE_API_KEY:
+    _logger.warning(
+        "⚠️  [PROVIDER] REMOTE_OLLAMA_API_KEY não definida no .env — "
+        "o provedor remoto será ignorado (fallback para Ollama local)."
+    )
 
 # ── Modelos por papel e por provedor ──────────────────────────────────────────
 # Remoto não tem gemma4 — usa qwen2.5:7b como substituto para chat.
@@ -47,12 +55,18 @@ def _check_remote() -> bool:
     """Health check contra a API remota, com resultado cacheado por _CACHE_TTL segundos."""
     global _last_ts, _remote_ok
 
+    # Sem credencial não há provedor remoto — evita health check inútil.
+    if not _REMOTE_API_KEY:
+        return False
+
     now = time.monotonic()
     if now - _last_ts < _CACHE_TTL:
         return _remote_ok
 
     try:
-        r = requests.get(f"{_REMOTE_URL}/health", timeout=5)
+        # timeout curto: no pior caso (remoto fora do ar) o custo é 3s por
+        # janela de 60s de cache, não 5s.
+        r = requests.get(f"{_REMOTE_URL}/health", timeout=3)
         _remote_ok = r.status_code == 200
     except Exception:
         _remote_ok = False

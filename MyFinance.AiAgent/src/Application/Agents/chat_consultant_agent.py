@@ -21,6 +21,7 @@ Extensão futura — context_payload:
     response = await invoke_chat(request.prompt, request.jwt_token, request.context_payload)
 """
 
+import asyncio
 import logging
 
 import jwt
@@ -194,7 +195,11 @@ async def invoke_chat(
                     que os captura e retorna {"success": false, "erro": ...}.
     """
     user_id = _extract_user_id(jwt_token)
-    model_name = get_model("chat")
+
+    # get_model e create_agent_graph disparam o health check do provedor
+    # (requests síncrono, até 3s no pior caso) — rodam em thread para não
+    # bloquear o event loop enquanto outros usuários são atendidos.
+    model_name = await asyncio.to_thread(get_model, "chat")
 
     _logger.info(
         "📨 [CHAT] Iniciando | user=%s | modelo=%s | msg=%d chars",
@@ -207,7 +212,7 @@ async def invoke_chat(
     # Cria um novo grafo com as tools de API autenticadas com o JWT do usuário.
     # O histórico de conversa é preservado pelo _memory (singleton no graph.py)
     # usando thread_id como chave de isolamento entre usuários.
-    graph = create_agent_graph(jwt_token)
+    graph = await asyncio.to_thread(create_agent_graph, jwt_token)
 
     # ── Estado inicial ───────────────────────────────────────────────────────
     # iterations=0: o contador começa do zero a cada nova invocação da conversa.

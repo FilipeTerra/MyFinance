@@ -14,6 +14,7 @@ Arquitetura HTTP:
 """
 
 import asyncio
+import logging
 import os
 from datetime import datetime, timedelta, timezone
 import math
@@ -25,6 +26,8 @@ from pydantic import BaseModel, Field
 from typing import Optional
 
 load_dotenv()
+
+_logger = logging.getLogger("myfinance.agent")
 
 _API_BASE_URL = os.getenv("API_URL", "http://localhost:5088/api")
 
@@ -195,12 +198,15 @@ def make_api_tools(jwt_token: str) -> list:
         """
         try:
             r = await _get("/accounts")
-        except httpx.RequestError:
+        except httpx.RequestError as e:
+            _logger.warning("🔌 [API] Backend .NET inacessível ao listar contas: %s", e)
             return _ERR_OFFLINE
 
         if r.status_code == 401:
+            _logger.warning("🔑 [API] JWT rejeitado (401) ao listar contas")
             return _ERR_SESSAO
         if r.status_code != 200:
+            _logger.warning("⚠️  [API] /accounts respondeu status %d", r.status_code)
             return "Não foi possível recuperar as contas do usuário."
 
         contas = r.json() or []
@@ -218,9 +224,19 @@ def make_api_tools(jwt_token: str) -> list:
         )
 
         todas = []
+        falhas = 0
         for grupo in grupos:
             if isinstance(grupo, list):
                 todas.extend(grupo)
+            else:
+                falhas += 1
+
+        _logger.info(
+            "🔎 [API] %d transação(ões) agregadas de %d conta(s)%s",
+            len(todas),
+            len(ids),
+            f" — {falhas} conta(s) falharam" if falhas else "",
+        )
         return todas
 
     # =========================================================================
@@ -233,15 +249,34 @@ def make_api_tools(jwt_token: str) -> list:
         do usuário ou ver quanto dinheiro ele tem disponível. Retorna uma lista de contas e saldos."""
         try:
             r = await _get("/accounts")
-            if r.status_code == 200:
-                contas = r.json()
-                return contas if contas else "O usuário ainda não possui contas cadastradas."
             if r.status_code == 401:
                 return _ERR_SESSAO
-            return f"Erro ao consultar contas (status {r.status_code})."
-        except httpx.RequestError:
+            if r.status_code != 200:
+                return f"Erro ao consultar contas (status {r.status_code})."
+
+            contas = r.json() or []
+            if not contas:
+                return "O usuário ainda não possui contas cadastradas."
+
+            # Saída compacta: só o que o LLM precisa (nome, tipo, saldo e o id
+            # para ações como realizar_aporte_meta). JSON cru inflaria o contexto.
+            linhas = [f"🏦 {len(contas)} conta(s):"]
+            total = 0.0
+            for c in contas:
+                saldo = c.get("currentBalance", 0.0)
+                total += saldo
+                linhas.append(
+                    f"  • {c.get('name', 'Sem nome')} ({c.get('typeName', 'Conta')}): "
+                    f"R$ {saldo:,.2f} | id={c.get('id', '?')}"
+                )
+            linhas.append(f"  💰 Saldo total: R$ {total:,.2f}")
+            _logger.info("🏦 [TOOL:saldos] %d conta(s) | saldo total R$ %.2f", len(contas), total)
+            return "\n".join(linhas)
+        except httpx.RequestError as e:
+            _logger.warning("🔌 [TOOL:saldos] API offline: %s", e)
             return _ERR_OFFLINE
         except Exception as e:
+            _logger.error("❌ [TOOL:saldos] Erro inesperado: %s", e)
             return f"Erro inesperado ao consultar contas: {e}"
 
     @tool
@@ -250,15 +285,35 @@ def make_api_tools(jwt_token: str) -> list:
         (ex: comprar carro, fundo de emergência), ver o progresso, valores alvo e se a meta foi concluída."""
         try:
             r = await _get("/financial-goals")
-            if r.status_code == 200:
-                metas = r.json()
-                return metas if metas else "O usuário ainda não possui metas financeiras cadastradas."
             if r.status_code == 401:
                 return _ERR_SESSAO
-            return f"Erro ao consultar metas (status {r.status_code})."
-        except httpx.RequestError:
+            if r.status_code != 200:
+                return f"Erro ao consultar metas (status {r.status_code})."
+
+            metas = r.json() or []
+            if not metas:
+                return "O usuário ainda não possui metas financeiras cadastradas."
+
+            # Saída compacta: nome, progresso, prazo, status e id (necessário
+            # para realizar_aporte_meta). JSON cru inflaria o contexto.
+            linhas = [f"🎯 {len(metas)} meta(s):"]
+            for m in metas:
+                atual = m.get("currentAmount", 0.0)
+                alvo = m.get("targetAmount", 0.0)
+                pct = m.get("progressPercentage") or (atual / alvo * 100 if alvo else 0.0)
+                status = "✅ concluída" if m.get("isCompleted") else "em andamento"
+                prazo = (m.get("deadline") or "")[:10]
+                linhas.append(
+                    f"  • {m.get('name', '?')}: R$ {atual:,.2f} / R$ {alvo:,.2f} "
+                    f"({pct:.1f}%) | prazo {prazo} | {status} | id={m.get('id', '?')}"
+                )
+            _logger.info("🎯 [TOOL:metas] %d meta(s) retornadas", len(metas))
+            return "\n".join(linhas)
+        except httpx.RequestError as e:
+            _logger.warning("🔌 [TOOL:metas] API offline: %s", e)
             return _ERR_OFFLINE
         except Exception as e:
+            _logger.error("❌ [TOOL:metas] Erro inesperado: %s", e)
             return f"Erro inesperado ao consultar metas: {e}"
 
     # =========================================================================
@@ -316,11 +371,17 @@ def make_api_tools(jwt_token: str) -> list:
             if total > limite:
                 linhas.append(f"\n  ℹ️ Exibindo {limite} de {total} transações no período.")
 
+            _logger.info(
+                "📋 [TOOL:extrato] %d/%d transação(ões) exibidas | período: %s",
+                len(exibidas), total, label,
+            )
             return "\n".join(linhas)
 
-        except httpx.RequestError:
+        except httpx.RequestError as e:
+            _logger.warning("🔌 [TOOL:extrato] API offline: %s", e)
             return _ERR_OFFLINE
         except Exception as e:
+            _logger.error("❌ [TOOL:extrato] Erro inesperado: %s", e)
             return f"Erro inesperado ao consultar transações: {e}"
 
     @tool
@@ -366,11 +427,17 @@ def make_api_tools(jwt_token: str) -> list:
                 pct = (total / total_despesas * 100) if total_despesas > 0 else 0
                 linhas.append(f"  • {cat}: R$ {total:,.2f} ({pct:.1f}%)")
             linhas.append(f"\n  💸 Total gasto: R$ {total_despesas:,.2f}")
+            _logger.info(
+                "📊 [TOOL:gastos] %d categoria(s) | total R$ %.2f | período: %s",
+                len(gastos), total_despesas, label,
+            )
             return "\n".join(linhas)
 
-        except httpx.RequestError:
+        except httpx.RequestError as e:
+            _logger.warning("🔌 [TOOL:gastos] API offline: %s", e)
             return _ERR_OFFLINE
         except Exception as e:
+            _logger.error("❌ [TOOL:gastos] Erro inesperado: %s", e)
             return f"Erro inesperado ao analisar gastos: {e}"
 
     @tool
@@ -451,11 +518,17 @@ def make_api_tools(jwt_token: str) -> list:
 
             linhas.append(f"\n💸 Total no período: R$ {total_geral:,.2f}")
             linhas.append(f"📈 Média mensal: R$ {total_geral / len(meses):,.2f}")
+            _logger.info(
+                "📊 [TOOL:relatorio] filtro='%s' | %d mês(es) | total R$ %.2f",
+                filtro_categoria, len(meses), total_geral,
+            )
             return "\n".join(linhas)
 
-        except httpx.RequestError:
+        except httpx.RequestError as e:
+            _logger.warning("🔌 [TOOL:relatorio] API offline: %s", e)
             return _ERR_OFFLINE
         except Exception as e:
+            _logger.error("❌ [TOOL:relatorio] Erro inesperado: %s", e)
             return f"Erro inesperado ao gerar relatório: {e}"
 
     @tool
@@ -531,11 +604,17 @@ def make_api_tools(jwt_token: str) -> list:
                 f"- **Maior despesa única:** {maior_despesa_desc} — R$ {maior_despesa_valor:,.2f}",
             ]
 
+            _logger.info(
+                "📋 [TOOL:resumo] receitas=R$ %.2f | despesas=R$ %.2f | invest=R$ %.2f | período: %s",
+                total_receitas, total_despesas, total_investimentos, label,
+            )
             return "\n".join(linhas)
 
-        except httpx.RequestError:
+        except httpx.RequestError as e:
+            _logger.warning("🔌 [TOOL:resumo] API offline: %s", e)
             return _ERR_OFFLINE
         except Exception as e:
+            _logger.error("❌ [TOOL:resumo] Erro inesperado: %s", e)
             return f"Erro inesperado ao calcular resumo: {e}"
 
     # =========================================================================
@@ -553,9 +632,14 @@ def make_api_tools(jwt_token: str) -> list:
             "targetAmount": valor_alvo,
             "deadline": f"{data_limite}T00:00:00",
         }
+        _logger.info(
+            "✍️  [TOOL:criar_meta] Solicitação: nome='%s' | alvo=R$ %.2f | prazo=%s",
+            nome, valor_alvo, data_limite,
+        )
         try:
             r = await _post("/financial-goals", payload)
             if r.status_code in (200, 201):
+                _logger.info("✅ [TOOL:criar_meta] Meta '%s' criada com sucesso", nome)
                 return (
                     f"✅ Meta criada com sucesso!\n"
                     f"  • Nome: {nome}\n"
@@ -563,22 +647,32 @@ def make_api_tools(jwt_token: str) -> list:
                     f"  • Prazo: {data_limite}"
                 )
             if r.status_code == 401:
+                _logger.warning("🔑 [TOOL:criar_meta] JWT rejeitado (401)")
                 return _ERR_SESSAO
             if r.status_code == 400:
+                _logger.warning("⚠️  [TOOL:criar_meta] Payload rejeitado (400): %s", r.text[:200])
                 return f"Dados inválidos para criar a meta: {r.text}"
+            _logger.warning("⚠️  [TOOL:criar_meta] Status inesperado: %d", r.status_code)
             return f"Erro ao criar meta (status {r.status_code})."
-        except httpx.RequestError:
+        except httpx.RequestError as e:
+            _logger.warning("🔌 [TOOL:criar_meta] API offline: %s", e)
             return _ERR_OFFLINE
         except Exception as e:
+            _logger.error("❌ [TOOL:criar_meta] Erro inesperado: %s", e)
             return f"Erro inesperado ao criar meta: {e}"
 
     @tool
     async def realizar_aporte_meta(valor: float, goal_id: str, account_id: str) -> str:
         """Use esta ferramenta para investir ou guardar dinheiro em uma meta financeira específica.
         Recebe o valor, o ID da meta e o ID da conta de origem. Retorna sucesso ou erro."""
+        _logger.info(
+            "✍️  [TOOL:aporte] Solicitação: R$ %.2f | meta=%s | conta=%s",
+            valor, goal_id[:8], account_id[:8],
+        )
         try:
             r_cat = await _get("/categories")
             if r_cat.status_code != 200 or not r_cat.json():
+                _logger.warning("⚠️  [TOOL:aporte] Nenhuma categoria disponível — aporte abortado")
                 return "Erro: Nenhuma categoria encontrada. Crie pelo menos uma categoria antes de realizar um aporte."
 
             category_id = r_cat.json()[0]["id"]
@@ -593,15 +687,21 @@ def make_api_tools(jwt_token: str) -> list:
             }
             r = await _post("/transactions", payload)
             if r.status_code in (200, 201):
+                _logger.info("✅ [TOOL:aporte] R$ %.2f aportados na meta %s", valor, goal_id[:8])
                 return f"✅ Aporte de R$ {valor:,.2f} realizado com sucesso na meta!"
             if r.status_code == 401:
+                _logger.warning("🔑 [TOOL:aporte] JWT rejeitado (401)")
                 return _ERR_SESSAO
             if r.status_code == 400:
+                _logger.warning("⚠️  [TOOL:aporte] Payload rejeitado (400): %s", r.text[:200])
                 return f"Dados inválidos: {r.text}"
+            _logger.warning("⚠️  [TOOL:aporte] Status inesperado: %d", r.status_code)
             return f"Erro ao realizar aporte (status {r.status_code})."
-        except httpx.RequestError:
+        except httpx.RequestError as e:
+            _logger.warning("🔌 [TOOL:aporte] API offline: %s", e)
             return _ERR_OFFLINE
         except Exception as e:
+            _logger.error("❌ [TOOL:aporte] Erro inesperado: %s", e)
             return f"Erro inesperado ao realizar aporte: {e}"
         
     @tool(args_schema=SimularEstresseOrcamentoInput)
@@ -637,6 +737,11 @@ def make_api_tools(jwt_token: str) -> list:
             elif novo_comprometimento_pct > 80:
                 status_risco = "ALTO RISCO - Restará pouca margem de segurança"
 
+            _logger.info(
+                "🧪 [TOOL:estresse] '%s' R$ %.2f/mês → %s (comprometimento %.1f%% → %.1f%%)",
+                descricao_nova_despesa, valor_mensal, status_risco.split(" -")[0],
+                comprometimento_atual_pct, novo_comprometimento_pct,
+            )
             return {
                 "analise": f"Impacto de assumir: {descricao_nova_despesa}",
                 "cenario_atual": {
@@ -655,6 +760,7 @@ def make_api_tools(jwt_token: str) -> list:
             }
             
         except Exception as e:
+            _logger.error("❌ [TOOL:estresse] Erro inesperado: %s", e)
             return {"erro": f"Falha ao simular cenário: {str(e)}"}
         
     @tool(args_schema=SimularMetaIdealInput)
@@ -678,6 +784,10 @@ def make_api_tools(jwt_token: str) -> list:
 
             if saldo_livre <= 0:
                 # Mantém a lógica de corte de despesas semântica que já fizemos
+                _logger.info(
+                    "🧮 [TOOL:meta_ideal] '%s' → orçamento negativo (rombo R$ %.2f) — sugerindo cortes",
+                    objetivo_principal, abs(saldo_livre),
+                )
                 maiores_despesas = _listar_maiores_despesas(transacoes, limite=8)
                 return {
                     "analise": "O orçamento atual está negativo ou zerado. Impossível criar meta.",
@@ -740,6 +850,10 @@ def make_api_tools(jwt_token: str) -> list:
                 status = "SUGESTÃO DIRECIONADA"
                 instrucao = "O utilizador estava indeciso. Apresente o valor alvo sugerido e o prazo como um plano de ação ideal e pergunte se ele concorda."
 
+            _logger.info(
+                "🧮 [TOOL:meta_ideal] '%s' → %s | alvo=R$ %.2f | aporte=R$ %.2f/mês | %d meses",
+                objetivo_principal, status, valor_alvo, aporte_sugerido, prazo_meses,
+            )
             return {
                 "objetivo": objetivo_principal,
                 "status_simulacao": status,
@@ -753,8 +867,9 @@ def make_api_tools(jwt_token: str) -> list:
                 },
                 "instrucao_ao_agente": instrucao
             }
-            
+
         except Exception as e:
+            _logger.error("❌ [TOOL:meta_ideal] Erro inesperado: %s", e)
             return {"erro": f"Falha ao simular meta ideal: {str(e)}"}
 
     return [
