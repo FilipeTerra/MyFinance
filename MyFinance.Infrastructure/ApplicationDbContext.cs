@@ -13,6 +13,7 @@ namespace MyFinance.Infrastructure
       public DbSet<Transaction> Transactions { get; set; }
       public DbSet<Category> Categories { get; set; }
       public DbSet<FinancialGoal> FinancialGoals { get; set; }
+      public DbSet<Investimento> Investimentos { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -79,6 +80,23 @@ namespace MyFinance.Infrastructure
                         entity.HasOne<User>()
                                 .WithMany()
                                 .HasForeignKey(fg => fg.UserId)
+                                .OnDelete(DeleteBehavior.Cascade);
+                  });
+
+                  modelBuilder.Entity<Investimento>(entity =>
+                  {
+                        entity.ToTable("Investimentos");
+                        entity.HasKey(inv => inv.Id);
+                        entity.Property(inv => inv.ValorInicial).HasColumnType("decimal(18,2)");
+                        entity.Property(inv => inv.ValorAtual).HasColumnType("decimal(18,2)");
+                        entity.Property(inv => inv.Tipo)
+                              .HasConversion(
+                                  v => v.ToString(),
+                                  v => (InvestmentType)Enum.Parse(typeof(InvestmentType), v));
+                        // Relacionamento 1-N: User -> Investimentos
+                        entity.HasOne<User>()
+                                .WithMany()
+                                .HasForeignKey(inv => inv.UserId)
                                 .OnDelete(DeleteBehavior.Cascade);
                   });
             }

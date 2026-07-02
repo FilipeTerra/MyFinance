@@ -75,6 +75,8 @@ builder.Services.AddHttpClient<IAiIntegrationService, AiIntegrationService>(clie
 });
 builder.Services.AddScoped<IFinancialGoalRepository, FinancialGoalRepository>();
 builder.Services.AddScoped<IFinancialGoalService, FinancialGoalService>();
+builder.Services.AddScoped<IInvestimentoRepository, InvestimentoRepository>();
+builder.Services.AddScoped<IInvestimentoService, InvestimentoService>();
 var app = builder.Build();
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
