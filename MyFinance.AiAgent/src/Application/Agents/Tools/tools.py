@@ -11,6 +11,7 @@ O nó de exibição (response node) é responsável por formatar para o usuário
 """
 from pydantic import BaseModel, Field
 from langchain_core.tools import tool
+import requests
 
 
 # ===========================================================================
@@ -251,47 +252,52 @@ def buscar_taxa_selic() -> dict:
     """
     Retorna as taxas de referência da economia brasileira: SELIC (taxa básica de juros)
     e IPCA (inflação oficial), bem como os juros reais (SELIC descontada a inflação).
-
-    Use esta ferramenta ANTES de qualquer simulação de investimento quando o usuário:
-      - Mencionar "CDI", "SELIC", "taxa básica" ou "juros do governo".
-      - Perguntar "qual é a taxa de juros atual?" ou "qual a inflação hoje?".
-      - Pedir para simular rendimentos "no CDI", "na SELIC" ou "acima da inflação".
-      - Perguntar se vale a pena investir em renda fixa no cenário atual.
-
-    Os valores retornados devem ser usados como parâmetro `taxa_juros_anual`
-    em chamadas subsequentes a `simular_investimento` ou como base de comparação
-    para avaliar rentabilidade de outros produtos financeiros.
-
-    IMPORTANTE: Esta implementação retorna dados simulados para fins de desenvolvimento.
-    A integração real deve consumir os endpoints do Banco Central do Brasil:
-      - SELIC Meta:  GET https://api.bcb.gov.br/dados/serie/bcdata.sgs.432/dados/ultimos/1?formato=json
-      - IPCA Acum.:  GET https://api.bcb.gov.br/dados/serie/bcdata.sgs.13522/dados/ultimos/1?formato=json
-
-    Returns:
-        dict com as chaves:
-          - selic_anual_pct (float):     Taxa SELIC meta ao ano em % (ex: 13.25).
-          - selic_mensal_pct (float):    Taxa SELIC equivalente ao mês em %.
-          - ipca_anual_pct (float):      IPCA acumulado 12 meses em %.
-          - ipca_mensal_pct (float):     IPCA equivalente ao mês em %.
-          - juros_real_anual_pct (float): SELIC descontada pelo IPCA (juros reais) em %.
-          - cdi_anual_pct (float):       Taxa CDI (próxima à SELIC, ~0,1pp abaixo) em %.
-          - data_referencia (str):       Mês/Ano de referência dos dados no formato "YYYY-MM".
-          - fonte (str):                 Origem dos dados.
-          - aviso (str):                 Indicação de que os dados são simulados.
-
-    Example:
-        Input:  (sem parâmetros)
-        Output: {"selic_anual_pct": 13.25, "ipca_anual_pct": 5.48, "juros_real_anual_pct": 7.38, ...}
+    
+    Use esta ferramenta ANTES de qualquer simulação de investimento ou análise de 
+    cenário econômico que dependa de juros ou inflação.
     """
-    selic_anual = 13.25   # % a.a. — valor simulado (Copom Jan/2025)
-    ipca_anual = 5.48     # % a.a. — IPCA acumulado 12 meses (simulado)
+    # 1. Valores de fallback (acionados se a API do BCB falhar)
+    selic_anual = 14.25
+    ipca_anual = 4.72
+    fonte = "Banco Central do Brasil (Fallback Estático)"
+    data_ref_selic = "2025-01 (Fallback)"
+    data_ref_ipca = "2025-01 (Fallback)"
 
-    # Converte taxas anuais para mensais equivalentes (capitalização composta)
+    try:
+        # Busca Selic Meta (Série 432)
+        resp_selic = requests.get(
+            "https://api.bcb.gov.br/dados/serie/bcdata.sgs.432/dados/ultimos/1?formato=json",
+            timeout=5
+        )
+        resp_selic.raise_for_status()
+        dados_selic = resp_selic.json()[0]
+        selic_anual = float(dados_selic["valor"])
+        data_ref_selic = dados_selic["data"]
+
+        # Busca IPCA Acumulado 12 meses (Série 13522)
+        resp_ipca = requests.get(
+            "https://api.bcb.gov.br/dados/serie/bcdata.sgs.13522/dados/ultimos/1?formato=json",
+            timeout=5
+        )
+        resp_ipca.raise_for_status()
+        dados_ipca = resp_ipca.json()[0]
+        ipca_anual = float(dados_ipca["valor"])
+        data_ref_ipca = dados_ipca["data"]
+
+        fonte = "Banco Central do Brasil (API SGS em tempo real)"
+
+    except Exception as e:
+        # Se a API cair ou demorar mais de 5s, captura o erro e mantém as variáveis de fallback
+        print(f"⚠️ [BCB API] Falha ao buscar dados em tempo real. Usando fallback. Erro: {e}")
+
+    # 2. Cálculos derivados (executados independentemente da origem dos dados)
+    
+    # Conversão de taxa anual para mensal (capitalização composta)
+    # Fórmula: i_m = (1 + i_a)^(1/12) - 1
     selic_mensal = ((1 + selic_anual / 100) ** (1 / 12) - 1) * 100
     ipca_mensal = ((1 + ipca_anual / 100) ** (1 / 12) - 1) * 100
 
-    # Juros reais: taxa acima da inflação pelo modelo de Fisher
-    # (1 + juro_nominal) / (1 + inflação) - 1
+    # Juros reais via Equação de Fisher
     juros_real = ((1 + selic_anual / 100) / (1 + ipca_anual / 100) - 1) * 100
 
     # CDI: convencionalmente ~0,10pp abaixo da SELIC Meta
@@ -304,12 +310,9 @@ def buscar_taxa_selic() -> dict:
         "ipca_mensal_pct": round(ipca_mensal, 4),
         "juros_real_anual_pct": round(juros_real, 4),
         "cdi_anual_pct": round(cdi_anual, 2),
-        "data_referencia": "2025-01",
-        "fonte": "Banco Central do Brasil (simulado — integrar api.bcb.gov.br)",
-        "aviso": (
-            "DADOS SIMULADOS para desenvolvimento. "
-            "Consulte api.bcb.gov.br/dados/serie/bcdata.sgs.432 para dados reais."
-        ),
+        "data_referencia_selic": data_ref_selic,
+        "data_referencia_ipca": data_ref_ipca,
+        "fonte": fonte
     }
 
 

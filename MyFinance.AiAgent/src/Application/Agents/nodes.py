@@ -24,6 +24,7 @@ from src.Application.Agents.state import AgentState, ContextData, MAX_ITERATIONS
 from src.Application.Agents.Tools.tools import MATH_TOOLS
 from src.Application.Agents.Tools.financial_tools import consultar_teoria_financeira
 from src.Application.Agents.Tools.api_tools import make_api_tools
+from src.Application.Agents.Tools.investment_tools import QUANT_TOOLS
 from src.Infra.Llm.ollama_provider import get_ollama_config, get_model
 
 _logger = logging.getLogger("myfinance.agent")
@@ -82,6 +83,22 @@ _SYSTEM_PROMPT = (
     "    'junho' (mês corrente sem ano) → data_inicio='2026-06-01', data_fim='2026-06-30'. "
     "    Se o usuário não mencionar nenhum período, omita data_inicio e data_fim "
     "    (as ferramentas usam os últimos 30 dias por padrão). "
+    
+    "14. Para analisar ações da bolsa brasileira (B3), avaliar valuation ou "
+        "discutir se uma empresa está barata/cara, use SEMPRE a ferramenta "
+        "consultar_indicadores_b3. Se o usuário falar o nome de uma empresa "
+        "sem informar o ticker, identifique o ticker correspondente de 4 a 6 letras "
+        "antes de chamar a ferramenta."
+        
+    "15. FLUXO DE CRIAÇÃO DE METAS (HUMAN-IN-THE-LOOP): "
+        "Quando o usuário quiser criar uma meta, se organizar, ou pedir conselhos sobre o que fazer com a sobra do salário, "
+        "SIGA ESTRITAMENTE ESTES 3 PASSOS:\n"
+        "   Passo 1: Chame a ferramenta `simular_meta_ideal`. Leia a proposta matemática gerada por ela.\n"
+        "   Passo 2: Apresente a proposta ao usuário (mostrando o valor alvo, o aporte sugerido e o prazo). "
+        "PAUSE O SEU RACIOCÍNIO e pergunte explicitamente: 'Posso criar essa meta no sistema para você agora?'. "
+        "NÃO chame a ferramenta de criação ainda.\n"
+        "   Passo 3: Apenas se o usuário responder positivamente (ex: 'Sim', 'Pode criar'), "
+        "chame a ferramenta `criar_meta_financeira` usando os valores exatos que você simulou no Passo 1."
 
     "Nunca invente dados nem faça cálculos mentais. "
     "Nunca mencione nomes de ferramentas ou detalhes técnicos ao usuário."
@@ -234,7 +251,9 @@ def make_nodes(jwt_token: str) -> tuple:
     # ── Lista unificada de ferramentas ───────────────────────────────────────
     # Ordem: matemática pura → conhecimento RAG → API .NET (autenticada)
     api_tools = make_api_tools(jwt_token)
-    all_tools = MATH_TOOLS + [consultar_teoria_financeira] + api_tools
+    all_tools = [
+        t for t in MATH_TOOLS + QUANT_TOOLS + [consultar_teoria_financeira] + api_tools
+    ]
 
     _logger.info(
         "⚙️  [NODES] %d ferramentas registradas: %s",
