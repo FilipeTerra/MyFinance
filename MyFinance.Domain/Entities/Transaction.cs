@@ -43,7 +43,7 @@ public class Transaction
     // --- Relacionamento com FinancialGoal (opcional) ---
     /// <summary>
     /// Chave Estrangeira (FK) opcional para a tabela FinancialGoals.
-    /// Preenchida apenas quando o tipo for Investment.
+    /// Preenchida apenas quando o tipo for Investment (aporte em meta).
     /// </summary>
     public Guid? FinancialGoalId { get; private set; }
 
@@ -52,7 +52,20 @@ public class Transaction
     /// </summary>
     public FinancialGoal? FinancialGoal { get; private set; }
 
-    public Transaction(string description, decimal amount, TransactionType type, DateTime date, Guid accountId, Guid categoryId, Guid? financialGoalId = null)
+    // --- Relacionamento com Investimento (opcional) ---
+    /// <summary>
+    /// Chave Estrangeira (FK) opcional para a tabela Investimentos.
+    /// Preenchida quando a transação é a origem (aporte) de um investimento —
+    /// é o que dá ao investimento uma origem concreta (conta bancária debitada).
+    /// </summary>
+    public Guid? InvestimentoId { get; private set; }
+
+    /// <summary>
+    /// Propriedade de Navegação para o EF Core.
+    /// </summary>
+    public Investimento? Investimento { get; private set; }
+
+    public Transaction(string description, decimal amount, TransactionType type, DateTime date, Guid accountId, Guid categoryId, Guid? financialGoalId = null, Guid? investimentoId = null)
     {
         Id = Guid.NewGuid();
         Description = description;
@@ -62,5 +75,6 @@ public class Transaction
         AccountId = accountId;
         CategoryId = categoryId;
         FinancialGoalId = financialGoalId;
+        InvestimentoId = investimentoId;
     }
 }

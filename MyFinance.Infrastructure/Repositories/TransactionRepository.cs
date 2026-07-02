@@ -115,6 +115,14 @@ public class TransactionRepository : ITransactionRepository
             .ToListAsync();
     }
 
+    public async Task<IEnumerable<Transaction>> GetByInvestimentoIdAsync(Guid investimentoId)
+    {
+        return await _context.Transactions
+            .Where(t => t.InvestimentoId == investimentoId)
+            .Include(t => t.Account)
+            .ToListAsync();
+    }
+
     public async Task AddAsync(Transaction transaction)
     {
         await _context.Transactions.AddAsync(transaction);

@@ -22,25 +22,28 @@ namespace MyFinance.Infrastructure.Repositories
         {
             return await _context.Investimentos
                 .Where(investimento => investimento.UserId == userId)
+                .OrderByDescending(investimento => investimento.DataCriacao)
                 .ToListAsync();
         }
 
         public async Task AddAsync(Investimento investimento)
         {
             await _context.Investimentos.AddAsync(investimento);
-            await _context.SaveChangesAsync();
         }
 
-        public async Task UpdateAsync(Investimento investimento)
+        public void Update(Investimento investimento)
         {
             _context.Investimentos.Update(investimento);
-            await _context.SaveChangesAsync();
         }
 
-        public async Task DeleteAsync(Investimento investimento)
+        public void Delete(Investimento investimento)
         {
             _context.Investimentos.Remove(investimento);
-            await _context.SaveChangesAsync();
+        }
+
+        public async Task<bool> SaveChangesAsync()
+        {
+            return await _context.SaveChangesAsync() > 0;
         }
     }
 }

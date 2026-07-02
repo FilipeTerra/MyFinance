@@ -1,0 +1,300 @@
+/* ── Trend tokens ──────────────────────────────────────────────────────── */
+.inv-card--up {
+    --t-color:  #10b981;
+    --t-bg:     #f0fdf4;
+    --t-badge:  #d1fae5;
+    --t-fg:     #065f46;
+}
+.inv-card--down {
+    --t-color:  #ef4444;
+    --t-bg:     #fef2f2;
+    --t-badge:  #fee2e2;
+    --t-fg:     #991b1b;
+}
+.inv-card--flat {
+    --t-color:  #64748b;
+    --t-bg:     #f8fafc;
+    --t-badge:  #e2e8f0;
+    --t-fg:     #475569;
+}
+
+/* ── Card base ─────────────────────────────────────────────────────────── */
+.inv-card {
+    position: relative;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 1.5rem 1.75rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.1rem;
+    overflow: hidden;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+    transition:
+        transform 0.22s ease,
+        box-shadow 0.22s ease,
+        border-color 0.22s ease;
+}
+
+/* Top accent strip — cor da classe do ativo */
+.inv-card::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 3px;
+    background: var(--type-color, #3b82f6);
+    border-radius: 16px 16px 0 0;
+}
+
+.inv-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.11);
+    border-color: var(--type-color, #3b82f6);
+}
+
+/* ── Header ────────────────────────────────────────────────────────────── */
+.inv-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding-top: 0.25rem;
+}
+
+.inv-card-heading {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-width: 0;
+}
+
+.inv-type-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    align-self: flex-start;
+    background: color-mix(in srgb, var(--type-color) 12%, #ffffff);
+    color: var(--type-color, #3b82f6);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 0.22rem 0.55rem;
+    border-radius: 999px;
+    white-space: nowrap;
+}
+
+.inv-type-badge-icon {
+    font-size: 0.8rem;
+    line-height: 1;
+}
+
+.inv-card-name {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #1e293b;
+    line-height: 1.35;
+    word-break: break-word;
+}
+
+/* ── Value block ───────────────────────────────────────────────────────── */
+.inv-value-block {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.inv-value-label {
+    font-size: 0.68rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #94a3b8;
+}
+
+.inv-value-current {
+    font-size: 1.9rem;
+    font-weight: 800;
+    color: #1e293b;
+    line-height: 1;
+    letter-spacing: -0.02em;
+}
+
+.inv-trend {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    align-self: flex-start;
+    font-size: 0.82rem;
+    font-weight: 700;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    background: var(--t-badge);
+    color: var(--t-fg);
+    margin-top: 0.2rem;
+}
+
+.inv-trend-arrow {
+    font-size: 0.7rem;
+    line-height: 1;
+}
+
+.inv-trend-abs {
+    font-weight: 600;
+    opacity: 0.8;
+}
+
+/* ── Stats row ─────────────────────────────────────────────────────────── */
+.inv-stats-row {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    background: #f8fafc;
+    border-radius: 10px;
+    padding: 0.875rem 1rem;
+    border: 1px solid #f1f5f9;
+}
+
+.inv-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.inv-stat--align-end {
+    align-items: flex-end;
+}
+
+.inv-stat-label {
+    font-size: 0.68rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #94a3b8;
+}
+
+.inv-stat-value {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.inv-stat-value--up   { color: #10b981; }
+.inv-stat-value--down { color: #ef4444; }
+.inv-stat-value--flat { color: #64748b; }
+
+.inv-stat-divider {
+    width: 1px;
+    height: 2rem;
+    background: #e2e8f0;
+    margin: 0 0.75rem;
+}
+
+/* ── Footer ────────────────────────────────────────────────────────────── */
+.inv-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 0.25rem;
+    border-top: 1px solid #f1f5f9;
+}
+
+.inv-footer-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #cbd5e1;
+}
+
+.inv-footer-value {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #64748b;
+}
+
+/* ── Actions ───────────────────────────────────────────────────────────── */
+.inv-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.inv-update-btn {
+    flex: 1;
+    padding: 0.6rem 1rem;
+    background: var(--type-color, #3b82f6);
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s ease, transform 0.1s ease;
+}
+.inv-update-btn:hover { opacity: 0.85; transform: translateY(-1px); }
+.inv-update-btn:active { transform: translateY(0); }
+
+.inv-delete-btn {
+    padding: 0.6rem 0.875rem;
+    background: transparent;
+    color: #ef4444;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+.inv-delete-btn:hover { background: #fee2e2; border-color: #f87171; }
+.inv-delete-btn:active { background: #fecaca; }
+
+/* ── Delete confirmation ───────────────────────────────────────────────── */
+.inv-delete-confirm {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.inv-delete-confirm-text {
+    flex: 1;
+    font-size: 0.78rem;
+    color: #ef4444;
+    font-weight: 600;
+    min-width: 0;
+}
+
+.inv-delete-confirm-no {
+    padding: 0.55rem 0.875rem;
+    background: transparent;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.2s ease;
+}
+.inv-delete-confirm-no:hover:not(:disabled) { background: #f8fafc; }
+
+.inv-delete-confirm-yes {
+    padding: 0.55rem 0.875rem;
+    background: #ef4444;
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: opacity 0.2s ease;
+}
+.inv-delete-confirm-yes:hover:not(:disabled) { opacity: 0.85; }
+
+.inv-delete-confirm-yes:disabled,
+.inv-delete-confirm-no:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}

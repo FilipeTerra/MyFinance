@@ -1,0 +1,205 @@
+/* ── Overlay ───────────────────────────────────────────────────────────── */
+.inv-overlay {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(2px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    animation: invFadeIn 0.18s ease-out;
+}
+
+/* ── Card ──────────────────────────────────────────────────────────────── */
+.inv-modal {
+    background: #ffffff;
+    padding: 2rem;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 480px;
+    margin: 1rem;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.18);
+    animation: invScaleIn 0.18s ease-out;
+}
+
+/* ── Header ────────────────────────────────────────────────────────────── */
+.inv-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.inv-modal-title {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.inv-modal-close {
+    background: none;
+    border: none;
+    font-size: 1.6rem;
+    line-height: 1;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 0 0.25rem;
+    transition: color 0.15s;
+}
+.inv-modal-close:hover { color: #1e293b; }
+
+/* ── Edit context banner ───────────────────────────────────────────────── */
+.inv-edit-context {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    background: #f8fafc;
+    border: 1px solid #f1f5f9;
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1.25rem;
+}
+
+.inv-edit-context-name {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.inv-edit-context-sub {
+    font-size: 0.78rem;
+    color: #64748b;
+    font-weight: 500;
+}
+
+/* ── Form groups ───────────────────────────────────────────────────────── */
+.inv-form-group {
+    margin-bottom: 1.1rem;
+}
+
+.inv-form-group label {
+    display: block;
+    margin-bottom: 0.45rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #64748b;
+}
+
+.inv-form-group input {
+    width: 100%;
+    padding: 0.7rem 0.8rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    background-color: #f8fafc;
+    color: #334155;
+    font-size: 1rem;
+    box-sizing: border-box;
+}
+
+.inv-form-group input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+/* ── Type selector (chips) ─────────────────────────────────────────────── */
+.inv-type-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.inv-type-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.5rem 0.8rem;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #64748b;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s, background 0.15s, transform 0.1s;
+}
+
+.inv-type-chip:hover:not(:disabled) {
+    border-color: #cbd5e1;
+    transform: translateY(-1px);
+}
+
+.inv-type-chip--active {
+    background: color-mix(in srgb, var(--chip-color) 12%, #ffffff);
+    border-color: var(--chip-color);
+    color: var(--chip-color);
+}
+
+.inv-type-chip-icon {
+    font-size: 0.95rem;
+    line-height: 1;
+}
+
+.inv-type-chip:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* ── Balance hint (conta de origem) ────────────────────────────────────── */
+.inv-balance-hint {
+    font-size: 0.78rem;
+    margin: 0.3rem 0 0;
+    color: #64748b;
+}
+.inv-balance-hint.insufficient { color: #ef4444; font-weight: 600; }
+
+/* ── Error message ─────────────────────────────────────────────────────── */
+.inv-error {
+    display: block;
+    color: #ef4444;
+    font-size: 0.82rem;
+    margin-top: 0.25rem;
+    margin-bottom: 0.5rem;
+}
+
+/* ── Actions ───────────────────────────────────────────────────────────── */
+.inv-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-top: 1.75rem;
+}
+
+.inv-btn-cancel {
+    padding: 0.6rem 1.3rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    background: #f8fafc;
+    color: #475569;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.inv-btn-cancel:hover:not(:disabled) { background: #f1f5f9; }
+
+.inv-btn-submit {
+    padding: 0.6rem 1.3rem;
+    border: none;
+    border-radius: 6px;
+    background: #3b82f6;
+    color: #ffffff;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, opacity 0.15s;
+}
+.inv-btn-submit:hover:not(:disabled) { background: #2563eb; }
+.inv-btn-submit:disabled,
+.inv-btn-cancel:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* ── Animations ────────────────────────────────────────────────────────── */
+@keyframes invFadeIn  { from { opacity: 0; }                          to { opacity: 1; } }
+@keyframes invScaleIn { from { opacity: 0; transform: scale(0.95); }  to { opacity: 1; transform: scale(1); } }

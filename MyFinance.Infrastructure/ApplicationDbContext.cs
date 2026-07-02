@@ -69,6 +69,11 @@ namespace MyFinance.Infrastructure
                       .WithMany()
                       .HasForeignKey(t => t.FinancialGoalId)
                       .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasOne(t => t.Investimento)
+                      .WithMany()
+                      .HasForeignKey(t => t.InvestimentoId)
+                      .OnDelete(DeleteBehavior.SetNull);
             });
                   modelBuilder.Entity<FinancialGoal>(entity =>
                   {

@@ -11,6 +11,7 @@ import type { CategoryRequestDto } from '../types/CategoryRequestDto';
 import type { UpdateAccountRequestDto } from '../types/UpdateAccountRequestDto';
 import type { AiTransactionResponseDto, SaveBatchTransactionRequestDto } from '../types/AiIntegration';
 import type { FinancialGoalResponseDto } from '../types/FinancialGoalResponseDto';
+import type { InvestimentoResponseDto, CreateInvestimentoRequestDto } from '../types/InvestimentoResponseDto';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -143,12 +144,31 @@ const financialGoalService = {
     },
 };
 
+const investimentoService = {
+    getAll: async (): Promise<InvestimentoResponseDto[]> => {
+        const response = await apiClient.get<InvestimentoResponseDto[]>('/investimentos');
+        return response.data;
+    },
+    create: async (data: CreateInvestimentoRequestDto): Promise<InvestimentoResponseDto> => {
+        const response = await apiClient.post<InvestimentoResponseDto>('/investimentos', data);
+        return response.data;
+    },
+    updateValorAtual: async (id: string, valorAtual: number): Promise<InvestimentoResponseDto> => {
+        const response = await apiClient.put<InvestimentoResponseDto>(`/investimentos/${id}/valor-atual`, { valorAtual });
+        return response.data;
+    },
+    delete: (id: string) => {
+        return apiClient.delete<void>(`/investimentos/${id}`);
+    },
+};
+
 export {
     authService,
     accountService,
     categoryService,
     transactionService,
     financialGoalService,
+    investimentoService,
     tokenManager,
     apiClient as api,
     AxiosError

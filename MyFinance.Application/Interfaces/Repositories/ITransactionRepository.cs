@@ -57,4 +57,6 @@ public interface ITransactionRepository
     Task AddRangeAsync(IEnumerable<Transaction> transactions);
 
     Task<IEnumerable<Transaction>> GetByFinancialGoalIdAsync(Guid goalId);
+
+    Task<IEnumerable<Transaction>> GetByInvestimentoIdAsync(Guid investimentoId);
 }
