@@ -1,11 +1,9 @@
-﻿namespace MyFinance.Domain.Entities;
+namespace MyFinance.Application.Dtos;
 
-public class User
+public class UserProfileResponseDto
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
-    public string PasswordHash { get; set; } = string.Empty;
-    public DateTime CreatedAt { get; set; }
     public decimal? MonthlyIncome { get; set; }
 }

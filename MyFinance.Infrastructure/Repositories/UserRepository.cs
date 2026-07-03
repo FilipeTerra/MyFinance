@@ -22,15 +22,24 @@ public class UserRepository : IUserRepository
 
     public async Task<bool> CheckEmailExistsAsync(string email)
     {
-        // Verifica eficientemente se algum usuário com o email existe
+        // Verifica eficientemente se algum usuï¿½rio com o email existe
         return await _context.Users.AnyAsync(u => u.Email.ToLower() == email.ToLower());
+    }
+
+    public async Task<User?> GetUserByIdAsync(Guid id)
+    {
+        return await _context.Users.FindAsync(id);
     }
 
     public async Task AddUserAsync(User user)
     {
-        // Adiciona o novo usuário ao contexto
         await _context.Users.AddAsync(user);
-        // Salva as mudanças no banco de dados
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task UpdateUserAsync(User user)
+    {
+        _context.Users.Update(user);
         await _context.SaveChangesAsync();
     }
 }

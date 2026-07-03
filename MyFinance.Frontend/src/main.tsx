@@ -11,6 +11,7 @@ import { RegisterPage } from './pages/RegisterPage';
 import { HomePage } from "./pages/HomePage";
 import { ChatPage } from "./pages/ChatPage";
 import { DashboardPage } from "./pages/DashboardPage";
+import { ProfilePage } from "./pages/ProfilePage";
 import { ProtectedRoute } from "./components/Auth/ProtectedRoute";
 
 const rootElement = document.getElementById('root');
@@ -31,6 +32,7 @@ root.render(
                     <Route path="/home" element={<HomePage />} />
                     <Route path="/chat" element={<ChatPage />} />
                     <Route path="/dashboard" element={<DashboardPage />} />
+                    <Route path="/profile" element={<ProfilePage />} />
 
                     {/* Redireciona a raiz "/" para a home se estiver logado */}
                     <Route path="/" element={<Navigate to="/home" replace />} />

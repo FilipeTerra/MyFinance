@@ -61,6 +61,7 @@ builder.Services.AddAuthentication(options =>
 
 // Registrar serviáos e repositários para Injeção de Dependáncia
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IAccountRepository, AccountRepository>();
 builder.Services.AddScoped<IAccountService, AccountService>();

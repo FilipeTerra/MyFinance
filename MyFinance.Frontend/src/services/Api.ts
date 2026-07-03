@@ -12,6 +12,7 @@ import type { UpdateAccountRequestDto } from '../types/UpdateAccountRequestDto';
 import type { AiTransactionResponseDto, SaveBatchTransactionRequestDto } from '../types/AiIntegration';
 import type { FinancialGoalResponseDto } from '../types/FinancialGoalResponseDto';
 import type { InvestimentoResponseDto, CreateInvestimentoRequestDto } from '../types/InvestimentoResponseDto';
+import type { UserProfileResponseDto, UpdateUserProfileRequestDto } from '../types/UserProfileDto';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -162,6 +163,17 @@ const investimentoService = {
     },
 };
 
+const profileService = {
+    getProfile: async (): Promise<UserProfileResponseDto> => {
+        const response = await apiClient.get<UserProfileResponseDto>('/profile');
+        return response.data;
+    },
+    updateProfile: async (data: UpdateUserProfileRequestDto): Promise<UserProfileResponseDto> => {
+        const response = await apiClient.put<UserProfileResponseDto>('/profile', data);
+        return response.data;
+    },
+};
+
 export {
     authService,
     accountService,
@@ -169,6 +181,7 @@ export {
     transactionService,
     financialGoalService,
     investimentoService,
+    profileService,
     tokenManager,
     apiClient as api,
     AxiosError
