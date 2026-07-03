@@ -146,21 +146,27 @@
 }
 
 /* Usuário — direita, gradiente azul */
+/* pre-wrap: mensagem do usuário é texto puro (sem markdown), então quebras
+   de linha literais precisam ser preservadas visualmente. */
 .bubble-user {
     background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
     color: #ffffff;
     border-radius: 18px 18px 4px 18px;
     box-shadow: 0 2px 10px rgba(59, 130, 246, 0.32);
+    white-space: pre-wrap;
 }
 
 /* FinAl — esquerda, branco com sombra */
+/* SEM pre-wrap aqui: o conteúdo é HTML renderizado pelo ReactMarkdown (p, li,
+   ul...), que já controla seu próprio espaçamento via margin. pre-wrap nesse
+   caso duplicava o espaçamento — cada quebra de linha "soft" do markdown
+   virava uma linha em branco visível em cima do margin do próprio elemento. */
 .bubble-agent {
     background: #ffffff;
     color: #1f2937;
     border-radius: 4px 18px 18px 18px;
     box-shadow: 0 1px 6px rgba(0, 0, 0, 0.07), 0 1px 2px rgba(0, 0, 0, 0.04);
     border: 1px solid #f1f3f5;
-    white-space: pre-wrap;
     line-height: 1.55;
 }
 

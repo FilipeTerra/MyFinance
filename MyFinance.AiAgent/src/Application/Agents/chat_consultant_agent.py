@@ -152,9 +152,13 @@ def _extract_final_response(messages: list[BaseMessage]) -> str:
         return _MSG_LEAK_DIRETO
 
     # ── [3] Injeção de dados de ferramenta ──────────────────────────────────
+    # Sem "---" (linha horizontal): as tools de análise já retornam prosa
+    # fluida (ver calcular_resumo_financeiro), então um espaçamento simples
+    # basta para o texto injetado + a pergunta de fechamento do LLM lerem
+    # como uma única mensagem de conversa, não um relatório colado.
     if tool_data and "R$" in tool_data and "R$" not in ai_response:
         _logger.info("🔧 [CHAT] LLM não incluiu dados da ferramenta — injetando na resposta final")
-        ai_response = tool_data + "\n\n---\n\n" + ai_response
+        ai_response = f"{tool_data}\n\n{ai_response}" if ai_response.strip() else tool_data
 
     return ai_response
 

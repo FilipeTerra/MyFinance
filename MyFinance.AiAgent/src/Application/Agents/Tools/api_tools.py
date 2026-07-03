@@ -34,6 +34,14 @@ _API_BASE_URL = os.getenv("API_URL", "http://localhost:5088/api")
 _ERR_OFFLINE = "Erro: A API financeira está offline ou inacessível."
 _ERR_SESSAO  = "Sessão expirada. O usuário precisa fazer login novamente."
 
+# strftime('%B') devolve o mês no locale do sistema (geralmente inglês).
+# Mapa fixo garante saída sempre em português, independente do ambiente.
+_MESES_PT = {
+    1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril",
+    5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto",
+    9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro",
+}
+
 class SimularEstresseOrcamentoInput(BaseModel):
     descricao_nova_despesa: str = Field(
         ...,
@@ -62,6 +70,37 @@ class SimularMetaIdealInput(BaseModel):
         description="Opcional. Em quantos meses o utilizador quer atingir a meta, se ele tiver mencionado."
     )
     
+def _classificar_fluxo(transacoes: list) -> tuple[float, float, float]:
+    """
+    Classificador ÚNICO de fluxo de caixa — fonte da verdade para todas as
+    tools de análise (resumo, impacto de despesa, meta ideal).
+
+    Regra (espelha TransactionType do .NET):
+      type 3 (Investment)          → aporte em meta/investimento (patrimônio,
+                                     NÃO é despesa — o dinheiro continua do usuário)
+      type 2 ou valor negativo     → despesa
+      type 1 ou valor positivo     → receita
+
+    Antes deste helper cada tool duplicava a classificação com regras
+    ligeiramente diferentes (o simulador contava aporte como despesa; o resumo
+    não), produzindo números conflitantes entre respostas do agente.
+
+    Returns:
+        (receitas, despesas, aportes) — todos como valores absolutos.
+    """
+    receitas = despesas = aportes = 0.0
+    for t in transacoes:
+        tx_type = t.get("type", 0)
+        amount = t.get("amount", 0)
+        if tx_type == 3:
+            aportes += abs(amount)
+        elif tx_type == 2 or (tx_type not in (1, 3) and amount < 0):
+            despesas += abs(amount)
+        elif tx_type == 1 or (tx_type not in (2, 3) and amount > 0):
+            receitas += amount
+    return receitas, despesas, aportes
+
+
 def _listar_maiores_despesas(transacoes: list, limite: int = 8) -> list:
     """Retorna as N maiores despesas do mês para que o LLM analise a essencialidade."""
     despesas = []
@@ -357,7 +396,7 @@ def make_api_tools(jwt_token: str) -> list:
                 tx_type = t.get("type", 0)
                 amount = t.get("amount", 0.0)
                 emoji = _TIPO_EMOJI.get(tx_type, "•")
-                sinal = "+" if amount > 0 else ""
+                sinal = "+" if amount > 0 else "-" if amount < 0 else ""
                 try:
                     data_fmt = _parse_date(t).strftime("%d/%m")
                 except Exception:
@@ -479,17 +518,20 @@ def make_api_tools(jwt_token: str) -> list:
                 try:
                     tx_date = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
                     chave_mes = tx_date.strftime("%Y-%m")
-                    label_mes = tx_date.strftime("%B/%Y").capitalize()
+                    label_mes = f"{_MESES_PT[tx_date.month]}/{tx_date.year}"
+                    data_fmt = tx_date.strftime("%d/%m")
                 except Exception:
+                    # Sem data válida: não reutiliza tx_date de iteração anterior
                     chave_mes = "desconhecido"
                     label_mes = "Data desconhecida"
+                    data_fmt = "??"
 
                 if chave_mes not in meses:
                     meses[chave_mes] = {"label": label_mes, "total": 0.0, "transacoes": []}
                 valor = abs(amount)
                 meses[chave_mes]["total"] += valor
                 meses[chave_mes]["transacoes"].append({
-                    "data": tx_date.strftime("%d/%m") if date_str else "??",
+                    "data": data_fmt,
                     "descricao": t.get("description", "Sem descrição"),
                     "categoria": t.get("categoryName") or t.get("category") or "Sem categoria",
                     "valor": valor,
@@ -578,10 +620,15 @@ def make_api_tools(jwt_token: str) -> list:
                 elif tx_type == 1 or (tx_type not in (2, 3) and amount > 0):
                     total_receitas += amount
 
-            saldo_liquido = total_receitas - total_despesas - total_investimentos
+            # Saldo do período = receitas − despesas. Aportes NÃO entram: o
+            # dinheiro aportado em meta continua sendo patrimônio do usuário
+            # (apenas mudou de lugar). Sem esta separação, um mês saudável com
+            # aporte alto aparecia como "negativo" — dado incorreto ao usuário.
+            saldo_periodo = total_receitas - total_despesas
+            sobra_apos_aportes = saldo_periodo - total_investimentos
             gasto_medio_diario = total_despesas / dias_periodo
             taxa_poupanca = (total_investimentos / total_receitas * 100) if total_receitas > 0 else 0.0
-            situacao = "✅ positivo" if saldo_liquido >= 0 else "❌ negativo"
+            situacao = "✅ positivo" if saldo_periodo >= 0 else "❌ negativo"
 
             if gastos_categoria:
                 cat_vila = max(gastos_categoria, key=lambda k: gastos_categoria[k])
@@ -589,20 +636,38 @@ def make_api_tools(jwt_token: str) -> list:
             else:
                 cat_vila, cat_vila_valor = "N/A", 0.0
 
+            # Texto em TÓPICOS curtos agrupados por bloco — mais intuitivo para
+            # o usuário visualizar um resumo completo do que um parágrafo único.
+            # Sem "##"/"###" (headers grandes): grupos em **negrito** e bullets
+            # simples mantêm a hierarquia visual leve, e o CSS do frontend não
+            # duplica espaçamento entre itens (bug de white-space já corrigido).
             linhas = [
-                f"## 📋 Raio-X Financeiro — {label}\n",
-                "### 💰 Fluxo de Caixa",
-                f"- **Receitas:** R$ {total_receitas:,.2f}",
-                f"- **Despesas:** R$ {total_despesas:,.2f}",
-                f"- **Investimentos/Aportes:** R$ {total_investimentos:,.2f}",
-                f"- **Saldo líquido:** R$ {saldo_liquido:,.2f} ({situacao})\n",
-                "### 📊 Indicadores",
-                f"- **Gasto médio diário:** R$ {gasto_medio_diario:,.2f}",
-                f"- **Taxa de poupança (investido/receita):** {taxa_poupanca:.1f}%\n",
-                "### 🚨 Destaques",
-                f"- **Categoria vilã:** {cat_vila} — R$ {cat_vila_valor:,.2f}",
-                f"- **Maior despesa única:** {maior_despesa_desc} — R$ {maior_despesa_valor:,.2f}",
+                f"📊 Resumo financeiro — {label}",
+                "",
+                "**Fluxo de caixa**",
+                f"• Receitas: R$ {total_receitas:,.2f}",
+                f"• Despesas: R$ {total_despesas:,.2f}",
+                f"• Saldo do período: R$ {saldo_periodo:,.2f} ({situacao})",
             ]
+            if total_investimentos > 0:
+                linhas.append(f"• Aportes em metas/investimentos: R$ {total_investimentos:,.2f}")
+                linhas.append(f"• Sobra em conta após aportes: R$ {sobra_apos_aportes:,.2f}")
+
+            linhas += [
+                "",
+                "**Indicadores**",
+                f"• Gasto médio diário: R$ {gasto_medio_diario:,.2f}",
+            ]
+            if total_investimentos > 0:
+                linhas.append(f"• Taxa de poupança (investido/receita): {taxa_poupanca:.1f}%")
+
+            if cat_vila != "N/A":
+                linhas += [
+                    "",
+                    "**Destaques**",
+                    f"• Categoria que mais pesou: {cat_vila} (R$ {cat_vila_valor:,.2f})",
+                    f"• Maior despesa única: {maior_despesa_desc} (R$ {maior_despesa_valor:,.2f})",
+                ]
 
             _logger.info(
                 "📋 [TOOL:resumo] receitas=R$ %.2f | despesas=R$ %.2f | invest=R$ %.2f | período: %s",
@@ -719,20 +784,22 @@ def make_api_tools(jwt_token: str) -> list:
             if isinstance(transacoes, str):
                 return {"erro": transacoes}
 
-            total_receitas = sum(t.get("amount", 0) for t in transacoes if t.get("type") == 1 or t.get("amount", 0) > 0)
-            despesas_atuais = sum(abs(t.get("amount", 0)) for t in transacoes if t.get("type") == 2 or t.get("amount", 0) < 0)
-            
+            # Classificador único: aporte em meta NÃO é despesa, mas é dinheiro
+            # comprometido — entra no cálculo de margem como item separado.
+            total_receitas, despesas_atuais, aportes_metas = _classificar_fluxo(transacoes)
+            compromissos_atuais = despesas_atuais + aportes_metas
+
             # Matemática determinística do cenário
-            novo_total_despesas = despesas_atuais + valor_mensal
-            saldo_liquido_atual = total_receitas - despesas_atuais
-            novo_saldo_liquido = total_receitas - novo_total_despesas
-            
-            comprometimento_atual_pct = (despesas_atuais / total_receitas * 100) if total_receitas > 0 else 0
-            novo_comprometimento_pct = (novo_total_despesas / total_receitas * 100) if total_receitas > 0 else 0
+            novo_total_compromissos = compromissos_atuais + valor_mensal
+            saldo_livre_atual = total_receitas - compromissos_atuais
+            novo_saldo_livre = total_receitas - novo_total_compromissos
+
+            comprometimento_atual_pct = (compromissos_atuais / total_receitas * 100) if total_receitas > 0 else 0
+            novo_comprometimento_pct = (novo_total_compromissos / total_receitas * 100) if total_receitas > 0 else 0
 
             # Classificação de Risco
             status_risco = "SEGURO"
-            if novo_saldo_liquido < 0:
+            if novo_saldo_livre < 0:
                 status_risco = "CRÍTICO - Orçamento ficará negativo"
             elif novo_comprometimento_pct > 80:
                 status_risco = "ALTO RISCO - Restará pouca margem de segurança"
@@ -747,13 +814,14 @@ def make_api_tools(jwt_token: str) -> list:
                 "cenario_atual": {
                     "receita_mensal": round(total_receitas, 2),
                     "despesa_mensal": round(despesas_atuais, 2),
-                    "saldo_livre": round(saldo_liquido_atual, 2),
+                    "aportes_em_metas": round(aportes_metas, 2),
+                    "saldo_livre": round(saldo_livre_atual, 2),
                     "comprometimento_renda_pct": round(comprometimento_atual_pct, 1)
                 },
                 "cenario_simulado": {
                     "nova_despesa": round(valor_mensal, 2),
-                    "novo_total_despesas": round(novo_total_despesas, 2),
-                    "novo_saldo_livre": round(novo_saldo_liquido, 2),
+                    "novo_total_compromissos": round(novo_total_compromissos, 2),
+                    "novo_saldo_livre": round(novo_saldo_livre, 2),
                     "novo_comprometimento_renda_pct": round(novo_comprometimento_pct, 1)
                 },
                 "status_de_risco": status_risco
@@ -778,9 +846,10 @@ def make_api_tools(jwt_token: str) -> list:
             if isinstance(transacoes, str):
                 return {"erro": transacoes}
 
-            total_receitas = sum(t.get("amount", 0) for t in transacoes if t.get("type") == 1 or t.get("amount", 0) > 0)
-            despesas_atuais = sum(abs(t.get("amount", 0)) for t in transacoes if t.get("type") == 2 or t.get("amount", 0) < 0)
-            saldo_livre = total_receitas - despesas_atuais
+            # Classificador único: aportes já feitos são compromisso (reduzem a
+            # sobra disponível para uma NOVA meta), mas não são "despesa".
+            total_receitas, despesas_atuais, aportes_metas = _classificar_fluxo(transacoes)
+            saldo_livre = total_receitas - despesas_atuais - aportes_metas
 
             if saldo_livre <= 0:
                 # Mantém a lógica de corte de despesas semântica que já fizemos
@@ -858,7 +927,8 @@ def make_api_tools(jwt_token: str) -> list:
                 "objetivo": objetivo_principal,
                 "status_simulacao": status,
                 "cenario_atual": {
-                    "sobra_mensal": round(saldo_livre, 2)
+                    "sobra_mensal": round(saldo_livre, 2),
+                    "aportes_ja_comprometidos": round(aportes_metas, 2)
                 },
                 "proposta_meta": {
                     "valor_total_alvo": valor_alvo,
