@@ -1,0 +1,270 @@
+/* ── Page shell ────────────────────────────────────────────────────────── */
+.profile-container {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background-color: #f1f5f9;
+}
+
+.profile-content {
+    width: 100%;
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 2rem 2rem 3rem;
+    box-sizing: border-box;
+}
+
+/* ── Page header ───────────────────────────────────────────────────────── */
+.profile-page-header {
+    margin-bottom: 1.5rem;
+}
+
+.profile-title {
+    margin: 0 0 0.2rem;
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: #1e293b;
+    letter-spacing: -0.02em;
+}
+
+.profile-subtitle {
+    margin: 0;
+    font-size: 0.875rem;
+    color: #94a3b8;
+    font-weight: 400;
+}
+
+/* ── Card base (compartilhado entre identidade e formulário) ─────────────── */
+.profile-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 1.5rem 1.75rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+}
+
+/* ── Identidade (somente leitura) ──────────────────────────────────────── */
+.profile-identity {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.profile-avatar {
+    flex-shrink: 0;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.32);
+}
+
+.profile-identity-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    min-width: 0;
+}
+
+.profile-name {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.profile-email {
+    font-size: 0.85rem;
+    color: #94a3b8;
+}
+
+/* ── Card de renda mensal ──────────────────────────────────────────────── */
+.profile-card-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+}
+
+.profile-card-icon {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: #eff6ff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.15rem;
+}
+
+.profile-card-title {
+    margin: 0 0 0.2rem;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.profile-card-desc {
+    margin: 0;
+    font-size: 0.8rem;
+    color: #94a3b8;
+    line-height: 1.5;
+}
+
+/* ── Form group ────────────────────────────────────────────────────────── */
+.profile-form-group label {
+    display: block;
+    margin-bottom: 0.45rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #64748b;
+}
+
+.profile-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.profile-input-prefix {
+    position: absolute;
+    left: 0.8rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #94a3b8;
+    pointer-events: none;
+}
+
+.profile-input-wrapper input {
+    width: 100%;
+    padding: 0.7rem 2.25rem 0.7rem 2.5rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background-color: #f8fafc;
+    color: #1e293b;
+    font-size: 1rem;
+    font-weight: 600;
+    box-sizing: border-box;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.profile-input-wrapper input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.profile-input-wrapper input:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.profile-input-clear {
+    position: absolute;
+    right: 0.5rem;
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #e2e8f0;
+    color: #64748b;
+    border: none;
+    border-radius: 50%;
+    font-size: 1rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.profile-input-clear:hover:not(:disabled) { background: #cbd5e1; color: #1e293b; }
+.profile-input-clear:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ── Feedback ──────────────────────────────────────────────────────────── */
+.profile-message {
+    margin: 1rem 0 0;
+    padding: 0.7rem 0.9rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.profile-message--success {
+    background: #f0fdf4;
+    color: #15803d;
+    border: 1px solid #bbf7d0;
+}
+
+.profile-message--error {
+    background: #fef2f2;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+}
+
+/* ── Ações ─────────────────────────────────────────────────────────────── */
+.profile-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 1.5rem;
+}
+
+.profile-save-btn {
+    padding: 0.65rem 1.4rem;
+    background: #3b82f6;
+    color: #ffffff;
+    border: none;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.28);
+    transition: background 0.15s, transform 0.1s, box-shadow 0.15s, opacity 0.15s;
+}
+.profile-save-btn:hover:not(:disabled) {
+    background: #2563eb;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(59, 130, 246, 0.36);
+}
+.profile-save-btn:active:not(:disabled) { transform: translateY(0); }
+.profile-save-btn:disabled {
+    background: #cbd5e1;
+    box-shadow: none;
+    cursor: not-allowed;
+}
+
+/* ── Loading skeleton ──────────────────────────────────────────────────── */
+.profile-skeleton-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.profile-skeleton {
+    border-radius: 16px;
+    background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+    background-size: 200% 100%;
+    animation: profile-skeleton-shimmer 1.4s infinite;
+}
+
+@keyframes profile-skeleton-shimmer {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* ── Responsivo ────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+    .profile-content {
+        padding: 1.25rem 1rem 2rem;
+    }
+
+    .profile-card {
+        padding: 1.25rem;
+    }
+}
