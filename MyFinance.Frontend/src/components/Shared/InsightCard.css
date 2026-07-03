@@ -1,0 +1,142 @@
+.insight-card {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.9rem;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 14px;
+    padding: 1rem 2.75rem 1rem 1.1rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+    animation: insight-card-in 0.25s ease;
+}
+
+@keyframes insight-card-in {
+    from {
+        opacity: 0;
+        transform: translateY(-6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.insight-card-icon {
+    font-size: 1.3rem;
+    line-height: 1.4;
+    flex-shrink: 0;
+}
+
+.insight-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    flex: 1;
+}
+
+.insight-card-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #1d4ed8;
+}
+
+.insight-card-curiosity {
+    margin: 0;
+    font-size: 0.8rem;
+    line-height: 1.45;
+    font-style: italic;
+    color: #64748b;
+}
+
+.insight-card-text {
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.insight-card-suggestion {
+    margin: 0;
+    font-size: 0.85rem;
+    line-height: 1.45;
+    color: #1d4ed8;
+}
+
+.insight-card-progress {
+    width: 100%;
+    max-width: 220px;
+    height: 6px;
+    background: #dbeafe;
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.insight-card-progress-fill {
+    height: 100%;
+    background: #3b82f6;
+    border-radius: 999px;
+    transition: width 0.3s ease;
+}
+
+.insight-card-cta {
+    align-self: flex-start;
+    margin-top: 0.15rem;
+    padding: 0.45rem 0.9rem;
+    background: #3b82f6;
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.insight-card-cta:hover:not(:disabled) {
+    background: #2563eb;
+}
+
+.insight-card-cta:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.insight-card-success {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #059669;
+}
+
+.insight-card-error {
+    font-size: 0.82rem;
+    color: #dc2626;
+}
+
+.insight-card-close {
+    position: absolute;
+    top: 0.6rem;
+    right: 0.7rem;
+    width: 1.6rem;
+    height: 1.6rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: transparent;
+    color: #64748b;
+    font-size: 1.2rem;
+    line-height: 1;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.insight-card-close:hover {
+    background: #dbeafe;
+    color: #1d4ed8;
+}

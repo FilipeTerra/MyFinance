@@ -3,9 +3,11 @@ import { Header } from '../components/Layout/Header';
 import { FinancialGoalCard } from '../components/FinancialGoals/FinancialGoalCard';
 import { InvestimentoCard } from '../components/Investimentos/InvestimentoCard';
 import { InvestimentoModal } from '../components/Investimentos/InvestimentoModal';
-import { financialGoalService, investimentoService } from '../services/Api';
+import { InsightCard } from '../components/Shared/InsightCard';
+import { financialGoalService, investimentoService, aiService } from '../services/Api';
 import type { FinancialGoalResponseDto } from '../types/FinancialGoalResponseDto';
 import type { InvestimentoResponseDto } from '../types/InvestimentoResponseDto';
+import type { ProactiveInsightResponseDto } from '../types/AiIntegration';
 import './DashboardPage.css';
 
 type DashboardTab = 'metas' | 'investimentos';
@@ -47,6 +49,7 @@ export function DashboardPage() {
     const [isLoading, setLoading]           = useState(true);
     const [error, setError]                 = useState<string | null>(null);
     const [isCreateOpen, setCreateOpen]     = useState(false);
+    const [insight, setInsight]             = useState<ProactiveInsightResponseDto | null>(null);
 
     const fetchGoals = async () => {
         const data = await financialGoalService.getAll();
@@ -72,6 +75,20 @@ export function DashboardPage() {
 
     useEffect(() => {
         void fetchAll();
+    }, []);
+
+    // Análise proativa do Agente IA: carrega em silêncio, sem bloquear o
+    // dashboard e sem exibir erro ao usuário caso falhe (non-blocking).
+    useEffect(() => {
+        aiService.getEmergencyReserveInsight()
+            .then(result => {
+                if (result.success && result.information) {
+                    setInsight(result);
+                }
+            })
+            .catch(err => {
+                console.warn('[AI] Falha ao buscar insight proativo (non-blocking):', err);
+            });
     }, []);
 
     const handleContributionSuccess = async () => {
@@ -127,6 +144,23 @@ export function DashboardPage() {
                         {investimentos.length > 0 && <span className="dashboard-tab-count">{investimentos.length}</span>}
                     </button>
                 </div>
+
+                {insight && insight.curiosity && insight.information && insight.suggestion && (
+                    <InsightCard
+                        curiosity={insight.curiosity}
+                        information={insight.information}
+                        suggestion={insight.suggestion}
+                        hasAdequateReserve={insight.hasAdequateReserve}
+                        alreadyHasReserveGoal={insight.alreadyHasReserveGoal}
+                        idealAmount={insight.idealAmount}
+                        percentAchieved={insight.percentAchieved}
+                        onDismiss={() => setInsight(null)}
+                        onGoalCreated={() => {
+                            setActiveTab('metas');
+                            void fetchGoals();
+                        }}
+                    />
+                )}
 
                 {error && <div className="dashboard-error">{error}</div>}
 

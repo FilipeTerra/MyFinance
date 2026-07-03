@@ -42,6 +42,13 @@ _MESES_PT = {
     9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro",
 }
 
+# Espelha Domain.Enums.InvestmentType do .NET — sem JsonStringEnumConverter
+# configurado lá, o campo "tipo" chega aqui como inteiro, não como string.
+_TIPO_INVESTIMENTO = {
+    1: "Renda Fixa", 2: "Ação", 3: "FII", 4: "Cripto", 5: "ETF",
+}
+_TIPO_RENDA_FIXA = 1
+
 class SimularEstresseOrcamentoInput(BaseModel):
     descricao_nova_despesa: str = Field(
         ...,
@@ -99,7 +106,6 @@ def _classificar_fluxo(transacoes: list) -> tuple[float, float, float]:
         elif tx_type == 1 or (tx_type not in (2, 3) and amount > 0):
             receitas += amount
     return receitas, despesas, aportes
-
 
 def _listar_maiores_despesas(transacoes: list, limite: int = 8) -> list:
     """Retorna as N maiores despesas do mês para que o LLM analise a essencialidade."""
@@ -942,6 +948,143 @@ def make_api_tools(jwt_token: str) -> list:
             _logger.error("❌ [TOOL:meta_ideal] Erro inesperado: %s", e)
             return {"erro": f"Falha ao simular meta ideal: {str(e)}"}
 
+    # =========================================================================
+    # Ferramentas de perfil e investimentos (Agente Proativo)
+    # =========================================================================
+
+    @tool
+    async def consultar_perfil_usuario() -> str:
+        """Use esta ferramenta para consultar os dados de perfil do usuário logado,
+        incluindo nome, e-mail e a renda mensal (salário) cadastrada. Necessária para
+        qualquer cálculo que dependa da renda do usuário (ex: reserva de emergência)."""
+        try:
+            r = await _get("/Profile")
+            if r.status_code == 401:
+                return _ERR_SESSAO
+            if r.status_code != 200:
+                return f"Erro ao consultar perfil (status {r.status_code})."
+
+            perfil = r.json() or {}
+            renda = perfil.get("monthlyIncome")
+            linhas = [f"👤 Perfil de {perfil.get('name', 'usuário')}:"]
+            if renda is not None:
+                linhas.append(f"  • Renda mensal cadastrada: R$ {renda:,.2f}")
+            else:
+                linhas.append("  • Renda mensal não cadastrada.")
+            _logger.info("👤 [TOOL:perfil] renda=%s", renda)
+            return "\n".join(linhas)
+        except httpx.RequestError as e:
+            _logger.warning("🔌 [TOOL:perfil] API offline: %s", e)
+            return _ERR_OFFLINE
+        except Exception as e:
+            _logger.error("❌ [TOOL:perfil] Erro inesperado: %s", e)
+            return f"Erro inesperado ao consultar perfil: {e}"
+
+    @tool
+    async def consultar_investimentos() -> str:
+        """Use esta ferramenta para listar os investimentos do usuário (Renda Fixa,
+        Ação, FII, Cripto, ETF), com valor investido, valor atual e rentabilidade."""
+        try:
+            r = await _get("/investimentos")
+            if r.status_code == 401:
+                return _ERR_SESSAO
+            if r.status_code != 200:
+                return f"Erro ao consultar investimentos (status {r.status_code})."
+
+            investimentos = r.json() or []
+            if not investimentos:
+                return "O usuário ainda não possui investimentos cadastrados."
+
+            linhas = [f"📈 {len(investimentos)} investimento(s):"]
+            for i in investimentos:
+                tipo = _TIPO_INVESTIMENTO.get(i.get("tipo"), str(i.get("tipo", "?")))
+                linhas.append(
+                    f"  • {i.get('nome', '?')} ({tipo}): R$ {i.get('valorAtual', 0.0):,.2f} "
+                    f"(investido R$ {i.get('valorInicial', 0.0):,.2f}, "
+                    f"rentabilidade {i.get('rentabilidadePercentual', 0.0):.1f}%)"
+                )
+            _logger.info("📈 [TOOL:investimentos] %d investimento(s) retornados", len(investimentos))
+            return "\n".join(linhas)
+        except httpx.RequestError as e:
+            _logger.warning("🔌 [TOOL:investimentos] API offline: %s", e)
+            return _ERR_OFFLINE
+        except Exception as e:
+            _logger.error("❌ [TOOL:investimentos] Erro inesperado: %s", e)
+            return f"Erro inesperado ao consultar investimentos: {e}"
+
+    @tool
+    async def analisar_reserva_emergencia() -> dict:
+        """Use esta ferramenta para diagnosticar se o usuário possui uma reserva de
+        emergência adequada. Ela busca a renda mensal do perfil, soma o valor guardado
+        em metas financeiras com 'reserva' no nome e em investimentos de Renda Fixa,
+        e calcula se esse total atinge o ideal de 6x a renda mensal. Retorna os números
+        prontos — NÃO calcule por conta própria, apenas use este resultado."""
+        try:
+            r_perfil, r_metas, r_investimentos = await asyncio.gather(
+                _get("/Profile"), _get("/financial-goals"), _get("/investimentos"),
+            )
+
+            if 401 in (r_perfil.status_code, r_metas.status_code, r_investimentos.status_code):
+                return {"erro": _ERR_SESSAO}
+
+            perfil = r_perfil.json() if r_perfil.status_code == 200 else {}
+            renda_mensal = (perfil or {}).get("monthlyIncome") or 0.0
+
+            if not renda_mensal:
+                return {
+                    "erro": (
+                        "O usuário não possui renda mensal cadastrada no perfil. "
+                        "Não é possível calcular a reserva ideal sem essa informação."
+                    )
+                }
+
+            metas = r_metas.json() if r_metas.status_code == 200 else []
+            metas_reserva = [
+                m for m in (metas or [])
+                if "reserva" in (m.get("name") or "").lower()
+            ]
+            valor_em_metas_reserva = sum(m.get("currentAmount", 0.0) for m in metas_reserva)
+            possui_meta_reserva = len(metas_reserva) > 0
+
+            investimentos = r_investimentos.json() if r_investimentos.status_code == 200 else []
+            valor_em_renda_fixa = sum(
+                i.get("valorAtual", 0.0)
+                for i in (investimentos or [])
+                if i.get("tipo") == _TIPO_RENDA_FIXA
+            )
+
+            valor_ideal = round(renda_mensal * 6, 2)
+            valor_atual = round(valor_em_metas_reserva + valor_em_renda_fixa, 2)
+            percentual_atingido = round(valor_atual / valor_ideal * 100, 1) if valor_ideal > 0 else 0.0
+            meses_cobertos = round(valor_atual / renda_mensal, 1) if renda_mensal > 0 else 0.0
+            reserva_adequada = valor_atual >= valor_ideal
+            valor_faltante = round(max(valor_ideal - valor_atual, 0.0), 2)
+
+            _logger.info(
+                "🛡️  [TOOL:reserva] renda=R$ %.2f | ideal=R$ %.2f | atual=R$ %.2f | adequada=%s",
+                renda_mensal, valor_ideal, valor_atual, reserva_adequada,
+            )
+            return {
+                "renda_mensal": round(renda_mensal, 2),
+                "valor_ideal_reserva": valor_ideal,
+                "valor_atual_guardado": valor_atual,
+                "detalhamento": {
+                    "em_metas_reserva": round(valor_em_metas_reserva, 2),
+                    "em_investimentos_renda_fixa": round(valor_em_renda_fixa, 2),
+                },
+                "meses_de_despesa_cobertos": meses_cobertos,
+                "percentual_atingido": percentual_atingido,
+                "reserva_adequada": reserva_adequada,
+                "valor_faltante": valor_faltante,
+                "possui_meta_reserva": possui_meta_reserva,
+            }
+        except httpx.RequestError as e:
+            _logger.warning("🔌 [TOOL:reserva] API offline: %s", e)
+            return {"erro": _ERR_OFFLINE}
+        except Exception as e:
+            _logger.error("❌ [TOOL:reserva] Erro inesperado: %s", e)
+            return {"erro": f"Falha ao analisar reserva de emergência: {e}"}
+
     return [
         consultar_saldos_contas,
         consultar_metas_financeiras,
@@ -952,5 +1095,8 @@ def make_api_tools(jwt_token: str) -> list:
         relatorio_mensal_por_categoria,
         calcular_resumo_financeiro,
         simular_impacto_nova_despesa,
-        simular_meta_ideal
+        simular_meta_ideal,
+        consultar_perfil_usuario,
+        consultar_investimentos,
+        analisar_reserva_emergencia,
     ]

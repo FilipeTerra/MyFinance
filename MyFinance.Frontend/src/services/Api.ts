@@ -9,8 +9,8 @@ import type { CategoryResponseDto } from '../types/CategoryResponseDto';
 import type { AccountRequestDto } from '../types/AccountRequestDto';
 import type { CategoryRequestDto } from '../types/CategoryRequestDto';
 import type { UpdateAccountRequestDto } from '../types/UpdateAccountRequestDto';
-import type { AiTransactionResponseDto, SaveBatchTransactionRequestDto } from '../types/AiIntegration';
-import type { FinancialGoalResponseDto } from '../types/FinancialGoalResponseDto';
+import type { AiTransactionResponseDto, SaveBatchTransactionRequestDto, ProactiveInsightResponseDto } from '../types/AiIntegration';
+import type { FinancialGoalResponseDto, CreateFinancialGoalRequestDto } from '../types/FinancialGoalResponseDto';
 import type { InvestimentoResponseDto, CreateInvestimentoRequestDto } from '../types/InvestimentoResponseDto';
 import type { UserProfileResponseDto, UpdateUserProfileRequestDto } from '../types/UserProfileDto';
 
@@ -140,6 +140,10 @@ const financialGoalService = {
         const response = await apiClient.get<FinancialGoalResponseDto[]>('/financial-goals');
         return response.data;
     },
+    create: async (data: CreateFinancialGoalRequestDto): Promise<FinancialGoalResponseDto> => {
+        const response = await apiClient.post<FinancialGoalResponseDto>('/financial-goals', data);
+        return response.data;
+    },
     delete: (id: string) => {
         return apiClient.delete<void>(`/financial-goals/${id}`);
     },
@@ -174,6 +178,13 @@ const profileService = {
     },
 };
 
+const aiService = {
+    getEmergencyReserveInsight: async (): Promise<ProactiveInsightResponseDto> => {
+        const response = await apiClient.get<ProactiveInsightResponseDto>('/ai/insights/emergency-reserve');
+        return response.data;
+    },
+};
+
 export {
     authService,
     accountService,
@@ -182,6 +193,7 @@ export {
     financialGoalService,
     investimentoService,
     profileService,
+    aiService,
     tokenManager,
     apiClient as api,
     AxiosError

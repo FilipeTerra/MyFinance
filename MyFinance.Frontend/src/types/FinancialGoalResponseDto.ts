@@ -8,3 +8,9 @@ export interface FinancialGoalResponseDto {
   createdAt: string;
   isCompleted: boolean;
 }
+
+export interface CreateFinancialGoalRequestDto {
+  name: string;
+  targetAmount: number;
+  deadline: string;
+}

@@ -20,6 +20,7 @@ from src.Infra.Logging.agent_logger import setup_logging
 from src.Application.UseCases.process_file_semantic import ProcessFileSemanticUseCase
 import jwt
 from src.Application.Agents.chat_consultant_agent import invoke_chat
+from src.Application.Agents.proactive_analyzer_agent import invoke_proactive_analysis
 
 setup_logging()
 
@@ -102,6 +103,10 @@ class LearnRequest(BaseModel):
     rules: List[LearnRule]
 
 
+class ProactiveInsightRequest(BaseModel):
+    jwt_token: str
+
+
 @app.get("/api/ai/models")
 async def get_available_models():
     """Lista os modelos disponíveis no provedor Ollama ativo (remoto ou local)."""
@@ -148,6 +153,22 @@ async def consultant_chat(request: ChatRequest):
         return {
             "success": False,
             "erro": "Erro interno ao processar a mensagem. Tente novamente em instantes.",
+        }
+
+
+@app.post("/api/ai/proactive/emergency-reserve")
+async def proactive_emergency_reserve(request: ProactiveInsightRequest):
+    try:
+        payload = jwt.decode(request.jwt_token, options={"verify_signature": False})
+        if time.time() > payload.get("exp", 0):
+            return {"success": False, "error_type": "session_expired", "erro": "Token expirado."}
+
+        return await invoke_proactive_analysis(request.jwt_token)
+    except Exception:
+        _logger.exception("❌ [PROACTIVE] Erro não tratado no endpoint /api/ai/proactive/emergency-reserve")
+        return {
+            "success": False,
+            "erro": "Erro interno ao gerar o insight. Tente novamente em instantes.",
         }
 
 
