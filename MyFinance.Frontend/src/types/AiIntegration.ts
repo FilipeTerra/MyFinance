@@ -20,17 +20,34 @@ export interface SaveBatchTransactionRequestDto {
     isNewCategory: boolean;
 }
 
+export type ProactiveInsightCardType = 'aviso' | 'info';
+
 export interface ProactiveInsightResponseDto {
     success: boolean;
     // Preenchido apenas quando success = false (ex: renda não cadastrada).
     message: string | null;
+    // Decisão de exibição já resolvida no backend: false = reserva adequada, não mostrar nada.
+    showCard: boolean;
+    // "aviso" (já investe, mas não atingiu o ideal) ou "info" (ainda não iniciou).
+    cardType: ProactiveInsightCardType | null;
     curiosity: string | null;
     information: string | null;
     suggestion: string | null;
-    hasAdequateReserve: boolean;
-    alreadyHasReserveGoal: boolean;
     idealAmount: number;
     currentAmount: number;
     missingAmount: number;
     percentAchieved: number;
+}
+
+export interface LifestyleInsightResponseDto {
+    success: boolean;
+    // Preenchido apenas quando success = false (ex: renda não cadastrada).
+    message: string | null;
+    alert: boolean;
+    curiosity: string | null;
+    information: string | null;
+    suggestion: string | null;
+    lifestylePercentOfIncome: number | null;
+    lifestyleGrowthPercent: number | null;
+    investmentGrowthPercent: number | null;
 }

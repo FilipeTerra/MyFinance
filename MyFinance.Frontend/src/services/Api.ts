@@ -9,7 +9,7 @@ import type { CategoryResponseDto } from '../types/CategoryResponseDto';
 import type { AccountRequestDto } from '../types/AccountRequestDto';
 import type { CategoryRequestDto } from '../types/CategoryRequestDto';
 import type { UpdateAccountRequestDto } from '../types/UpdateAccountRequestDto';
-import type { AiTransactionResponseDto, SaveBatchTransactionRequestDto, ProactiveInsightResponseDto } from '../types/AiIntegration';
+import type { AiTransactionResponseDto, SaveBatchTransactionRequestDto, ProactiveInsightResponseDto, LifestyleInsightResponseDto } from '../types/AiIntegration';
 import type { FinancialGoalResponseDto, CreateFinancialGoalRequestDto } from '../types/FinancialGoalResponseDto';
 import type { InvestimentoResponseDto, CreateInvestimentoRequestDto } from '../types/InvestimentoResponseDto';
 import type { UserProfileResponseDto, UpdateUserProfileRequestDto } from '../types/UserProfileDto';
@@ -181,6 +181,10 @@ const profileService = {
 const aiService = {
     getEmergencyReserveInsight: async (): Promise<ProactiveInsightResponseDto> => {
         const response = await apiClient.get<ProactiveInsightResponseDto>('/ai/insights/emergency-reserve');
+        return response.data;
+    },
+    getLifestyleInflationInsight: async (): Promise<LifestyleInsightResponseDto> => {
+        const response = await apiClient.get<LifestyleInsightResponseDto>('/ai/insights/lifestyle-inflation');
         return response.data;
     },
 };

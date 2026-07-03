@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { financialGoalService } from '../../services/Api';
+import type { ProactiveInsightCardType } from '../../types/AiIntegration';
 import './InsightCard.css';
 
 interface InsightCardProps {
+    cardType: ProactiveInsightCardType;
     curiosity: string;
     information: string;
     suggestion: string;
-    hasAdequateReserve: boolean;
-    alreadyHasReserveGoal: boolean;
     idealAmount: number;
     percentAchieved: number;
     onDismiss: () => void;
@@ -23,11 +23,10 @@ function oneYearFromNow(): string {
 }
 
 export function InsightCard({
+    cardType,
     curiosity,
     information,
     suggestion,
-    hasAdequateReserve,
-    alreadyHasReserveGoal,
     idealAmount,
     percentAchieved,
     onDismiss,
@@ -37,7 +36,8 @@ export function InsightCard({
     const [created, setCreated] = useState(false);
     const [createError, setCreateError] = useState<string | null>(null);
 
-    const showButton = !hasAdequateReserve && !alreadyHasReserveGoal && !created;
+    // "aviso" = já existe meta/investimento em andamento, não faz sentido criar outro.
+    const showButton = cardType === 'info' && !created;
     const progress = Math.min(100, Math.max(0, percentAchieved));
 
     const handleCreateGoal = async () => {
@@ -59,19 +59,17 @@ export function InsightCard({
     };
 
     return (
-        <div className="insight-card" role="status">
-            <span className="insight-card-icon" aria-hidden="true">🛡️</span>
+        <div className={`insight-card${cardType === 'aviso' ? ' insight-card--warning' : ''}`} role="status">
+            <span className="insight-card-icon" aria-hidden="true">{cardType === 'aviso' ? '⚠️' : '🛡️'}</span>
 
             <div className="insight-card-body">
                 <span className="insight-card-title">Reserva de emergência</span>
                 <p className="insight-card-curiosity">💡 {curiosity}</p>
                 <p className="insight-card-text">{information}</p>
 
-                {!hasAdequateReserve && (
-                    <div className="insight-card-progress" aria-hidden="true">
-                        <div className="insight-card-progress-fill" style={{ width: `${progress}%` }} />
-                    </div>
-                )}
+                <div className="insight-card-progress" aria-hidden="true">
+                    <div className="insight-card-progress-fill" style={{ width: `${progress}%` }} />
+                </div>
 
                 <p className="insight-card-suggestion">{suggestion}</p>
 

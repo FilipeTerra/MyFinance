@@ -49,6 +49,13 @@ _TIPO_INVESTIMENTO = {
 }
 _TIPO_RENDA_FIXA = 1
 
+# Palavras-chave usadas para identificar categorias/descrições de "estilo de
+# vida" (gastos supérfluos) — mesma técnica de match usada em
+# relatorio_mensal_por_categoria (substring case-insensitive em categoria + descrição).
+_KEYWORDS_ESTILO_DE_VIDA = [
+    "lazer", "restaurante", "assinatura", "role", "bar", "streaming", "delivery",
+]
+
 class SimularEstresseOrcamentoInput(BaseModel):
     descricao_nova_despesa: str = Field(
         ...,
@@ -1047,11 +1054,11 @@ def make_api_tools(jwt_token: str) -> list:
             possui_meta_reserva = len(metas_reserva) > 0
 
             investimentos = r_investimentos.json() if r_investimentos.status_code == 200 else []
-            valor_em_renda_fixa = sum(
-                i.get("valorAtual", 0.0)
-                for i in (investimentos or [])
-                if i.get("tipo") == _TIPO_RENDA_FIXA
-            )
+            investimentos_renda_fixa = [
+                i for i in (investimentos or []) if i.get("tipo") == _TIPO_RENDA_FIXA
+            ]
+            valor_em_renda_fixa = sum(i.get("valorAtual", 0.0) for i in investimentos_renda_fixa)
+            possui_investimento_renda_fixa = len(investimentos_renda_fixa) > 0
 
             valor_ideal = round(renda_mensal * 6, 2)
             valor_atual = round(valor_em_metas_reserva + valor_em_renda_fixa, 2)
@@ -1077,6 +1084,7 @@ def make_api_tools(jwt_token: str) -> list:
                 "reserva_adequada": reserva_adequada,
                 "valor_faltante": valor_faltante,
                 "possui_meta_reserva": possui_meta_reserva,
+                "possui_investimento_renda_fixa": possui_investimento_renda_fixa,
             }
         except httpx.RequestError as e:
             _logger.warning("🔌 [TOOL:reserva] API offline: %s", e)
@@ -1084,6 +1092,108 @@ def make_api_tools(jwt_token: str) -> list:
         except Exception as e:
             _logger.error("❌ [TOOL:reserva] Erro inesperado: %s", e)
             return {"erro": f"Falha ao analisar reserva de emergência: {e}"}
+
+    @tool
+    async def analisar_inflacao_estilo_vida() -> dict:
+        """Use esta ferramenta para diagnosticar 'inflação de estilo de vida': gastos
+        supérfluos (lazer, restaurantes, assinaturas, delivery) crescendo no mesmo ritmo
+        ou mais rápido que a renda, sem um aumento correspondente nos investimentos.
+        Analisa os últimos 6 meses de transações comparando o trimestre mais recente
+        com o anterior. Retorna os números prontos — NÃO calcule por conta própria."""
+        try:
+            agora = datetime.now(timezone.utc)
+            dt_inicio_6m = agora - timedelta(days=180)
+            dt_corte_3m = agora - timedelta(days=90)
+
+            r_perfil, transacoes = await asyncio.gather(
+                _get("/Profile"),
+                _buscar_todas_transacoes(dt_inicio_6m, agora),
+            )
+
+            if isinstance(transacoes, str):
+                return {"erro": transacoes}
+
+            renda_cadastrada = (r_perfil.json() if r_perfil.status_code == 200 else {}).get(
+                "monthlyIncome"
+            ) or 0.0
+
+            def _e_estilo_de_vida(t: dict) -> bool:
+                texto = f"{t.get('categoryName') or t.get('category') or ''} {t.get('description') or ''}".lower()
+                return any(kw in texto for kw in _KEYWORDS_ESTILO_DE_VIDA)
+
+            def _parse_data(t: dict) -> datetime:
+                try:
+                    d = datetime.fromisoformat((t.get("date") or "").replace("Z", "+00:00"))
+                    return d if d.tzinfo else d.replace(tzinfo=timezone.utc)
+                except Exception:
+                    return agora
+
+            recentes = [t for t in transacoes if _parse_data(t) >= dt_corte_3m]
+            anteriores = [t for t in transacoes if _parse_data(t) < dt_corte_3m]
+
+            def _resumo_periodo(grupo: list) -> dict:
+                receitas, _despesas, aportes = _classificar_fluxo(grupo)
+                estilo_vida = sum(
+                    abs(t.get("amount", 0))
+                    for t in grupo
+                    if (t.get("type") == 2 or t.get("amount", 0) < 0) and _e_estilo_de_vida(t)
+                )
+                return {"receitas": receitas, "aportes": aportes, "estilo_vida": estilo_vida}
+
+            atual = _resumo_periodo(recentes)
+            anterior = _resumo_periodo(anteriores)
+
+            def _variacao_pct(novo: float, antigo: float) -> float | None:
+                if antigo <= 0:
+                    return None if novo <= 0 else 100.0
+                return round((novo - antigo) / antigo * 100, 1)
+
+            variacao_renda = _variacao_pct(atual["receitas"], anterior["receitas"])
+            variacao_estilo_vida = _variacao_pct(atual["estilo_vida"], anterior["estilo_vida"])
+            variacao_aportes = _variacao_pct(atual["aportes"], anterior["aportes"])
+
+            media_mensal_estilo_vida = round(atual["estilo_vida"] / 3, 2)
+            percentual_da_renda = (
+                round(media_mensal_estilo_vida / renda_cadastrada * 100, 1)
+                if renda_cadastrada > 0
+                else None
+            )
+
+            dados_suficientes = len(anteriores) > 0
+
+            if dados_suficientes:
+                alerta = bool(
+                    (variacao_estilo_vida is not None and variacao_aportes is not None
+                     and variacao_estilo_vida > variacao_aportes)
+                    or (variacao_renda is not None and variacao_renda > 5 and (variacao_aportes or 0) <= 0)
+                    or (percentual_da_renda is not None and percentual_da_renda > 30)
+                )
+            else:
+                alerta = bool(percentual_da_renda is not None and percentual_da_renda > 30)
+
+            _logger.info(
+                "📈 [TOOL:inflacao] estilo_vida=R$ %.2f/mês (%.1f%% renda) | var_estilo=%s | var_aportes=%s | alerta=%s",
+                media_mensal_estilo_vida, percentual_da_renda or 0.0,
+                variacao_estilo_vida, variacao_aportes, alerta,
+            )
+            return {
+                "renda_mensal_cadastrada": round(renda_cadastrada, 2),
+                "gasto_estilo_vida_ultimo_trimestre": round(atual["estilo_vida"], 2),
+                "gasto_estilo_vida_trimestre_anterior": round(anterior["estilo_vida"], 2),
+                "media_mensal_estilo_vida": media_mensal_estilo_vida,
+                "percentual_da_renda_em_estilo_vida": percentual_da_renda,
+                "variacao_renda_pct": variacao_renda,
+                "variacao_estilo_vida_pct": variacao_estilo_vida,
+                "variacao_aportes_pct": variacao_aportes,
+                "dados_suficientes": dados_suficientes,
+                "alerta_inflacao_estilo_vida": alerta,
+            }
+        except httpx.RequestError as e:
+            _logger.warning("🔌 [TOOL:inflacao] API offline: %s", e)
+            return {"erro": _ERR_OFFLINE}
+        except Exception as e:
+            _logger.error("❌ [TOOL:inflacao] Erro inesperado: %s", e)
+            return {"erro": f"Falha ao analisar inflação de estilo de vida: {e}"}
 
     return [
         consultar_saldos_contas,
@@ -1099,4 +1209,5 @@ def make_api_tools(jwt_token: str) -> list:
         consultar_perfil_usuario,
         consultar_investimentos,
         analisar_reserva_emergencia,
+        analisar_inflacao_estilo_vida,
     ]

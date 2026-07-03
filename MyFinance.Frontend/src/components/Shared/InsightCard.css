@@ -23,6 +23,24 @@
     }
 }
 
+.insight-card--warning {
+    background: #fffbeb;
+    border-color: #fde68a;
+}
+
+.insight-card--warning .insight-card-title,
+.insight-card--warning .insight-card-suggestion {
+    color: #b45309;
+}
+
+.insight-card--warning .insight-card-progress {
+    background: #fde68a;
+}
+
+.insight-card--warning .insight-card-progress-fill {
+    background: #d97706;
+}
+
 .insight-card-icon {
     font-size: 1.3rem;
     line-height: 1.4;

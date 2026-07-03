@@ -82,7 +82,7 @@ export function DashboardPage() {
     useEffect(() => {
         aiService.getEmergencyReserveInsight()
             .then(result => {
-                if (result.success && result.information) {
+                if (result.success && result.showCard && result.information) {
                     setInsight(result);
                 }
             })
@@ -145,13 +145,12 @@ export function DashboardPage() {
                     </button>
                 </div>
 
-                {insight && insight.curiosity && insight.information && insight.suggestion && (
+                {insight && insight.cardType && insight.curiosity && insight.information && insight.suggestion && (
                     <InsightCard
+                        cardType={insight.cardType}
                         curiosity={insight.curiosity}
                         information={insight.information}
                         suggestion={insight.suggestion}
-                        hasAdequateReserve={insight.hasAdequateReserve}
-                        alreadyHasReserveGoal={insight.alreadyHasReserveGoal}
                         idealAmount={insight.idealAmount}
                         percentAchieved={insight.percentAchieved}
                         onDismiss={() => setInsight(null)}

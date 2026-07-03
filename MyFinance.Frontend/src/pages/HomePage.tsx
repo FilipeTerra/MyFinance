@@ -10,8 +10,10 @@ import { CreateTransactionButton } from '../components/Transactions/CreateTransa
 import { CreateAccountButton } from '../components/Accounts/CreateAccountButton';
 import { UploadTransactionFileButton } from '../components/Transactions/UploadTransactionFileButton';
 import { TransactionModal } from '../components/Transactions/TransactionModal';
-import { accountService, categoryService, transactionService, AxiosError, type ApiErrorResponse } from '../services/Api';
+import { accountService, categoryService, transactionService, aiService, AxiosError, type ApiErrorResponse } from '../services/Api';
 import { ConfirmationModal } from '../components/Shared/ConfirmationModal';
+import { LifestyleInsightCard } from '../components/Shared/LifestyleInsightCard';
+import type { LifestyleInsightResponseDto } from '../types/AiIntegration';
 
 // Componentes de Conta
 import { AccountCard } from '../components/Accounts/AccountCard';
@@ -45,6 +47,7 @@ export function HomePage() {
     const [isDeleteAccountModalOpen, setIsDeleteAccountModalOpen] = useState(false);
     const [accountToDeleteId, setAccountToDeleteId] = useState<string | null>(null);
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+    const [lifestyleInsight, setLifestyleInsight] = useState<LifestyleInsightResponseDto | null>(null);
 
     const loadAccountsAndCategories = async () => {
         setIsLoadingAccounts(true);
@@ -95,6 +98,20 @@ export function HomePage() {
     // Carregar dados iniciais
     useEffect(() => {
         void loadAccountsAndCategories();
+    }, []);
+
+    // Monitor de Inflação do Estilo de Vida: carrega em silêncio, sem bloquear
+    // a página e sem exibir erro ao usuário caso falhe (non-blocking).
+    useEffect(() => {
+        aiService.getLifestyleInflationInsight()
+            .then(result => {
+                if (result.success && result.information) {
+                    setLifestyleInsight(result);
+                }
+            })
+            .catch(err => {
+                console.warn('[AI] Falha ao buscar insight de estilo de vida (non-blocking):', err);
+            });
     }, []);
 
     // Buscar transações quando filtros mudam
@@ -251,6 +268,15 @@ export function HomePage() {
 
             <main className="homepage-content">
                 <h2>Contas e Transações</h2>
+
+                {lifestyleInsight && lifestyleInsight.curiosity && lifestyleInsight.information && lifestyleInsight.suggestion && (
+                    <LifestyleInsightCard
+                        curiosity={lifestyleInsight.curiosity}
+                        information={lifestyleInsight.information}
+                        suggestion={lifestyleInsight.suggestion}
+                        onDismiss={() => setLifestyleInsight(null)}
+                    />
+                )}
 
                 {error && <div className="error-message">{error}</div>}
 

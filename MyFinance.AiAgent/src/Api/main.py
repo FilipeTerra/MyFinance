@@ -21,6 +21,7 @@ from src.Application.UseCases.process_file_semantic import ProcessFileSemanticUs
 import jwt
 from src.Application.Agents.chat_consultant_agent import invoke_chat
 from src.Application.Agents.proactive_analyzer_agent import invoke_proactive_analysis
+from src.Application.Agents.lifestyle_monitor_agent import invoke_lifestyle_monitor
 
 setup_logging()
 
@@ -166,6 +167,22 @@ async def proactive_emergency_reserve(request: ProactiveInsightRequest):
         return await invoke_proactive_analysis(request.jwt_token)
     except Exception:
         _logger.exception("❌ [PROACTIVE] Erro não tratado no endpoint /api/ai/proactive/emergency-reserve")
+        return {
+            "success": False,
+            "erro": "Erro interno ao gerar o insight. Tente novamente em instantes.",
+        }
+
+
+@app.post("/api/ai/proactive/lifestyle-inflation")
+async def proactive_lifestyle_inflation(request: ProactiveInsightRequest):
+    try:
+        payload = jwt.decode(request.jwt_token, options={"verify_signature": False})
+        if time.time() > payload.get("exp", 0):
+            return {"success": False, "error_type": "session_expired", "erro": "Token expirado."}
+
+        return await invoke_lifestyle_monitor(request.jwt_token)
+    except Exception:
+        _logger.exception("❌ [LIFESTYLE] Erro não tratado no endpoint /api/ai/proactive/lifestyle-inflation")
         return {
             "success": False,
             "erro": "Erro interno ao gerar o insight. Tente novamente em instantes.",

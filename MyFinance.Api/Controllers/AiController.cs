@@ -43,4 +43,30 @@ public class AiController : ControllerBase
             return StatusCode(500, new { message = $"Falha de comunicação com o Agente IA: {ex.Message}" });
         }
     }
+
+    /// <summary>
+    /// Dispara o Monitor de Inflação do Estilo de Vida: analisa os últimos 6 meses de
+    /// transações e verifica se gastos supérfluos (lazer, restaurantes, assinaturas)
+    /// estão crescendo mais rápido que os investimentos, retornando um alerta educativo
+    /// embasado em literatura de finanças pessoais quando aplicável.
+    /// </summary>
+    [HttpGet("insights/lifestyle-inflation")]
+    public async Task<IActionResult> GetLifestyleInflationInsight()
+    {
+        var authHeader = Request.Headers.Authorization.ToString();
+        var jwtToken = authHeader.StartsWith("Bearer ") ? authHeader["Bearer ".Length..] : authHeader;
+
+        if (string.IsNullOrEmpty(jwtToken))
+            return Unauthorized(new { message = "Usuário não autenticado." });
+
+        try
+        {
+            var insight = await _aiIntegrationService.GetLifestyleInflationInsightAsync(jwtToken);
+            return Ok(insight);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = $"Falha de comunicação com o Agente IA: {ex.Message}" });
+        }
+    }
 }

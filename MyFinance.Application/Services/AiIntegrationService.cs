@@ -70,15 +70,46 @@ namespace MyFinance.Application.Services
                 {
                     Success = result?.Success ?? false,
                     Message = result?.Erro,
+                    ShowCard = result?.ExibirCard ?? false,
+                    CardType = result?.TipoCard,
                     Curiosity = result?.Curiosidade,
                     Information = result?.Informacao,
                     Suggestion = result?.Sugestao,
-                    HasAdequateReserve = result?.ReservaAdequada ?? false,
-                    AlreadyHasReserveGoal = result?.PossuiMetaReserva ?? false,
                     IdealAmount = result?.ValorIdeal ?? 0m,
                     CurrentAmount = result?.ValorAtual ?? 0m,
                     MissingAmount = result?.ValorFaltante ?? 0m,
                     PercentAchieved = result?.PercentualAtingido ?? 0m
+                };
+            }
+
+            throw new Exception($"Falha ao obter insight da IA: {response.ReasonPhrase}");
+        }
+
+        public async Task<LifestyleInsightResponseDto> GetLifestyleInflationInsightAsync(string jwtToken)
+        {
+            var payload = new { jwt_token = jwtToken };
+            var response = await _httpClient.PostAsJsonAsync("api/ai/proactive/lifestyle-inflation", payload);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var jsonResponse = await response.Content.ReadAsStringAsync();
+
+                var result = JsonSerializer.Deserialize<LifestyleInsightPythonResponse>(jsonResponse, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+
+                return new LifestyleInsightResponseDto
+                {
+                    Success = result?.Success ?? false,
+                    Message = result?.Erro,
+                    Alert = result?.Alerta ?? false,
+                    Curiosity = result?.Curiosidade,
+                    Information = result?.Informacao,
+                    Suggestion = result?.Sugestao,
+                    LifestylePercentOfIncome = result?.PercentualRendaEstiloVida,
+                    LifestyleGrowthPercent = result?.VariacaoEstiloVidaPct,
+                    InvestmentGrowthPercent = result?.VariacaoAportesPct
                 };
             }
 
@@ -96,6 +127,12 @@ namespace MyFinance.Application.Services
             public bool Success { get; set; }
             public string? Erro { get; set; }
 
+            [JsonPropertyName("exibir_card")]
+            public bool ExibirCard { get; set; }
+
+            [JsonPropertyName("tipo_card")]
+            public string? TipoCard { get; set; }
+
             [JsonPropertyName("curiosidade")]
             public string? Curiosidade { get; set; }
 
@@ -104,12 +141,6 @@ namespace MyFinance.Application.Services
 
             [JsonPropertyName("sugestao")]
             public string? Sugestao { get; set; }
-
-            [JsonPropertyName("reserva_adequada")]
-            public bool ReservaAdequada { get; set; }
-
-            [JsonPropertyName("possui_meta_reserva")]
-            public bool PossuiMetaReserva { get; set; }
 
             [JsonPropertyName("valor_ideal")]
             public decimal ValorIdeal { get; set; }
@@ -122,6 +153,31 @@ namespace MyFinance.Application.Services
 
             [JsonPropertyName("percentual_atingido")]
             public decimal PercentualAtingido { get; set; }
+        }
+
+        private class LifestyleInsightPythonResponse
+        {
+            public bool Success { get; set; }
+            public string? Erro { get; set; }
+            public bool Alerta { get; set; }
+
+            [JsonPropertyName("curiosidade")]
+            public string? Curiosidade { get; set; }
+
+            [JsonPropertyName("informacao")]
+            public string? Informacao { get; set; }
+
+            [JsonPropertyName("sugestao")]
+            public string? Sugestao { get; set; }
+
+            [JsonPropertyName("percentual_renda_estilo_vida")]
+            public decimal? PercentualRendaEstiloVida { get; set; }
+
+            [JsonPropertyName("variacao_estilo_vida_pct")]
+            public decimal? VariacaoEstiloVidaPct { get; set; }
+
+            [JsonPropertyName("variacao_aportes_pct")]
+            public decimal? VariacaoAportesPct { get; set; }
         }
     }
 }
