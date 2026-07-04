@@ -1,6 +1,7 @@
 /* Container da PíGINA - Usa Flexbox para centralizar */
 .login-page-container {
     display: flex; /* Ativa flexbox */
+    flex-direction: column; /* Empilha marca e card verticalmente */
     justify-content: center; /* Centraliza horizontalmente */
     align-items: center; /* Centraliza verticalmente */
     width: 100%;
@@ -9,6 +10,15 @@
     box-sizing: border-box;
     background-color: #eef2f7; /* Fundo cinza bem claro */
     flex-grow: 1; /* Permite que ele cresça para preencher o #root */
+}
+
+/* Marca exibida acima do card de login */
+.login-page-brand {
+    color: #2263cc; /* Azul principal do sistema */
+    font-size: 4rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    margin: 0 0 1.5rem;
 }
 
 /* Card Externo da Página de Login */

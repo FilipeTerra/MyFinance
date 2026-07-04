@@ -5,6 +5,7 @@ export function LoginPage() {
     return (
         // Container da PíGINA para centralização
         <div className="login-page-container">
+            <h1 className="login-page-brand">FinAI</h1>
             {/* O Card que envolve o formulário */}
             <div className="login-page-card">
                 {/* Renderiza o componente do formulário aqui dentro */}
