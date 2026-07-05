@@ -25,7 +25,6 @@ from datetime import datetime, timezone
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langchain_core.runnables import RunnableConfig
-from langchain_ollama import ChatOllama
 from langgraph.prebuilt import ToolNode
 
 from src.Application.Agents.state import AgentState, ContextData, MAX_ITERATIONS
@@ -33,7 +32,7 @@ from src.Application.Agents.Tools.tools import MATH_TOOLS
 from src.Application.Agents.Tools.financial_tools import consultar_teoria_financeira
 from src.Application.Agents.Tools.api_tools import make_api_tools
 from src.Application.Agents.Tools.investment_tools import QUANT_TOOLS
-from src.Infra.Llm.ollama_provider import get_ollama_config, get_model
+from src.Infra.Llm.ollama_provider import get_chat_llm, ainvoke_with_retry
 
 _logger = logging.getLogger("myfinance.agent")
 
@@ -319,18 +318,14 @@ def make_nodes(jwt_token: str) -> tuple:
 
     # ── LLM com ferramentas vinculadas — instanciado UMA VEZ por request ────
     # temperature=0 e num_ctx=8192: ver constantes no topo do módulo (C2).
-    # O timeout entra via client_kwargs (repassado ao httpx.Client interno do
-    # ollama): geração que exceder _LLM_TIMEOUT_S falha rápido em vez de
-    # pendurar a requisição indefinidamente.
-    model_name = get_model("chat")
-    ollama_config = get_ollama_config()
-    ollama_config.setdefault("client_kwargs", {})["timeout"] = _LLM_TIMEOUT_S
-
-    _llm = ChatOllama(
-        model=model_name,
+    # A construção (resolução de modelo/endpoint + timeout no httpx interno) é
+    # centralizada em get_chat_llm — geração que exceder _LLM_TIMEOUT_S falha
+    # rápido em vez de pendurar a requisição indefinidamente.
+    _llm = get_chat_llm(
+        "chat",
         temperature=_LLM_TEMPERATURE,
         num_ctx=_LLM_NUM_CTX,
-        **ollama_config,
+        timeout=_LLM_TIMEOUT_S,
     ).bind_tools(all_tools)
 
     # ── Nó 3: tool_node ─────────────────────────────────────────────────────
@@ -382,14 +377,11 @@ def make_nodes(jwt_token: str) -> tuple:
 
         # await + ainvoke: a geração do LLM roda sem travar o event loop.
         # O RunnableConfig é propagado para callbacks (logger, tracer).
-        # Retry único: falhas transitórias (rede, provedor reiniciando) são
-        # comuns com Ollama remoto; uma segunda tentativa resolve a maioria
-        # sem custo perceptível. Falha dupla propaga para o endpoint.
-        try:
-            response: AIMessage = await _llm.ainvoke(messages_to_send, config=config)
-        except Exception as e:
-            _logger.warning("🔁 [AGENT] Falha na chamada ao LLM (%s) — 2ª tentativa...", e)
-            response = await _llm.ainvoke(messages_to_send, config=config)
+        # Retry único (via ainvoke_with_retry): falhas transitórias (rede,
+        # provedor reiniciando) são comuns com Ollama; falha dupla propaga.
+        response: AIMessage = await ainvoke_with_retry(
+            _llm, messages_to_send, config=config, label="AGENT"
+        )
 
         tool_calls = getattr(response, "tool_calls", []) or []
         _logger.info(

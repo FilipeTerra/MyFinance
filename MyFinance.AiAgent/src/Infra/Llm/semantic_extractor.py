@@ -7,10 +7,9 @@ from typing import List, Optional
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.output_parsers import JsonOutputParser
-from langchain_ollama import ChatOllama
 
 from src.Domain.models import ExtractedTransaction, TransactionList
-from src.Infra.Llm.ollama_provider import get_model, get_ollama_config
+from src.Infra.Llm.ollama_provider import get_chat_llm, get_model
 
 _logger = logging.getLogger("myfinance.agent")
 
@@ -58,18 +57,11 @@ class SemanticExtractor:
     ) -> None:
         self.lines_per_chunk = lines_per_chunk
 
-        config = get_ollama_config()
         model_name = model or get_model("extractor")
 
         _logger.info("🧠 [EXTRATOR] Modelo: %s | chunk: %d linhas", model_name, lines_per_chunk)
 
-        self._llm = ChatOllama(
-            model=model_name,
-            base_url=config["base_url"],
-            client_kwargs=config["client_kwargs"],
-            format="json",
-            temperature=0,
-        )
+        self._llm = get_chat_llm("extractor", model=model_name, temperature=0, format="json")
 
         # with_structured_output é preferível; JsonOutputParser serve de fallback
         # caso o proxy ou modelo não suporte a instrução de schema.

@@ -27,13 +27,12 @@ import logging
 import re
 
 from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_ollama import ChatOllama
 from langgraph.graph import END, START, StateGraph
 from typing import TypedDict
 
 from src.Application.Agents.Tools.api_tools import make_api_tools
 from src.Infra.Data.financial_rag import FinancialKnowledgeBase
-from src.Infra.Llm.ollama_provider import get_model, get_ollama_config
+from src.Infra.Llm.ollama_provider import get_chat_llm, ainvoke_with_retry
 
 _logger = logging.getLogger("myfinance.agent")
 
@@ -123,11 +122,11 @@ async def _gerar_conteudo_com_rag(dados: dict) -> dict:
     informacao = _montar_informacao(dados)
     snippet = await asyncio.to_thread(_kb.search, _RAG_QUERY, 2)
 
-    model_name = get_model("chat")
-    ollama_config = get_ollama_config()
-    ollama_config.setdefault("client_kwargs", {})["timeout"] = _LLM_TIMEOUT_S
-    llm = ChatOllama(
-        model=model_name, temperature=_LLM_TEMPERATURE, num_ctx=_LLM_NUM_CTX, **ollama_config
+    llm = get_chat_llm(
+        "chat",
+        temperature=_LLM_TEMPERATURE,
+        num_ctx=_LLM_NUM_CTX,
+        timeout=_LLM_TIMEOUT_S,
     )
 
     mensagens = [
@@ -139,11 +138,7 @@ async def _gerar_conteudo_com_rag(dados: dict) -> dict:
             )
         ),
     ]
-    try:
-        resposta = await llm.ainvoke(mensagens)
-    except Exception as e:
-        _logger.warning("🔁 [LIFESTYLE] Falha na chamada ao LLM (%s) — 2ª tentativa...", e)
-        resposta = await llm.ainvoke(mensagens)
+    resposta = await ainvoke_with_retry(llm, mensagens, label="LIFESTYLE")
 
     curiosidade, sugestao = _parse_resposta_llm(str(resposta.content))
     return {

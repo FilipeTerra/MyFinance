@@ -101,6 +101,69 @@ def get_model(role: str) -> str:
     return model
 
 
+# ── Chat LLM ─────────────────────────────────────────────────────────────────
+
+def get_chat_llm(
+    role: str = "chat",
+    *,
+    model: str | None = None,
+    temperature: float = 0.0,
+    num_ctx: int | None = None,
+    timeout: float | None = None,
+    **kwargs,
+):
+    """
+    Cria um ChatOllama para o papel indicado, resolvendo modelo e endpoint pelo
+    provedor ativo (remoto/local). Fonte ÚNICA de construção do cliente de chat —
+    antes duplicada em nodes.py, lifestyle_monitor_agent.py e semantic_extractor.py.
+
+    Mantém a dependência de `langchain_ollama` isolada na camada Infra: a Application
+    passa a pedir um LLM por papel, sem conhecer a biblioteca cliente concreta.
+
+    Args:
+        role:        papel do modelo ('chat', 'extractor', ...).
+        model:       nome explícito do modelo; sobrepõe a resolução por papel.
+        temperature: 0.0 (default) para saída determinística de tool-calling.
+        num_ctx:     janela de contexto; None usa o default do Ollama.
+        timeout:     timeout (s) do httpx interno; None não injeta.
+        **kwargs:    repassados ao ChatOllama (ex.: format="json").
+    """
+    from langchain_ollama import ChatOllama
+
+    config = get_ollama_config()
+    if timeout is not None:
+        config.setdefault("client_kwargs", {})["timeout"] = timeout
+
+    params: dict = {"model": model or get_model(role), "temperature": temperature}
+    if num_ctx is not None:
+        params["num_ctx"] = num_ctx
+
+    return ChatOllama(**params, **config, **kwargs)
+
+
+async def ainvoke_with_retry(llm, messages, *, config=None, attempts: int = 2, label: str = "LLM"):
+    """
+    Invoca o LLM de forma assíncrona com N tentativas.
+
+    Falhas transitórias (rede, provedor remoto reiniciando) são comuns com Ollama;
+    uma segunda tentativa resolve a maioria sem custo perceptível. A última falha
+    propaga para o chamador. Centraliza o retry antes duplicado em nodes.py e
+    lifestyle_monitor_agent.py.
+    """
+    for attempt in range(1, attempts + 1):
+        try:
+            if config is not None:
+                return await llm.ainvoke(messages, config=config)
+            return await llm.ainvoke(messages)
+        except Exception as e:
+            if attempt == attempts:
+                raise
+            _logger.warning(
+                "🔁 [%s] Falha na chamada ao LLM (%s) — tentativa %d/%d...",
+                label, e, attempt + 1, attempts,
+            )
+
+
 # ── Embeddings ─────────────────────────────────────────────────────────────────
 
 class _RemoteEmbeddings(Embeddings):
