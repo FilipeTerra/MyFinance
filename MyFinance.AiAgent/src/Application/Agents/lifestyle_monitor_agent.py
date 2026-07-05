@@ -30,7 +30,8 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.graph import END, START, StateGraph
 from typing import TypedDict
 
-from src.Application.Agents.Tools.api_tools import make_api_tools
+from src.Application.Agents.insight_card import InsightCard, erro_result
+from src.Application.Agents.Tools.api.registry import make_api_tools
 from src.Infra.Data.financial_rag import FinancialKnowledgeBase
 from src.Infra.Llm.ollama_provider import get_chat_llm, ainvoke_with_retry
 
@@ -141,11 +142,12 @@ async def _gerar_conteudo_com_rag(dados: dict) -> dict:
     resposta = await ainvoke_with_retry(llm, mensagens, label="LIFESTYLE")
 
     curiosidade, sugestao = _parse_resposta_llm(str(resposta.content))
-    return {
-        "curiosidade": curiosidade or _CURIOSIDADE_FALLBACK,
-        "informacao": informacao,
-        "sugestao": sugestao or _SUGESTAO_FALLBACK_ALERTA,
-    }
+    card = InsightCard(
+        curiosidade=curiosidade or _CURIOSIDADE_FALLBACK,
+        informacao=informacao,
+        sugestao=sugestao or _SUGESTAO_FALLBACK_ALERTA,
+    )
+    return card.to_dict()
 
 
 def _build_graph(jwt_token: str):
@@ -165,14 +167,17 @@ def _build_graph(jwt_token: str):
     async def sem_alerta_node(state: LifestyleState) -> dict:
         dados = state["dados"]
         if "erro" in dados:
-            return {"resultado": {"success": False, "erro": dados["erro"]}}
+            return {"resultado": erro_result(dados["erro"])}
+        card = InsightCard(
+            curiosidade=_CURIOSIDADE_SEM_ALERTA,
+            informacao=_montar_informacao(dados),
+            sugestao=_SUGESTAO_SEM_ALERTA,
+        )
         return {
             "resultado": {
                 "success": True,
                 "alerta": False,
-                "curiosidade": _CURIOSIDADE_SEM_ALERTA,
-                "informacao": _montar_informacao(dados),
-                "sugestao": _SUGESTAO_SEM_ALERTA,
+                **card.to_dict(),
                 **_numeros_publicos(dados),
             }
         }
@@ -211,10 +216,7 @@ async def invoke_lifestyle_monitor(jwt_token: str) -> dict:
     graph = _build_graph(jwt_token)
     result: dict = await graph.ainvoke({})
 
-    resultado = result.get("resultado") or {
-        "success": False,
-        "erro": "Não foi possível gerar a análise agora.",
-    }
+    resultado = result.get("resultado") or erro_result("Não foi possível gerar a análise agora.")
     _logger.info(
         "📈 [LIFESTYLE] success=%s | alerta=%s",
         resultado.get("success"), resultado.get("alerta"),

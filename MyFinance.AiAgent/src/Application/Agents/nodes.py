@@ -30,7 +30,7 @@ from langgraph.prebuilt import ToolNode
 from src.Application.Agents.state import AgentState, ContextData, MAX_ITERATIONS
 from src.Application.Agents.Tools.tools import MATH_TOOLS
 from src.Application.Agents.Tools.financial_tools import consultar_teoria_financeira
-from src.Application.Agents.Tools.api_tools import make_api_tools
+from src.Application.Agents.Tools.api.registry import make_api_tools
 from src.Application.Agents.Tools.investment_tools import QUANT_TOOLS
 from src.Infra.Llm.ollama_provider import get_chat_llm, ainvoke_with_retry
 

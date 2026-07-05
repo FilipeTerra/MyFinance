@@ -33,7 +33,8 @@ parágrafo único): curiosidade, informação (diagnóstico numérico) e sugest�
 
 import logging
 
-from src.Application.Agents.Tools.api_tools import make_api_tools
+from src.Application.Agents.insight_card import InsightCard, erro_result
+from src.Application.Agents.Tools.api.registry import make_api_tools
 
 _logger = logging.getLogger("myfinance.agent")
 
@@ -66,24 +67,22 @@ def _montar_conteudo(dados: dict) -> dict:
     ja_iniciou = dados["possui_meta_reserva"] or dados["possui_investimento_renda_fixa"]
 
     if ja_iniciou:
-        return {
-            "exibir_card": True,
-            "tipo_card": "aviso",
-            "curiosidade": _CURIOSIDADE_EM_ANDAMENTO,
-            "informacao": _montar_informacao_progresso(dados),
-            "sugestao": "Continue investindo até completar os 6 meses de renda guardados.",
-        }
+        card = InsightCard(
+            curiosidade=_CURIOSIDADE_EM_ANDAMENTO,
+            informacao=_montar_informacao_progresso(dados),
+            sugestao="Continue investindo até completar os 6 meses de renda guardados.",
+        )
+        return {"exibir_card": True, "tipo_card": "aviso", **card.to_dict()}
 
-    return {
-        "exibir_card": True,
-        "tipo_card": "info",
-        "curiosidade": _CURIOSIDADE_NAO_INICIADA,
-        "informacao": (
+    card = InsightCard(
+        curiosidade=_CURIOSIDADE_NAO_INICIADA,
+        informacao=(
             f"Sua reserva ideal é R$ {dados['valor_ideal_reserva']:,.2f} "
             f"(6x sua renda mensal) e você ainda não começou."
         ),
-        "sugestao": "Que tal criar essa meta agora e dar o primeiro passo?",
-    }
+        sugestao="Que tal criar essa meta agora e dar o primeiro passo?",
+    )
+    return {"exibir_card": True, "tipo_card": "info", **card.to_dict()}
 
 
 async def invoke_proactive_analysis(jwt_token: str) -> dict:
@@ -102,7 +101,7 @@ async def invoke_proactive_analysis(jwt_token: str) -> dict:
 
     if "erro" in dados:
         _logger.warning("🛡️  [PROACTIVE] Análise abortada: %s", dados["erro"])
-        return {"success": False, "erro": dados["erro"]}
+        return erro_result(dados["erro"])
 
     conteudo = _montar_conteudo(dados)
     _logger.info(
