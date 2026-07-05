@@ -1,12 +1,38 @@
 import os
 import logging
 from langchain_core.embeddings import Embeddings
+from langchain_core.documents import Document
 from langchain_community.vectorstores import FAISS
 from langchain_community.document_loaders import DirectoryLoader, PyPDFLoader, TextLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter, MarkdownHeaderTextSplitter
 from src.Infra.Llm.ollama_provider import get_embeddings
 
 _INDEX_PATH = "data/faiss_index"
+
+# Chunking — os livros são densos: cada seção "##" tem parágrafos de 500-900
+# chars. O antigo chunk_size=600 cortava parágrafos no meio, fragmentando ideias
+# entre dois vetores. 1200/150 mantém cada ideia inteira, com sobreposição de
+# borda suficiente para não perder o contexto na fronteira.
+_CHUNK_SIZE = 1200
+_CHUNK_OVERLAP = 150
+
+# Cabeçalhos markdown "##" são fronteiras semânticas naturais nos livros: viram
+# limite de chunk E metadado ("secao"), usado depois para citar a fonte.
+_MD_HEADERS = [("##", "secao")]
+
+# Slug do arquivo-fonte → título legível, para o agente citar de qual livro veio
+# o trecho. Arquivos fora do mapa caem no fallback (slug → Title Case).
+_BOOK_TITLES = {
+    "pai-rico-pai-pobre": "Pai Rico, Pai Pobre",
+    "o-homem-mais-rico-da-babilonia": "O Homem Mais Rico da Babilônia",
+    "ensinamentos-financas": "Ensinamentos de Finanças Pessoais",
+}
+
+
+def _titulo_livro(source: str) -> str:
+    """Deriva um título legível a partir do caminho do arquivo-fonte."""
+    stem = os.path.splitext(os.path.basename(source))[0]
+    return _BOOK_TITLES.get(stem, stem.replace("-", " ").replace("_", " ").title())
 
 
 class FinancialKnowledgeBase:
@@ -39,20 +65,43 @@ class FinancialKnowledgeBase:
         Lê .txt e .pdf de um diretório, gera embeddings e salva o índice FAISS.
         Retorna o número de chunks indexados.
         Cada chamada recria o índice do zero (idempotente).
-        """
-        txt_loader = DirectoryLoader(
-            directory_path, glob="**/*.txt", loader_cls=TextLoader, silent_errors=True
-        )
-        pdf_loader = DirectoryLoader(
-            directory_path, glob="**/*.pdf", loader_cls=PyPDFLoader, silent_errors=True
-        )
 
-        docs = txt_loader.load() + pdf_loader.load()
-        if not docs:
+        Estratégia de chunking por tipo de arquivo:
+          .txt (livros em markdown) → divide primeiro por seção "##", carregando
+            o título da seção como metadado, e só então limita o tamanho. Assim
+            cada chunk cobre uma ideia completa e sabe de qual seção/livro veio.
+          .pdf → sem estrutura markdown confiável: divide apenas por caracteres.
+        """
+        txt_docs = DirectoryLoader(
+            directory_path, glob="**/*.txt", loader_cls=TextLoader, silent_errors=True
+        ).load()
+        pdf_docs = DirectoryLoader(
+            directory_path, glob="**/*.pdf", loader_cls=PyPDFLoader, silent_errors=True
+        ).load()
+
+        if not txt_docs and not pdf_docs:
             raise ValueError(f"Nenhum documento .txt ou .pdf encontrado em '{directory_path}'.")
 
-        splitter = RecursiveCharacterTextSplitter(chunk_size=600, chunk_overlap=80)
-        chunks = splitter.split_documents(docs)
+        char_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=_CHUNK_SIZE, chunk_overlap=_CHUNK_OVERLAP
+        )
+        md_splitter = MarkdownHeaderTextSplitter(
+            headers_to_split_on=_MD_HEADERS, strip_headers=False
+        )
+
+        chunks: list[Document] = []
+
+        # .txt: quebra por seção "##" (preserva o título em metadata["secao"]),
+        # propaga o arquivo-fonte e depois corta seções longas por caracteres.
+        for doc in txt_docs:
+            source = doc.metadata.get("source", "")
+            secoes = md_splitter.split_text(doc.page_content)
+            for sec in secoes:
+                sec.metadata["source"] = source
+            chunks.extend(char_splitter.split_documents(secoes))
+
+        # .pdf: divisão puramente por caracteres.
+        chunks.extend(char_splitter.split_documents(pdf_docs))
 
         embeddings = self._make_embeddings()
         os.makedirs(_INDEX_PATH, exist_ok=True)
@@ -60,6 +109,14 @@ class FinancialKnowledgeBase:
         self._vectorstore.save_local(_INDEX_PATH)
 
         return len(chunks)
+
+    @staticmethod
+    def _format_snippet(doc: Document) -> str:
+        """Prefixa o trecho com a fonte (livro — seção) para o agente citar."""
+        titulo = _titulo_livro(doc.metadata.get("source", ""))
+        secao = doc.metadata.get("secao")
+        fonte = f"{titulo} — {secao}" if secao else titulo
+        return f"[Fonte: {fonte}]\n{doc.page_content}"
 
     def search(self, query: str, k: int = 3) -> str:
         """Busca os trechos mais relevantes para a query."""
@@ -73,4 +130,4 @@ class FinancialKnowledgeBase:
         fresh = self._make_embeddings()
         self._vectorstore.embedding_function = fresh.embed_query
         results = self._vectorstore.similarity_search(query, k=k)
-        return "\n\n---\n\n".join(doc.page_content for doc in results)
+        return "\n\n---\n\n".join(self._format_snippet(doc) for doc in results)

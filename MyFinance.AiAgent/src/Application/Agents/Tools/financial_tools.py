@@ -32,6 +32,7 @@ async def consultar_teoria_financeira(query: str) -> str:
         "=== TRECHOS EXTRAÍDOS DOS LIVROS DE FINANÇAS PESSOAIS ===\n\n"
         f"{result}\n\n"
         "=== FIM DOS TRECHOS ===\n"
-        "INSTRUÇÃO: Apresente os conceitos acima ao usuário. Cite os pontos principais "
-        "que os livros ensinam sobre o tema perguntado."
+        "INSTRUÇÃO: Apresente os conceitos acima ao usuário de forma fluida, mencionando "
+        "naturalmente de qual livro veio o ensinamento (o título após '[Fonte:]'). "
+        "Não repita o rótulo '[Fonte:]' nem o nome da seção — cite apenas o nome do livro."
     )
