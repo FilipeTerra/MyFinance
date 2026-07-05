@@ -2,12 +2,9 @@ import asyncio
 import logging
 
 from langchain_core.tools import tool
-from src.Infra.Data.financial_rag import FinancialKnowledgeBase
+from src.Infra.Data.financial_rag import get_financial_knowledge_base
 
 _logger = logging.getLogger("myfinance.agent")
-
-# Singleton — o índice FAISS é carregado uma única vez e reutilizado
-_kb = FinancialKnowledgeBase()
 
 
 @tool
@@ -22,7 +19,8 @@ async def consultar_teoria_financeira(query: str) -> str:
     # A busca envolve gerar o embedding da query (HTTP síncrono para o Ollama,
     # timeout de até 30s) + busca FAISS — roda em thread para não bloquear
     # o event loop enquanto outros usuários são atendidos.
-    result = await asyncio.to_thread(_kb.search, query)
+    kb = get_financial_knowledge_base()
+    result = await asyncio.to_thread(kb.search, query)
 
     if "não inicializada" in result:
         _logger.warning("⚠️  [RAG]  Índice FAISS ausente. Adicione livros em data/books/ e chame POST /api/ai/ingest.")

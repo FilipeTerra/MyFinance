@@ -1,5 +1,6 @@
 import os
 import logging
+from functools import lru_cache
 from langchain_core.embeddings import Embeddings
 from langchain_core.documents import Document
 from langchain_community.vectorstores import FAISS
@@ -132,3 +133,16 @@ class FinancialKnowledgeBase:
         self._vectorstore.embedding_function = fresh.embed_query
         results = self._vectorstore.similarity_search(query, k=k)
         return "\n\n---\n\n".join(self._format_snippet(doc) for doc in results)
+
+
+@lru_cache
+def get_financial_knowledge_base() -> FinancialKnowledgeBase:
+    """
+    Instância única (cacheada) da base de conhecimento RAG.
+
+    Antes, financial_tools.py e lifestyle_monitor_agent.py criavam cada um o
+    seu próprio singleton `FinancialKnowledgeBase()` — dois objetos distintos
+    carregando o MESMO índice FAISS do disco de forma independente. Esta
+    factory garante que todo o processo compartilhe uma única instância.
+    """
+    return FinancialKnowledgeBase()

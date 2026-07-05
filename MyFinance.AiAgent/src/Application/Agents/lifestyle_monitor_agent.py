@@ -32,13 +32,10 @@ from typing import TypedDict
 
 from src.Application.Agents.insight_card import InsightCard, erro_result
 from src.Application.Agents.Tools.api.registry import make_api_tools
-from src.Infra.Data.financial_rag import FinancialKnowledgeBase
+from src.Infra.Data.financial_rag import get_financial_knowledge_base
 from src.Infra.Llm.ollama_provider import get_chat_llm, ainvoke_with_retry
 
 _logger = logging.getLogger("myfinance.agent")
-
-# Singleton — mesmo índice FAISS reutilizado por consultar_teoria_financeira
-_kb = FinancialKnowledgeBase()
 
 _LLM_TEMPERATURE = 0.2
 _LLM_NUM_CTX = 4096
@@ -121,7 +118,8 @@ def _numeros_publicos(dados: dict) -> dict:
 
 async def _gerar_conteudo_com_rag(dados: dict) -> dict:
     informacao = _montar_informacao(dados)
-    snippet = await asyncio.to_thread(_kb.search, _RAG_QUERY, 2)
+    kb = get_financial_knowledge_base()
+    snippet = await asyncio.to_thread(kb.search, _RAG_QUERY, 2)
 
     llm = get_chat_llm(
         "chat",
