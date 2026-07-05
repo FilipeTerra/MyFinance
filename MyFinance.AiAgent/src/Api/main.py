@@ -33,7 +33,14 @@ _EMBEDDING_MODEL = "nomic-embed-text"
 
 
 def _startup_sync() -> None:
-    """Executado em thread separada: garante o modelo de embeddings e ingere documentos."""
+    """
+    Executado em thread separada: garante o modelo de chat/embeddings na subida.
+
+    A ingestão de data/books/ NÃO roda mais automaticamente aqui: os livros são
+    estáticos e raramente mudam, então reprocessar embeddings a cada subida do
+    servidor era custo desnecessário. A ingestão agora é sob demanda, como uma
+    migration — chame POST /api/ai/ingest ao adicionar ou atualizar um livro.
+    """
     try:
         provider = "remoto" if is_remote() else "local"
         _logger.info(
@@ -45,26 +52,6 @@ def _startup_sync() -> None:
         _logger.warning("⚠️  [STARTUP] Não foi possível resolver o modelo de chat: %s", e)
 
     ensure_model(_EMBEDDING_MODEL)
-
-    if not os.path.isdir(_BOOKS_DIR):
-        _logger.info("📚 [RAG]  Diretório '%s' não encontrado. RAG não será inicializado.", _BOOKS_DIR)
-        return
-
-    files = [f for f in os.listdir(_BOOKS_DIR) if f.lower().endswith((".pdf", ".txt"))]
-    if not files:
-        _logger.info(
-            "📚 [RAG]  Nenhum .pdf/.txt encontrado em '%s'. "
-            "Adicione documentos para ativar o RAG.",
-            _BOOKS_DIR,
-        )
-        return
-
-    _logger.info("📚 [RAG]  Ingerindo %d arquivo(s) de '%s'...", len(files), _BOOKS_DIR)
-    try:
-        total = _knowledge_base.ingest_documents(_BOOKS_DIR)
-        _logger.info("✅ [RAG]  %d chunks indexados com sucesso.", total)
-    except Exception as e:
-        _logger.error("❌ [RAG]  Falha na ingestão automática: %s", e)
 
 
 @asynccontextmanager
@@ -91,7 +78,7 @@ class ChatRequest(BaseModel):
 
 
 class IngestRequest(BaseModel):
-    directory: str = "data/books"
+    directory: str = _BOOKS_DIR
 
 
 class LearnRule(BaseModel):

@@ -86,6 +86,11 @@ Thumbs.db
 
 # Arquivos relacionados a IA e agentes (Logs, dados de treinamento, etc.)
 ai_logs/
-faiss_index/
+
+## Base de conhecimento RAG do AiAgent: os livros-fonte e o script de exemplo
+## da disciplina ficam fora do repo; o índice FAISS gerado a partir deles é
+## o artefato versionado (ingestão sob demanda via POST /api/ai/ingest)
+MyFinance.AiAgent/data/books/
+MyFinance.AiAgent/data/exemplo.py
 
 teste.ipynb
