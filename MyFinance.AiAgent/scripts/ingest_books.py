@@ -21,13 +21,14 @@ _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.chdir(_ROOT)
 sys.path.insert(0, _ROOT)
 
+from src.Infra.Config.settings import get_settings  # noqa: E402
 from src.Infra.Logging.agent_logger import setup_logging  # noqa: E402
 from src.Infra.Data.financial_rag import FinancialKnowledgeBase  # noqa: E402
 
 
 def main() -> int:
     setup_logging()
-    directory = sys.argv[1] if len(sys.argv) > 1 else "data/books"
+    directory = sys.argv[1] if len(sys.argv) > 1 else get_settings().books_dir
 
     kb = FinancialKnowledgeBase()
     try:

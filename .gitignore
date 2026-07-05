@@ -50,8 +50,10 @@ dist-ssr
 *.tsbuildinfo
 
 ## Variáveis de ambiente locais (NUNCA versione segredos!)
+.env
 .env.local
 .env.*.local
+!.env.example
 
 # Python / AI Agent (FastAPI / LangChain)
 ## Ambientes Virtuais (Virtualenvs)

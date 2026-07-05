@@ -15,21 +15,19 @@ Arquitetura HTTP:
 
 import asyncio
 import logging
-import os
 from datetime import datetime, timedelta, timezone
 import math
 
 import httpx
-from dotenv import load_dotenv
 from langchain_core.tools import tool
 from pydantic import BaseModel, Field
 from typing import Optional
 
-load_dotenv()
+from src.Infra.Config.settings import get_settings
 
 _logger = logging.getLogger("myfinance.agent")
 
-_API_BASE_URL = os.getenv("API_URL", "http://localhost:5088/api")
+_API_BASE_URL = get_settings().api_url
 
 _ERR_OFFLINE = "Erro: A API financeira está offline ou inacessível."
 _ERR_SESSAO  = "Sessão expirada. O usuário precisa fazer login novamente."

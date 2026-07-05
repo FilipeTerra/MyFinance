@@ -11,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import List
 
+from src.Infra.Config.settings import get_settings
 from src.Infra.Llm.ollama_utils import ensure_model
 from src.Infra.Llm.ollama_provider import list_models, get_model, is_remote, _MODELS
 from src.Infra.Cache.knowledge_base import KnowledgeBase
@@ -26,10 +27,10 @@ from src.Application.Agents.lifestyle_monitor_agent import invoke_lifestyle_moni
 setup_logging()
 
 _logger = logging.getLogger("myfinance.agent")
+_settings = get_settings()
 _knowledge_base = FinancialKnowledgeBase()
 
-_BOOKS_DIR = "data/books"
-_EMBEDDING_MODEL = "nomic-embed-text"
+_BOOKS_DIR = _settings.books_dir
 
 
 def _startup_sync() -> None:
@@ -51,7 +52,7 @@ def _startup_sync() -> None:
     except Exception as e:
         _logger.warning("⚠️  [STARTUP] Não foi possível resolver o modelo de chat: %s", e)
 
-    ensure_model(_EMBEDDING_MODEL)
+    ensure_model(get_model("embedding"))
 
 
 @asynccontextmanager
@@ -64,7 +65,7 @@ app = FastAPI(title="MyFinance AI Agent", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=_settings.cors_allow_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

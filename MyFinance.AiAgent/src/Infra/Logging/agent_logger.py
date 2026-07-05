@@ -8,9 +8,9 @@ _LOGGER_NAME = "myfinance.agent"
 
 def setup_logging() -> None:
     """Configura o formato de log para toda a aplicação."""
-    import os
+    from src.Infra.Config.settings import get_settings
 
-    log_level = logging.DEBUG if os.getenv("MYFINANCE_DEBUG") else logging.INFO
+    log_level = logging.DEBUG if get_settings().debug else logging.INFO
 
     logging.basicConfig(
         level=log_level,

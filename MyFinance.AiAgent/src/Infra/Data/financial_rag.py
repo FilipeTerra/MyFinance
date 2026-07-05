@@ -5,9 +5,10 @@ from langchain_core.documents import Document
 from langchain_community.vectorstores import FAISS
 from langchain_community.document_loaders import DirectoryLoader, PyPDFLoader, TextLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter, MarkdownHeaderTextSplitter
+from src.Infra.Config.settings import get_settings
 from src.Infra.Llm.ollama_provider import get_embeddings
 
-_INDEX_PATH = "data/faiss_index"
+_INDEX_PATH = get_settings().faiss_index_path
 
 # Chunking — os livros são densos: cada seção "##" tem parágrafos de 500-900
 # chars. O antigo chunk_size=600 cortava parágrafos no meio, fragmentando ideias

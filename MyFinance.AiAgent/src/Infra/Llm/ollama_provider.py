@@ -1,21 +1,20 @@
 import logging
-import os
 import time
 from typing import List
 import requests
 from langchain_core.embeddings import Embeddings
-from dotenv import load_dotenv
 
-load_dotenv()
+from src.Infra.Config.settings import get_settings
 
 _logger = logging.getLogger("myfinance.agent")
+_settings = get_settings()
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
-_REMOTE_URL = os.getenv("REMOTE_OLLAMA_URL", "http://ollama.futurelab.dcc.ufmg.br")
-# Sem fallback hardcoded: credencial vive APENAS no .env. Se ausente, o health
+_REMOTE_URL = _settings.remote_ollama_url
+# A credencial vive APENAS no ambiente/.env (settings). Se ausente, o health
 # check do remoto falha naturalmente e o sistema cai para o Ollama local.
-_REMOTE_API_KEY = os.getenv("REMOTE_OLLAMA_API_KEY", "")
-_LOCAL_URL = os.getenv("LOCAL_OLLAMA_URL", "http://localhost:11434")
+_REMOTE_API_KEY = _settings.remote_ollama_api_key
+_LOCAL_URL = _settings.local_ollama_url
 
 if not _REMOTE_API_KEY:
     _logger.warning(
@@ -24,29 +23,16 @@ if not _REMOTE_API_KEY:
     )
 
 # ── Modelos por papel e por provedor ──────────────────────────────────────────
-# Remoto não tem gemma4 — usa qwen2.5:7b como substituto para chat.
+# Remoto não tem gemma4 — usa llama3.1:8b como substituto para chat.
 _MODELS: dict[str, dict[str, str]] = {
-    "chat": {
-        "local":  os.getenv("CHAT_MODEL_LOCAL",  "gemma4:latest"),
-        "remote": os.getenv("CHAT_MODEL_REMOTE",  "llama3.1:8b"),
-    },
-    "classifier": {
-        "local":  os.getenv("CLASSIFIER_MODEL_LOCAL",  "llama3.2:3b"),
-        "remote": os.getenv("CLASSIFIER_MODEL_REMOTE", "llama3.2:3b"),
-    },
-    "embedding": {
-        "local":  os.getenv("EMBEDDING_MODEL_LOCAL",  "nomic-embed-text"),
-        "remote": os.getenv("EMBEDDING_MODEL_REMOTE", "nomic-embed-text:latest"),
-    },
-    # Modelos que lidam bem com JSON estruturado para o SemanticExtractor
-    "extractor": {
-        "local":  os.getenv("EXTRACTOR_MODEL_LOCAL",  "qwen2.5:7b"),
-        "remote": os.getenv("EXTRACTOR_MODEL_REMOTE", "llama3.2:3b"),
-    },
+    "chat":       {"local": _settings.chat_model_local,       "remote": _settings.chat_model_remote},
+    "classifier": {"local": _settings.classifier_model_local, "remote": _settings.classifier_model_remote},
+    "embedding":  {"local": _settings.embedding_model_local,  "remote": _settings.embedding_model_remote},
+    "extractor":  {"local": _settings.extractor_model_local,  "remote": _settings.extractor_model_remote},
 }
 
-# ── Cache do health check (TTL = 60 s) ────────────────────────────────────────
-_CACHE_TTL = 60.0
+# ── Cache do health check ─────────────────────────────────────────────────────
+_CACHE_TTL = _settings.remote_health_ttl_s
 _last_ts: float = 0.0
 _remote_ok: bool = False
 
@@ -66,7 +52,7 @@ def _check_remote() -> bool:
     try:
         # timeout curto: no pior caso (remoto fora do ar) o custo é 3s por
         # janela de 60s de cache, não 5s.
-        r = requests.get(f"{_REMOTE_URL}/health", timeout=3)
+        r = requests.get(f"{_REMOTE_URL}/health", timeout=_settings.remote_health_timeout_s)
         _remote_ok = r.status_code == 200
     except Exception:
         _remote_ok = False
