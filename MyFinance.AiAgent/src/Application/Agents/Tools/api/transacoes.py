@@ -36,7 +36,7 @@ class SimularEstresseOrcamentoInput(BaseModel):
 
 
 def build(session: ApiSession) -> list:
-    @tool
+    @tool(extras={"retorna_dinheiro": True})
     @handle_api_errors()
     async def consultar_transacoes_recentes(
         limite: int = 15,
@@ -93,7 +93,7 @@ def build(session: ApiSession) -> list:
         )
         return "\n".join(linhas)
 
-    @tool
+    @tool(extras={"retorna_dinheiro": True})
     @handle_api_errors()
     async def analisar_gastos_por_categoria(
         ultimos_dias: int = 30,
@@ -142,7 +142,7 @@ def build(session: ApiSession) -> list:
         )
         return "\n".join(linhas)
 
-    @tool
+    @tool(extras={"retorna_dinheiro": True})
     @handle_api_errors()
     async def relatorio_mensal_por_categoria(
         filtro_categoria: str,
@@ -229,7 +229,7 @@ def build(session: ApiSession) -> list:
         )
         return "\n".join(linhas)
 
-    @tool
+    @tool(extras={"retorna_dinheiro": True})
     @handle_api_errors()
     async def calcular_resumo_financeiro(
         ultimos_dias: int = 30,

@@ -31,7 +31,7 @@ class SimularMetaIdealInput(BaseModel):
 
 
 def build(session: ApiSession) -> list:
-    @tool
+    @tool(extras={"retorna_dinheiro": True})
     @handle_api_errors()
     async def consultar_metas_financeiras() -> str:
         """Use esta ferramenta para verificar as metas financeiras do usuário

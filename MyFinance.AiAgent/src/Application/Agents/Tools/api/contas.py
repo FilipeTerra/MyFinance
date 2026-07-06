@@ -11,7 +11,7 @@ _logger = logging.getLogger("myfinance.agent")
 
 
 def build(session: ApiSession) -> list:
-    @tool
+    @tool(extras={"retorna_dinheiro": True})
     @handle_api_errors()
     async def consultar_saldos_contas() -> str:
         """Use esta ferramenta para verificar o saldo atual, listar as contas bancárias

@@ -29,24 +29,11 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, ToolMe
 
 from src.Application.Agents.graph import create_agent_graph
 from src.Application.Agents.tool_call_parser import is_leaked_tool_call
+from src.Application.Agents.tool_registry import get_data_tool_names
 from src.Infra.Llm.ollama_provider import get_model
 from src.Infra.Logging.agent_logger import AgentCallbackLogger
 
 _logger = logging.getLogger("myfinance.agent")
-
-# Ferramentas que retornam dados estruturados com valores monetários.
-# Se o LLM (especialmente modelos pequenos) ignorar o output dessas ferramentas,
-# o dado é injetado diretamente na resposta final antes de enviar ao frontend.
-_DATA_TOOLS = frozenset({
-    "calcular_resumo_financeiro",
-    "analisar_gastos_por_categoria",
-    "simular_investimento",
-    "consultar_metas_financeiras",
-    "consultar_saldos_contas",
-    "consultar_transacoes_recentes",
-    "buscar_taxa_selic",
-    "relatorio_mensal_por_categoria",
-})
 
 # Mensagens de fallback — centralizadas para manutenção e consistência.
 _MSG_EMERGENCIA  = "Ocorreu um erro interno. Por favor, tente novamente."
@@ -85,10 +72,11 @@ def _extract_final_response(messages: list[BaseMessage]) -> str:
 
       [0] Guarda básica — mensagens vazias e content nulo.
 
-      [1] Coleta de contexto do turno — outputs de ferramentas de dados
-          (_DATA_TOOLS) são coletados ANTES de qualquer decisão sobre
-          ai_response. Isso é crítico: os dados de ferramenta são a fonte
-          de recuperação quando a resposta do LLM está corrompida.
+      [1] Coleta de contexto do turno — outputs de ferramentas marcadas com
+          extras={"retorna_dinheiro": True} (ver tool_registry.py) são
+          coletados ANTES de qualquer decisão sobre ai_response. Isso é
+          crítico: os dados de ferramenta são a fonte de recuperação quando
+          a resposta do LLM está corrompida.
 
       [2] Detecção e recuperação de tool-call leakage (Camada 2) —
           ativada quando fix_agent_output (Camada 1) não conseguiu parsear
@@ -125,11 +113,12 @@ def _extract_final_response(messages: list[BaseMessage]) -> str:
     )
     current_turn = messages[last_human_idx + 1:]
 
+    data_tool_names = get_data_tool_names()
     tool_outputs = [
         str(msg.content)
         for msg in current_turn
         if isinstance(msg, ToolMessage)
-        and getattr(msg, "name", None) in _DATA_TOOLS
+        and getattr(msg, "name", None) in data_tool_names
         and msg.content
     ]
     tool_data = "\n\n".join(tool_outputs)

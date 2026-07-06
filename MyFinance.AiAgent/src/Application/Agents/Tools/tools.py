@@ -99,7 +99,7 @@ class CalcularJurosFinanciamentoInput(BaseModel):
 # Ferramentas
 # ===========================================================================
 
-@tool(args_schema=SimularInvestimentoInput)
+@tool(args_schema=SimularInvestimentoInput, extras={"retorna_dinheiro": True})
 def simular_investimento(
     capital_inicial: float,
     aporte_mensal: float,
@@ -264,7 +264,7 @@ _BCB_SELIC_URL = "https://api.bcb.gov.br/dados/serie/bcdata.sgs.432/dados/ultimo
 _BCB_IPCA_URL = "https://api.bcb.gov.br/dados/serie/bcdata.sgs.13522/dados/ultimos/1?formato=json"
 
 
-@tool
+@tool(extras={"retorna_dinheiro": True})
 async def buscar_taxa_selic() -> dict:
     """
     Retorna as taxas de referência da economia brasileira: SELIC (taxa básica de juros)

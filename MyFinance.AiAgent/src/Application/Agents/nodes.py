@@ -138,6 +138,20 @@ def inject_context(state: AgentState, config: RunnableConfig) -> dict:
     return {"context_data": context}
 
 
+def collect_all_tools(jwt_token: str) -> list:
+    """
+    Monta a lista unificada de ferramentas do agente: matemática pura → quant/B3
+    → conhecimento RAG → API .NET (autenticada com o JWT).
+
+    Extraído como função própria (não só inline em make_nodes) para que outros
+    módulos possam introspectar as tools disponíveis — ex: tool_registry.py
+    deriva quais delas retornam dados monetários a partir de `tool.extras`,
+    sem precisar manter uma segunda lista de nomes em outro arquivo.
+    """
+    api_tools = make_api_tools(jwt_token)
+    return MATH_TOOLS + QUANT_TOOLS + [consultar_teoria_financeira] + api_tools
+
+
 # ===========================================================================
 # Factory: make_nodes
 # ===========================================================================
@@ -165,10 +179,7 @@ def make_nodes(jwt_token: str) -> tuple:
     Returns:
         (agent_node, tool_node): callables prontos para registro no StateGraph.
     """
-    # ── Lista unificada de ferramentas ───────────────────────────────────────
-    # Ordem: matemática pura → quant/B3 → conhecimento RAG → API .NET (autenticada)
-    api_tools = make_api_tools(jwt_token)
-    all_tools = MATH_TOOLS + QUANT_TOOLS + [consultar_teoria_financeira] + api_tools
+    all_tools = collect_all_tools(jwt_token)
 
     _logger.info(
         "⚙️  [NODES] %d ferramentas registradas: %s",
