@@ -3,7 +3,9 @@ using MyFinance.Infrastructure;
 using MyFinance.Application.Interfaces.Services;
 using MyFinance.Application.Interfaces.Repositories; 
 using MyFinance.Application.Services;   
-using MyFinance.Infrastructure.Repositories; 
+using MyFinance.Infrastructure.Repositories;
+using MyFinance.Infrastructure.Security;
+using MyFinance.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer; // Para JwtBearerDefaults
 using Microsoft.IdentityModel.Tokens; // Para TokenValidationParameters, SymmetricSecurityKey
 using System.Text;
@@ -60,6 +62,8 @@ builder.Services.AddAuthentication(options =>
 });
 
 // Registrar serviáos e repositários para Injeção de Dependáncia
+builder.Services.AddScoped<IPasswordHasher, BCryptPasswordHasher>();
+builder.Services.AddScoped<ITokenService, JwtTokenService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
