@@ -20,17 +20,8 @@ public class AccountService : IAccountService
 
     public async Task<ServiceResponse<AccountResponseDto>> CreateAccountAsync(AccountRequestDto dto, Guid userId)
     {
-        var newAccount = new Account
-        {
-            Id = Guid.NewGuid(),
-            Name = dto.Name,
-            Type = dto.Type,
-            InitialBalance = dto.InitialBalance,
-            CreatedAt = DateTime.UtcNow,
-            UserId = userId // O UserId vem do token (seguro), náo do DTO
-        };
-
-        newAccount.UpdateBalance(dto.InitialBalance);
+        // O UserId vem do token (seguro), náo do DTO
+        var newAccount = new Account(dto.Name, dto.Type, dto.InitialBalance, userId);
 
         await _accountRepository.AddAsync(newAccount);
         await _accountRepository.SaveChangesAsync();
@@ -64,8 +55,7 @@ public class AccountService : IAccountService
         }
 
         // Atualiza os campos permitidos
-        account.Name = dto.Name;
-        account.Type = dto.Type;
+        account.Rename(dto.Name, dto.Type);
 
         _accountRepository.Update(account);
         await _accountRepository.SaveChangesAsync();

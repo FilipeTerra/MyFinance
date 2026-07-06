@@ -173,12 +173,7 @@ public class TransactionService : ITransactionService
         oldAccount.UpdateBalance(-oldAmount);
         targetAccount.UpdateBalance(newNormalizedAmount);
 
-        transaction.Description = dto.Description;
-        transaction.Amount = newNormalizedAmount;
-        transaction.Type = dto.Type;
-        transaction.Date = dto.Date.ToUniversalTime();
-        transaction.AccountId = dto.AccountId;
-        transaction.CategoryId = dto.CategoryId;
+        transaction.Reassign(dto.Description, newNormalizedAmount, dto.Type, dto.Date.ToUniversalTime(), dto.AccountId, dto.CategoryId);
 
         await using var dbTransaction = await _transactionRepository.BeginTransactionAsync();
         try
