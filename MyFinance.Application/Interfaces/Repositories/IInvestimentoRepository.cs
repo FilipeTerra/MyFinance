@@ -7,7 +7,7 @@ namespace MyFinance.Application.Interfaces.Repositories
 {
     public interface IInvestimentoRepository
     {
-        Task<Investimento> GetByIdAsync(Guid id);
+        Task<Investimento?> GetByIdAsync(Guid id);
         Task<IEnumerable<Investimento>> GetAllByUserIdAsync(Guid userId);
 
         /// <summary>

@@ -7,7 +7,7 @@ namespace MyFinance.Application.Interfaces.Repositories
 {
     public interface IFinancialGoalRepository
     {
-        Task<FinancialGoal> GetByIdAsync(Guid id);
+        Task<FinancialGoal?> GetByIdAsync(Guid id);
         Task<IEnumerable<FinancialGoal>> GetAllByUserIdAsync(Guid userId);
         Task AddAsync(FinancialGoal goal);
         Task UpdateAsync(FinancialGoal goal);

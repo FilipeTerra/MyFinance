@@ -13,7 +13,7 @@ namespace MyFinance.Infrastructure.Repositories
             _context = context;
         }
 
-        public async Task<Investimento> GetByIdAsync(Guid id)
+        public async Task<Investimento?> GetByIdAsync(Guid id)
         {
             return await _context.Investimentos.FindAsync(id);
         }

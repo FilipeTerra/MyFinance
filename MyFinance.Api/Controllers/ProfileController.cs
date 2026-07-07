@@ -16,6 +16,10 @@ public class ProfileController : ControllerBase
 {
     private readonly IUserService _userService;
 
+    /// <summary>
+    /// Construtor do controller, injetando o serviço de usuário.
+    /// </summary>
+    /// <param name="userService"></param>
     public ProfileController(IUserService userService)
     {
         _userService = userService;

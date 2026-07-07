@@ -14,6 +14,10 @@ public class AiController : ControllerBase
 {
     private readonly IAiIntegrationService _aiIntegrationService;
 
+    /// <summary>
+    /// Construtor do controller, injetando o serviço de integração com os agentes de IA.
+    /// </summary>
+    /// <param name="aiIntegrationService"></param>
     public AiController(IAiIntegrationService aiIntegrationService)
     {
         _aiIntegrationService = aiIntegrationService;

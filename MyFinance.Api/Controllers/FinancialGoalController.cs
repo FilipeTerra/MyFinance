@@ -77,6 +77,12 @@ public class FinancialGoalController : ControllerBase
         return Ok();
     }
 
+/// <summary>
+/// Endpoint para exclusão de uma meta financeira específica. Estorna os aportes já feitos
+/// para as contas de origem e remove as transações vinculadas. Retorna 204 No Content.
+/// </summary>
+/// <param name="id"></param>
+/// <returns></returns>
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> DeleteGoal(Guid id)
     {
