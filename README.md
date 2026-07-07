@@ -2,7 +2,7 @@
   <img src="MyFinance.Frontend/public/FinAI%20logo.png" alt="FinAI logo" width="520">
 </p>
 
-# MyFinance
+# FinAI
 
 > **Sistema Multiagentes de IA em Plataforma de Gestão Financeira Pessoal**
 
@@ -15,7 +15,7 @@
 
 ## Sobre o Projeto
 
-O **MyFinance** nasceu da união de dois objetivos pessoais: a necessidade de manter as finanças organizadas e o desejo de evoluir tecnicamente.
+O **FinAI** nasceu da união de dois objetivos pessoais: a necessidade de manter as finanças organizadas e o desejo de evoluir tecnicamente.
 
 Mais do que uma ferramenta de controle de gastos, é um laboratório de boas práticas de engenharia de software e arquitetura de agentes de IA. O projeto aplica **Clean Architecture**, design patterns, integração com **modelos de linguagem (LLMs)** e uma cultura de **testes automatizados + CI** para resolver um problema real do dia a dia com uma solução robusta e escalável.
 
