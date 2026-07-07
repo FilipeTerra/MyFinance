@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="MyFinance.Frontend/public/FinAI%20logo.png" alt="MyFinance logo" width="220">
+  <img src="MyFinance.Frontend/public/FinAI%20logo.png" alt="FinAI logo" width="520">
 </p>
 
 # MyFinance
