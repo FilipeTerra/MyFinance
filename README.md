@@ -1,6 +1,10 @@
+<p align="center">
+  <img src="MyFinance.Frontend/public/FinAI%20logo.png" alt="MyFinance logo" width="220">
+</p>
+
 # MyFinance
 
-> **Plataforma de gestão financeira pessoal com análises inteligentes e agentes proativos de IA.**
+> **Sistema Multiagentes de IA em Plataforma de Gestão Financeira Pessoal**
 
 [![CI](https://github.com/FilipeTerra/MyFinance/actions/workflows/ci.yml/badge.svg)](https://github.com/FilipeTerra/MyFinance/actions/workflows/ci.yml)
 ![.NET](https://img.shields.io/badge/.NET-9.0-512BD4?logo=dotnet&logoColor=white)
@@ -11,11 +15,11 @@
 
 ## Sobre o Projeto
 
-O **MyFinance** nasceu da união de dois objetivos pessoais: a necessidade de manter as finanças organizadas e o desejo constante de evoluir tecnicamente.
+O **MyFinance** nasceu da união de dois objetivos pessoais: a necessidade de manter as finanças organizadas e o desejo de evoluir tecnicamente.
 
-Mais do que uma ferramenta de controle de gastos, é um laboratório de boas práticas de engenharia de software. O projeto aplica **Clean Architecture**, design patterns, integração com **modelos de linguagem (LLMs)** e uma cultura de **testes automatizados + CI** para resolver um problema real do dia a dia com uma solução robusta e escalável.
+Mais do que uma ferramenta de controle de gastos, é um laboratório de boas práticas de engenharia de software e arquitetura de agentes de IA. O projeto aplica **Clean Architecture**, design patterns, integração com **modelos de linguagem (LLMs)** e uma cultura de **testes automatizados + CI** para resolver um problema real do dia a dia com uma solução robusta e escalável.
 
-O diferencial está na camada de **IA proativa**: em vez de apenas registrar transações, o sistema analisa o comportamento financeiro do usuário e gera insights educativos embasados em literatura de finanças pessoais (via RAG).
+O diferencial está na camada de **Agentes de IA**: em vez de apenas registrar transações, o sistema analisa o comportamento financeiro do usuário e gera insights educativos e oferece um consultor de IA embasado em literatura de finanças pessoais (via RAG).
 
 ---
 
@@ -24,12 +28,11 @@ O diferencial está na camada de **IA proativa**: em vez de apenas registrar tra
 O sistema é composto por **três serviços independentes** que se comunicam via HTTP:
 
 ```
-┌─────────────────────┐        ┌──────────────────────────┐        ┌───────────────────────────┐
-│   MyFinance.Frontend│        │      MyFinance.Api        │        │     MyFinance.AiAgent     │
-│   React + Vite (SPA)│ ─────▶ │   ASP.NET Core (REST)     │ ─────▶ │   FastAPI + LangGraph     │
-│                     │  HTTP  │   Clean Architecture      │  HTTP  │   Agentes de IA / RAG     │
-│   :5173             │        │   :5088                   │        │   :8181                   │
-└─────────────────────┘        └──────────────────────────┘        └───────────────────────────┘
+┌─────────────────────┐        ┌───────────────────────────┐         ┌───────────────────────────┐
+│  MyFinance.Frontend │        │      MyFinance.Api        │         │     MyFinance.AiAgent     │
+│  React + Vite (SPA) │ ─────▶│   ASP.NET Core (REST)     │ ─────▶ │   FastAPI + LangGraph     │
+│                     │  HTTP  │   Clean Architecture      │  HTTP   │   Agentes de IA / RAG     │
+└─────────────────────┘        └───────────────────────────┘         └───────────────────────────┘
                                           │                                       │
                                           ▼                                       ▼
                                    ┌──────────────┐                       ┌──────────────┐
@@ -56,9 +59,19 @@ Detalhes de tecnologia (BCrypt, JWT, HTTP) ficam isolados atrás de abstrações
 
 Serviço FastAPI que orquestra agentes de IA com **LangGraph**, também organizado em camadas (`Domain`, `Application`, `Infra`):
 
+- **Consultor conversacional (padrão ReAct):** chat que raciocina em ciclos *Thought → Action → Observation*, decidindo quais tools chamar a cada pergunta e mantendo memória da conversa por usuário.
 - **Agentes proativos** que analisam o histórico financeiro e decidem quando exibir insights (reserva de emergência, inflação do estilo de vida).
 - **RAG** (Retrieval-Augmented Generation) com **FAISS** sobre uma base de livros de finanças pessoais, para embasar sugestões com fontes citáveis.
 - **Providers flexíveis de LLM** via Ollama, com fallback automático de um proxy remoto para uma instância local.
+
+**Tools do agente consultor:**
+
+| Categoria | Exemplos |
+|---|---|
+| Dados da conta (API .NET) | saldos, transações recentes, gastos por categoria, resumo financeiro, metas, investimentos, perfil |
+| Simulações | criar/aportar meta, simular meta ideal, simular impacto de nova despesa, simular investimento, juros de financiamento |
+| Dados de mercado (tempo real) | taxa Selic, indicadores de ações na B3 |
+| Conhecimento (RAG) | consulta à base de livros de finanças pessoais |
 
 ---
 
@@ -70,6 +83,7 @@ Serviço FastAPI que orquestra agentes de IA com **LangGraph**, também organiza
 * **Categorias:** Organização das transações por categoria personalizada.
 * **Metas Financeiras:** Criação de metas com acompanhamento de progresso e aportes.
 * **Investimentos:** Registro de ativos (Renda Fixa, Ações, FIIs, Cripto, ETFs) com acompanhamento de rentabilidade.
+* **Consultor Financeiro (Chat):** agente conversacional que responde perguntas sobre a vida financeira do usuário em linguagem natural, com acesso a dados reais da conta e a mais de 15 tools (consultas, simulações, mercado e conhecimento).
 * **Insights de IA (proativos):**
   * *Reserva de Emergência* — avalia se o valor guardado atinge o ideal recomendado.
   * *Inflação do Estilo de Vida* — detecta se gastos supérfluos crescem mais rápido que os investimentos.
@@ -170,9 +184,8 @@ npm run dev                 # sobe em http://localhost:5173
 ## Roadmap
 
 * [ ] Dashboard com gráficos interativos de tendências e categorização de gastos
-* [ ] Relatórios detalhados de receitas, despesas e previsões
-* [ ] Orçamentos mensais por categoria
-* [ ] Testes de integração da API (WebApplicationFactory) e do AiAgent
+* [ ] Incrementar as tools do agente ReAct
+* [ ] Desenvolver perfil do usuário
 
 ---
 
