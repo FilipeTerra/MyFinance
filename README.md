@@ -1,69 +1,179 @@
 # MyFinance
 
-> **Sistema de gerenciamento financeiro pessoal, com análises personalizadas e detalhadas.**
+> **Plataforma de gestão financeira pessoal com análises inteligentes e agentes proativos de IA.**
+
+[![CI](https://github.com/FilipeTerra/MyFinance/actions/workflows/ci.yml/badge.svg)](https://github.com/FilipeTerra/MyFinance/actions/workflows/ci.yml)
+![.NET](https://img.shields.io/badge/.NET-9.0-512BD4?logo=dotnet&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)
+![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
+
+---
 
 ## Sobre o Projeto
 
 O **MyFinance** nasceu da união de dois objetivos pessoais: a necessidade de manter as finanças organizadas e o desejo constante de evoluir tecnicamente.
 
-Este projeto não é apenas uma ferramenta para controle de gastos, mas também um laboratório de boas práticas de desenvolvimento. Aqui, aplico conceitos de arquitetura de software, design patterns e tecnologias modernas para criar uma solução robusta e escalável, resolvendo um problema real do meu dia a dia.
+Mais do que uma ferramenta de controle de gastos, é um laboratório de boas práticas de engenharia de software. O projeto aplica **Clean Architecture**, design patterns, integração com **modelos de linguagem (LLMs)** e uma cultura de **testes automatizados + CI** para resolver um problema real do dia a dia com uma solução robusta e escalável.
+
+O diferencial está na camada de **IA proativa**: em vez de apenas registrar transações, o sistema analisa o comportamento financeiro do usuário e gera insights educativos embasados em literatura de finanças pessoais (via RAG).
+
+---
+
+## Arquitetura
+
+O sistema é composto por **três serviços independentes** que se comunicam via HTTP:
+
+```
+┌─────────────────────┐        ┌──────────────────────────┐        ┌───────────────────────────┐
+│   MyFinance.Frontend│        │      MyFinance.Api        │        │     MyFinance.AiAgent     │
+│   React + Vite (SPA)│ ─────▶ │   ASP.NET Core (REST)     │ ─────▶ │   FastAPI + LangGraph     │
+│                     │  HTTP  │   Clean Architecture      │  HTTP  │   Agentes de IA / RAG     │
+│   :5173             │        │   :5088                   │        │   :8181                   │
+└─────────────────────┘        └──────────────────────────┘        └───────────────────────────┘
+                                          │                                       │
+                                          ▼                                       ▼
+                                   ┌──────────────┐                       ┌──────────────┐
+                                   │  PostgreSQL  │                       │    Ollama    │
+                                   │  (EF Core)   │                       │ (LLM local/  │
+                                   └──────────────┘                       │   remoto)    │
+                                                                          └──────────────┘
+```
+
+### Backend .NET — Clean Architecture
+
+A API segue a regra de dependência da Clean Architecture, com as camadas apontando sempre para o centro (Domain):
+
+| Camada | Responsabilidade |
+|---|---|
+| **MyFinance.Domain** | Entidades e regras de negócio corporativas. Sem dependências externas. |
+| **MyFinance.Application** | Casos de uso (Services), DTOs e interfaces (Repositories, Services). Depende apenas de Domain. |
+| **MyFinance.Infrastructure** | Implementações concretas: EF Core, repositórios, hashing (BCrypt), geração de JWT, cliente HTTP do AiAgent. |
+| **MyFinance.Api** | Composition root: Controllers, injeção de dependência, autenticação JWT, Swagger. |
+
+Detalhes de tecnologia (BCrypt, JWT, HTTP) ficam isolados atrás de abstrações (`IPasswordHasher`, `ITokenService`, `IAiIntegrationService`), mantendo o núcleo de negócio livre de acoplamento a frameworks.
+
+### AiAgent Python — Agentes e RAG
+
+Serviço FastAPI que orquestra agentes de IA com **LangGraph**, também organizado em camadas (`Domain`, `Application`, `Infra`):
+
+- **Agentes proativos** que analisam o histórico financeiro e decidem quando exibir insights (reserva de emergência, inflação do estilo de vida).
+- **RAG** (Retrieval-Augmented Generation) com **FAISS** sobre uma base de livros de finanças pessoais, para embasar sugestões com fontes citáveis.
+- **Providers flexíveis de LLM** via Ollama, com fallback automático de um proxy remoto para uma instância local.
+
+---
 
 ## Funcionalidades
 
-O sistema foi desenhado para ser prático e intuitivo:
-
-* **Home (Visão Geral):** Focada na agilidade. Permite o registro rápido de transações (receitas e despesas), consulta de histórico e visualização resumida das contas cadastradas.
-* **Gestão de Contas e Transações:** CRUD completo para manter seus dados sempre atualizados.
-* **Dashboard (Em Desenvolvimento):** Uma área dedicada à inteligência financeira, com gráficos de tendências, categorização de gastos e análises detalhadas para auxiliar na tomada de decisão.
-
-## Tecnologias Utilizadas
-
-O projeto utiliza uma stack moderna, separada entre Backend (API) e Frontend (SPA):
-
-### Backend (.NET Core)
-* **C# / .NET:** Construção da API RESTful.
-* **Entity Framework Core:** ORM para interação com o banco de dados.
-* **Arquitetura:** O projeto segue princípios de **Clean Architecture** (separação em Api, Application, Domain, Infrastructure) para garantir desacoplamento e testabilidade.
-* **Boas Práticas:** Injeção de dependência, DTOs, Repository Pattern.
-
-### Frontend (React)
-* **React + Vite:** Para uma interface rápida e reativa.
-* **TypeScript:** Garantindo tipagem estática e segurança no desenvolvimento.
-* **CSS Modules/Custom CSS:** Estilização componentizada.
-
-## ⚙️ Como Executar
-
-### Pré-requisitos
-* .NET SDK.
-* Node.js.
-* Postgres (ou configurar a connection string para seu banco de preferência).
-
-### Passos
-
-1.  **Clone o repositório:**
-    ```bash
-    git clone [https://github.com/seu-usuario/myfinance.git](https://github.com/seu-usuario/myfinance.git)
-    ```
-
-2.  **Backend:**
-    ```bash
-    cd MyFinance.Api
-    dotnet restore
-    dotnet run
-    ```
-
-3.  **Frontend:**
-    ```bash
-    cd MyFinance.Frontend
-    npm install
-    npm run dev
-    ```
-
-## Em desenvolvimento
-
-* [ ] Implementação da aba Dashboard com gráficos interativos.
-* [ ] Relatórios detalhados sobre gastos, receitas e previsões.
-* [ ] Metas de economia e orçamentos.
+* **Autenticação:** Registro e login com senha protegida por hash (BCrypt) e autenticação via JWT.
+* **Contas:** CRUD de contas financeiras (corrente, poupança, carteira, cartão, investimento) com controle de saldo.
+* **Transações:** Registro de receitas, despesas e aportes, com ajuste automático de saldo e importação em lote a partir de extratos.
+* **Categorias:** Organização das transações por categoria personalizada.
+* **Metas Financeiras:** Criação de metas com acompanhamento de progresso e aportes.
+* **Investimentos:** Registro de ativos (Renda Fixa, Ações, FIIs, Cripto, ETFs) com acompanhamento de rentabilidade.
+* **Insights de IA (proativos):**
+  * *Reserva de Emergência* — avalia se o valor guardado atinge o ideal recomendado.
+  * *Inflação do Estilo de Vida* — detecta se gastos supérfluos crescem mais rápido que os investimentos.
+* **Processamento de extratos por IA:** Extração automática de transações a partir de arquivos.
 
 ---
-Desenvolvido por **Filipe Caldeira** - Software Engenieer 👨‍💻
+
+## Stack Tecnológica
+
+### Backend — API (.NET 9)
+* **C# / ASP.NET Core** — API RESTful
+* **Entity Framework Core** + **PostgreSQL (Npgsql)** — persistência
+* **JWT Bearer** — autenticação
+* **BCrypt.Net** — hashing de senhas
+* **Swagger / OpenAPI** — documentação da API
+
+### AiAgent (Python 3.11)
+* **FastAPI** — serviço HTTP
+* **LangChain + LangGraph** — orquestração de agentes
+* **FAISS** — vector store para RAG
+* **Ollama** — execução de LLMs (local ou proxy remoto)
+* **pandas / pdfplumber** — processamento de extratos
+
+### Frontend (React 19)
+* **React + Vite** — SPA rápida e reativa
+* **TypeScript** — tipagem estática
+* **React Router** — navegação
+* **React Hook Form + Zod** — formulários e validação
+* **Axios** — cliente HTTP
+
+---
+
+## Testes e Qualidade
+
+O projeto tem uma suíte de testes automatizados que roda em **integração contínua a cada push e pull request**:
+
+| Suíte | Tecnologia | Cobertura |
+|---|---|---|
+| **MyFinance.Domain.Tests** | xUnit | Entidades e regras de negócio (invariantes, validações) |
+| **MyFinance.Application.Tests** | xUnit + Moq | Todos os Services, com repositórios mockados |
+| **AiAgent** | pytest | Funções puras, tools financeiras, parsers e configuração |
+
+O pipeline de **GitHub Actions** (`.github/workflows/ci.yml`) executa os testes .NET e Python em jobs paralelos. A branch `main` é protegida: **nenhum código é mesclado sem que todos os testes passem.**
+
+```bash
+# Rodar os testes .NET
+dotnet test
+
+# Rodar os testes do AiAgent
+cd MyFinance.AiAgent && pytest
+```
+
+---
+
+## Como Executar
+
+### Pré-requisitos
+* [.NET SDK 9.0](https://dotnet.microsoft.com/download)
+* [Node.js](https://nodejs.org/) (18+)
+* [Python 3.11](https://www.python.org/)
+* [PostgreSQL](https://www.postgresql.org/)
+* [Ollama](https://ollama.com/) *(opcional — necessário apenas para as funcionalidades de IA)*
+
+### 1. Clonar o repositório
+```bash
+git clone https://github.com/FilipeTerra/MyFinance.git
+cd MyFinance
+```
+
+### 2. Backend (API .NET)
+Configure a connection string e as `JwtSettings` em `MyFinance.Api/appsettings.Development.json`, então:
+```bash
+cd MyFinance.Api
+dotnet restore
+dotnet ef database update   # aplica as migrations
+dotnet run                  # sobe em http://localhost:5088
+```
+
+### 3. AiAgent (Python) — opcional
+```bash
+cd MyFinance.AiAgent
+python -m venv venv && source venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env        # preencha as chaves conforme necessário
+uvicorn src.Api.main:app --port 8181
+```
+
+### 4. Frontend (React)
+As URLs da API são configuradas via variáveis de ambiente (`VITE_API_BASE_URL`, `VITE_AI_API_BASE_URL`) — veja `.env.development`.
+```bash
+cd MyFinance.Frontend
+npm install
+npm run dev                 # sobe em http://localhost:5173
+```
+
+---
+
+## Roadmap
+
+* [ ] Dashboard com gráficos interativos de tendências e categorização de gastos
+* [ ] Relatórios detalhados de receitas, despesas e previsões
+* [ ] Orçamentos mensais por categoria
+* [ ] Testes de integração da API (WebApplicationFactory) e do AiAgent
+
+---
+
+Desenvolvido por **Filipe Caldeira** — Software Engineer 👨‍💻
