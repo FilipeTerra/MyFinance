@@ -80,6 +80,45 @@ def _buscar_indicadores_sync(ticker: str) -> dict:
         _logger.error("❌ [TOOL:b3] Falha ao buscar '%s': %s", ticker, e)
         return {"erro": f"Falha ao buscar dados para {ticker}: {str(e)}"}
 
+
+def _buscar_cotacao_sync(ticker: str) -> dict:
+    """Busca apenas a cotação (preço de fechamento) mais recente do ticker — usada
+    pela sincronização automática de cotações dos investimentos (endpoint /api/market/quote)."""
+    try:
+        ticker_yf = f"{ticker.upper().strip()}.SA"
+        hist = yf.Ticker(ticker_yf).history(period="5d")
+        if hist.empty:
+            _logger.warning("📈 [MARKET:quote] Ticker '%s' sem dados no Yahoo Finance", ticker)
+            return {"success": False, "erro": f"Nenhum dado encontrado para o ticker {ticker}."}
+
+        preco_atual = hist["Close"].iloc[-1]
+        return {"success": True, "ticker": ticker.upper(), "preco_atual_brl": round(preco_atual, 2)}
+
+    except Exception as e:
+        _logger.error("❌ [MARKET:quote] Falha ao buscar '%s': %s", ticker, e)
+        return {"success": False, "erro": f"Falha ao buscar cotação para {ticker}: {str(e)}"}
+
+
+def _buscar_historico_sync(ticker: str, meses: int) -> dict:
+    """Busca o histórico de cotações (fechamento diário) do ticker nos últimos `meses`
+    meses — usada para o backfill da série histórica (endpoint /api/market/history)."""
+    try:
+        ticker_yf = f"{ticker.upper().strip()}.SA"
+        hist = yf.Ticker(ticker_yf).history(period=f"{meses}mo")
+        if hist.empty:
+            _logger.warning("📈 [MARKET:history] Ticker '%s' sem dados no Yahoo Finance", ticker)
+            return {"success": False, "erro": f"Nenhum dado encontrado para o ticker {ticker}."}
+
+        historico = [
+            {"data": data.strftime("%Y-%m-%d"), "valor": round(preco, 2)}
+            for data, preco in hist["Close"].items()
+        ]
+        return {"success": True, "ticker": ticker.upper(), "historico": historico}
+
+    except Exception as e:
+        _logger.error("❌ [MARKET:history] Falha ao buscar histórico de '%s': %s", ticker, e)
+        return {"success": False, "erro": f"Falha ao buscar histórico para {ticker}: {str(e)}"}
+
 # ===========================================================================
 # Ferramentas
 # ===========================================================================

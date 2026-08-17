@@ -29,7 +29,7 @@ function computeGoalStats(goals: FinancialGoalResponseDto[]) {
 }
 
 function computeInvestStats(items: InvestimentoResponseDto[]) {
-    const totalInvestido = items.reduce((s, i) => s + i.valorInicial, 0);
+    const totalInvestido = items.reduce((s, i) => s + i.totalAportado, 0);
     const totalAtual     = items.reduce((s, i) => s + i.valorAtual, 0);
     const resultado      = totalAtual - totalInvestido;
     return {

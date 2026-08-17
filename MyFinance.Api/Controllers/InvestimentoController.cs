@@ -124,4 +124,55 @@ public class InvestimentoController : ControllerBase
             return NotFound(new { message = ex.Message });
         }
     }
+
+    /// <summary>
+    /// Registra um novo aporte em um investimento existente, debitando a conta de origem.
+    /// Retorna o investimento atualizado com status 200 OK.
+    /// </summary>
+    /// <param name="id"></param>
+    /// <param name="request"></param>
+    /// <returns></returns>
+    [HttpPost("{id:guid}/aportes")]
+    public async Task<IActionResult> AdicionarAporte(Guid id, [FromBody] AporteInvestimentoRequestDto request)
+    {
+        var userId = GetUserIdFromToken();
+        try
+        {
+            var result = await _investimentoService.AdicionarAporteAsync(id, userId, request);
+            return Ok(result);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Lista o histórico de aportes (data e valor) de um investimento específico.
+    /// Retorna status 200 OK.
+    /// </summary>
+    /// <param name="id"></param>
+    /// <returns></returns>
+    [HttpGet("{id:guid}/aportes")]
+    public async Task<IActionResult> GetHistoricoAportes(Guid id)
+    {
+        var userId = GetUserIdFromToken();
+        try
+        {
+            var result = await _investimentoService.GetHistoricoAportesAsync(id, userId);
+            return Ok(result);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+    }
 }

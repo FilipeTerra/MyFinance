@@ -10,6 +10,12 @@ namespace MyFinance.Application.Dtos.Investimentos
         public InvestmentType Tipo { get; init; }
 
         /// <summary>
+        /// Código do ativo na B3 (ex: "PETR4"), usado para buscar cotações automaticamente.
+        /// Opcional — irrelevante para Renda Fixa.
+        /// </summary>
+        public string? Ticker { get; init; }
+
+        /// <summary>
         /// Conta de origem do dinheiro — será debitada no valor do aporte inicial.
         /// </summary>
         public Guid AccountId { get; init; }

@@ -1,8 +1,9 @@
 using Microsoft.EntityFrameworkCore;
-using MyFinance.Infrastructure; 
+using MyFinance.Infrastructure;
 using MyFinance.Application.Interfaces.Services;
-using MyFinance.Application.Interfaces.Repositories; 
-using MyFinance.Application.Services;   
+using MyFinance.Application.Interfaces.Repositories;
+using MyFinance.Application.Services;
+using MyFinance.Infrastructure.HostedServices;
 using MyFinance.Infrastructure.Repositories;
 using MyFinance.Infrastructure.Security;
 using MyFinance.Infrastructure.Services;
@@ -82,6 +83,14 @@ builder.Services.AddScoped<IFinancialGoalRepository, FinancialGoalRepository>();
 builder.Services.AddScoped<IFinancialGoalService, FinancialGoalService>();
 builder.Services.AddScoped<IInvestimentoRepository, InvestimentoRepository>();
 builder.Services.AddScoped<IInvestimentoService, InvestimentoService>();
+builder.Services.AddScoped<ICotacaoHistoricoRepository, CotacaoHistoricoRepository>();
+builder.Services.AddScoped<IMarketSyncService, MarketSyncService>();
+builder.Services.AddHttpClient<IStockMarketIntegrationService, StockMarketIntegrationService>(client =>
+{
+    client.BaseAddress = new Uri("http://127.0.0.1:8181/");
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
+builder.Services.AddHostedService<StartupMarketSyncHostedService>();
 var app = builder.Build();
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 

@@ -26,6 +26,13 @@ namespace MyFinance.Infrastructure.Repositories
                 .ToListAsync();
         }
 
+        public async Task<IEnumerable<Investimento>> GetAllComTickerAsync()
+        {
+            return await _context.Investimentos
+                .Where(investimento => investimento.Ticker != null)
+                .ToListAsync();
+        }
+
         public async Task AddAsync(Investimento investimento)
         {
             await _context.Investimentos.AddAsync(investimento);

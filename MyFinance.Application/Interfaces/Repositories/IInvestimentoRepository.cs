@@ -11,6 +11,12 @@ namespace MyFinance.Application.Interfaces.Repositories
         Task<IEnumerable<Investimento>> GetAllByUserIdAsync(Guid userId);
 
         /// <summary>
+        /// Busca todos os investimentos (de todos os usuários) que possuem um Ticker configurado —
+        /// usado pela sincronização de cotações de mercado no startup da aplicação.
+        /// </summary>
+        Task<IEnumerable<Investimento>> GetAllComTickerAsync();
+
+        /// <summary>
         /// Adiciona o investimento ao contexto do EF (não persiste — chame SaveChangesAsync).
         /// </summary>
         Task AddAsync(Investimento investimento);

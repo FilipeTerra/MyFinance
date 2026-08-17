@@ -11,7 +11,12 @@ import type { CategoryRequestDto } from '../types/CategoryRequestDto';
 import type { UpdateAccountRequestDto } from '../types/UpdateAccountRequestDto';
 import type { AiTransactionResponseDto, SaveBatchTransactionRequestDto, ProactiveInsightResponseDto, LifestyleInsightResponseDto } from '../types/AiIntegration';
 import type { FinancialGoalResponseDto, CreateFinancialGoalRequestDto } from '../types/FinancialGoalResponseDto';
-import type { InvestimentoResponseDto, CreateInvestimentoRequestDto } from '../types/InvestimentoResponseDto';
+import type {
+    InvestimentoResponseDto,
+    CreateInvestimentoRequestDto,
+    AporteInvestimentoRequestDto,
+    AporteHistoricoResponseDto,
+} from '../types/InvestimentoResponseDto';
 import type { UserProfileResponseDto, UpdateUserProfileRequestDto } from '../types/UserProfileDto';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -164,6 +169,14 @@ const investimentoService = {
     },
     delete: (id: string) => {
         return apiClient.delete<void>(`/investimentos/${id}`);
+    },
+    adicionarAporte: async (id: string, data: AporteInvestimentoRequestDto): Promise<InvestimentoResponseDto> => {
+        const response = await apiClient.post<InvestimentoResponseDto>(`/investimentos/${id}/aportes`, data);
+        return response.data;
+    },
+    getHistoricoAportes: async (id: string): Promise<AporteHistoricoResponseDto[]> => {
+        const response = await apiClient.get<AporteHistoricoResponseDto[]>(`/investimentos/${id}/aportes`);
+        return response.data;
     },
 };
 
