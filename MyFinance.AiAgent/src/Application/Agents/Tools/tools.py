@@ -264,15 +264,9 @@ _BCB_SELIC_URL = "https://api.bcb.gov.br/dados/serie/bcdata.sgs.432/dados/ultimo
 _BCB_IPCA_URL = "https://api.bcb.gov.br/dados/serie/bcdata.sgs.13522/dados/ultimos/1?formato=json"
 
 
-@tool(extras={"retorna_dinheiro": True})
-async def buscar_taxa_selic() -> dict:
-    """
-    Retorna as taxas de referência da economia brasileira: SELIC (taxa básica de juros)
-    e IPCA (inflação oficial), bem como os juros reais (SELIC descontada a inflação).
-
-    Use esta ferramenta ANTES de qualquer simulação de investimento ou análise de
-    cenário econômico que dependa de juros ou inflação.
-    """
+async def _buscar_taxa_selic_impl() -> dict:
+    """Implementação pura, sem decorator @tool — chamável tanto pela tool do
+    LangChain (buscar_taxa_selic) quanto pelo endpoint REST /api/market/selic."""
     # 1. Valores de fallback (acionados se a API do BCB falhar)
     selic_anual = 14.25
     ipca_anual = 4.72
@@ -335,6 +329,18 @@ async def buscar_taxa_selic() -> dict:
         "data_referencia_ipca": data_ref_ipca,
         "fonte": fonte
     }
+
+
+@tool(extras={"retorna_dinheiro": True})
+async def buscar_taxa_selic() -> dict:
+    """
+    Retorna as taxas de referência da economia brasileira: SELIC (taxa básica de juros)
+    e IPCA (inflação oficial), bem como os juros reais (SELIC descontada a inflação).
+
+    Use esta ferramenta ANTES de qualquer simulação de investimento ou análise de
+    cenário econômico que dependa de juros ou inflação.
+    """
+    return await _buscar_taxa_selic_impl()
 
 
 # ===========================================================================

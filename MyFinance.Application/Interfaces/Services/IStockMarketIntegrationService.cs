@@ -17,5 +17,11 @@ namespace MyFinance.Application.Interfaces.Services
         /// Retorna lista vazia quando o ticker não é encontrado ou a consulta externa falha.
         /// </summary>
         Task<IEnumerable<CotacaoPontoDto>> GetHistoryAsync(string ticker, int meses);
+
+        /// <summary>
+        /// Busca a taxa Selic anual vigente (real, via Banco Central). Retorna null
+        /// quando a consulta externa falha — o chamador decide o fallback.
+        /// </summary>
+        Task<decimal?> GetTaxaSelicAsync();
     }
 }

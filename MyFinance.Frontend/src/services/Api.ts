@@ -18,6 +18,7 @@ import type {
     AporteHistoricoResponseDto,
 } from '../types/InvestimentoResponseDto';
 import type { UserProfileResponseDto, UpdateUserProfileRequestDto } from '../types/UserProfileDto';
+import type { CalcularProjecaoRequestDto, ProjecaoInvestimentoResponseDto } from '../types/ProjecaoInvestimento';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -180,6 +181,13 @@ const investimentoService = {
     },
 };
 
+const projecaoInvestimentoService = {
+    calcular: async (data: CalcularProjecaoRequestDto): Promise<ProjecaoInvestimentoResponseDto> => {
+        const response = await apiClient.post<ProjecaoInvestimentoResponseDto>('/investimentos/projecao', data);
+        return response.data;
+    },
+};
+
 const profileService = {
     getProfile: async (): Promise<UserProfileResponseDto> => {
         const response = await apiClient.get<UserProfileResponseDto>('/profile');
@@ -209,6 +217,7 @@ export {
     transactionService,
     financialGoalService,
     investimentoService,
+    projecaoInvestimentoService,
     profileService,
     aiService,
     tokenManager,

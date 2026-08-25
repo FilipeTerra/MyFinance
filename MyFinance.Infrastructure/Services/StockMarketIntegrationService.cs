@@ -58,6 +58,24 @@ namespace MyFinance.Infrastructure.Services
             }
         }
 
+        public async Task<decimal?> GetTaxaSelicAsync()
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync("api/market/selic");
+                if (!response.IsSuccessStatusCode)
+                    return null;
+
+                var result = await response.Content.ReadFromJsonAsync<SelicPythonResponse>();
+                return result?.Success == true ? result.SelicAnualPct : null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Falha ao buscar a taxa Selic.");
+                return null;
+            }
+        }
+
         private class QuotePythonResponse
         {
             public bool Success { get; set; }
@@ -76,6 +94,14 @@ namespace MyFinance.Infrastructure.Services
         {
             public DateTime Data { get; set; }
             public decimal Valor { get; set; }
+        }
+
+        private class SelicPythonResponse
+        {
+            public bool Success { get; set; }
+
+            [JsonPropertyName("selic_anual_pct")]
+            public decimal SelicAnualPct { get; set; }
         }
     }
 }
