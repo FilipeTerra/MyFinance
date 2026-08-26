@@ -53,6 +53,7 @@ export function InvestimentoModal({ mode, investimento, onClose, onSuccess }: In
 
     const [nome, setNome] = useState('');
     const [tipo, setTipo] = useState<InvestmentType>(InvestmentType.RendaFixa);
+    const [ticker, setTicker] = useState('');
     const [valor, setValor] = useState(
         isEdit && investimento ? maskCurrency(investimento.valorAtual.toFixed(2).replace('.', '')) : ''
     );
@@ -137,6 +138,7 @@ export function InvestimentoModal({ mode, investimento, onClose, onSuccess }: In
                 valorInicial: parsedValor,
                 accountId: selectedAccountId,
                 categoryId,
+                ticker: tipo !== InvestmentType.RendaFixa && ticker.trim() ? ticker.trim().toUpperCase() : undefined,
             });
             onSuccess();
         } catch (err) {
@@ -161,7 +163,7 @@ export function InvestimentoModal({ mode, investimento, onClose, onSuccess }: In
                     <div className="inv-edit-context">
                         <span className="inv-edit-context-name">{investimento.nome}</span>
                         <span className="inv-edit-context-sub">
-                            Aportado: {formatCurrency(investimento.valorInicial)}
+                            Total aportado: {formatCurrency(investimento.totalAportado)}
                         </span>
                     </div>
                 )}
@@ -210,6 +212,24 @@ export function InvestimentoModal({ mode, investimento, onClose, onSuccess }: In
                                         })}
                                     </div>
                                 </div>
+
+                                {tipo !== InvestmentType.RendaFixa && (
+                                    <div className="inv-form-group">
+                                        <label htmlFor="invTicker">Ticker na B3 (opcional)</label>
+                                        <input
+                                            id="invTicker"
+                                            type="text"
+                                            placeholder="Ex: PETR4"
+                                            value={ticker}
+                                            onChange={e => setTicker(e.target.value)}
+                                            disabled={isLoading}
+                                            maxLength={10}
+                                        />
+                                        <p className="inv-ticker-hint">
+                                            Informe o ticker para que a cotação seja atualizada automaticamente.
+                                        </p>
+                                    </div>
+                                )}
 
                                 {/* Origem do dinheiro — conta a ser debitada */}
                                 <AccountSelectField

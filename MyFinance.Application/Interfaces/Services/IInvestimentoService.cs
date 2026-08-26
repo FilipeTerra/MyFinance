@@ -11,5 +11,7 @@ namespace MyFinance.Application.Interfaces.Services
         Task<IEnumerable<InvestimentoResponseDto>> GetUserInvestimentosAsync(Guid userId);
         Task<InvestimentoResponseDto> UpdateValorAtualAsync(Guid investimentoId, Guid userId, decimal novoValor);
         Task DeleteInvestimentoAsync(Guid investimentoId, Guid userId);
+        Task<InvestimentoResponseDto> AdicionarAporteAsync(Guid investimentoId, Guid userId, AporteInvestimentoRequestDto request);
+        Task<IEnumerable<AporteHistoricoResponseDto>> GetHistoricoAportesAsync(Guid investimentoId, Guid userId);
     }
 }

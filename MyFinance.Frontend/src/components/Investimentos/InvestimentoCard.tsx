@@ -3,6 +3,9 @@ import type { InvestimentoResponseDto } from '../../types/InvestimentoResponseDt
 import { investimentoService } from '../../services/Api';
 import { INVESTMENT_TYPE_META } from './investmentTypeMeta';
 import { InvestimentoModal } from './InvestimentoModal';
+import { AporteInvestimentoModal } from './AporteInvestimentoModal';
+import { HistoricoAportesModal } from './HistoricoAportesModal';
+import { CotacaoSparkline } from './CotacaoSparkline';
 import './InvestimentoCard.css';
 
 interface InvestimentoCardProps {
@@ -33,6 +36,8 @@ const TREND_META: Record<Trend, { arrow: string; label: string }> = {
 
 export function InvestimentoCard({ investimento, onUpdateSuccess, onDeleteSuccess }: InvestimentoCardProps) {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isAporteModalOpen, setIsAporteModalOpen] = useState(false);
+    const [isHistoricoModalOpen, setIsHistoricoModalOpen] = useState(false);
     const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
 
@@ -52,7 +57,7 @@ export function InvestimentoCard({ investimento, onUpdateSuccess, onDeleteSucces
     const meta = INVESTMENT_TYPE_META[investimento.tipo];
     const trend = getTrend(investimento.rentabilidadePercentual);
     const trendMeta = TREND_META[trend];
-    const resultado = investimento.valorAtual - investimento.valorInicial;
+    const resultado = investimento.valorAtual - investimento.totalAportado;
 
     return (
         <div
@@ -69,31 +74,50 @@ export function InvestimentoCard({ investimento, onUpdateSuccess, onDeleteSucces
                 </div>
             </div>
 
-            <div className="inv-value-block">
-                <span className="inv-value-label">Valor atual</span>
-                <span className="inv-value-current">{formatCurrency(investimento.valorAtual)}</span>
-                <span className={`inv-trend inv-trend--${trend}`}>
+            <div className="inv-value-section">
+                <div className="inv-value-columns">
+                    <div className="inv-value-col">
+                        <span className="inv-value-label">Total aportado</span>
+                        <span className="inv-value-amount">{formatCurrency(investimento.totalAportado)}</span>
+                    </div>
+                    <div className="inv-value-col inv-value-col--current">
+                        <span className="inv-value-label">Valor atual</span>
+                        <span className="inv-value-amount inv-value-amount--current">{formatCurrency(investimento.valorAtual)}</span>
+                    </div>
+                </div>
+
+                <div className={`inv-trend inv-trend--${trend}`}>
                     <span className="inv-trend-arrow" aria-hidden="true">{trendMeta.arrow}</span>
                     {investimento.rentabilidadePercentual > 0 ? '+' : ''}
                     {investimento.rentabilidadePercentual.toFixed(2)}%
                     <span className="inv-trend-abs">
                         ({resultado >= 0 ? '+' : ''}{formatCurrency(resultado)})
                     </span>
-                </span>
+                </div>
+
+                {investimento.ticker && (
+                    <span className="inv-auto-sync-badge" title="A cotação deste ativo é atualizada automaticamente pela integração com a bolsa">
+                        🔄 Cotação automática ({investimento.ticker})
+                    </span>
+                )}
             </div>
 
-            <div className="inv-stats-row">
-                <div className="inv-stat">
-                    <span className="inv-stat-label">Aportado</span>
-                    <span className="inv-stat-value">{formatCurrency(investimento.valorInicial)}</span>
+            <div className="inv-variacao-block">
+                <div className="inv-variacao-info">
+                    <span className="inv-variacao-label">Últimos 3 meses</span>
+                    {investimento.variacaoUltimos3MesesPercentual !== null ? (
+                        <span className={`inv-variacao-value inv-variacao-value--${
+                            investimento.variacaoUltimos3MesesPercentual > 0 ? 'up' :
+                            investimento.variacaoUltimos3MesesPercentual < 0 ? 'down' : 'flat'
+                        }`}>
+                            {investimento.variacaoUltimos3MesesPercentual > 0 ? '+' : ''}
+                            {investimento.variacaoUltimos3MesesPercentual.toFixed(2)}%
+                        </span>
+                    ) : (
+                        <span className="inv-variacao-value inv-variacao-value--flat">Dados insuficientes</span>
+                    )}
                 </div>
-                <div className="inv-stat-divider" aria-hidden="true" />
-                <div className="inv-stat inv-stat--align-end">
-                    <span className="inv-stat-label">{trendMeta.label}</span>
-                    <span className={`inv-stat-value inv-stat-value--${trend}`}>
-                        {resultado >= 0 ? '+' : ''}{formatCurrency(resultado)}
-                    </span>
-                </div>
+                <CotacaoSparkline pontos={investimento.historicoCotacoes} />
             </div>
 
             <div className="inv-footer">
@@ -120,22 +144,36 @@ export function InvestimentoCard({ investimento, onUpdateSuccess, onDeleteSucces
                     </button>
                 </div>
             ) : (
-                <div className="inv-actions">
-                    <button
-                        className="inv-update-btn"
-                        onClick={() => setIsEditModalOpen(true)}
-                        title="Atualizar valor de mercado"
-                    >
-                        Atualizar valor
+                <>
+                    <div className="inv-actions">
+                        {!investimento.ticker && (
+                            <button
+                                className="inv-update-btn"
+                                onClick={() => setIsEditModalOpen(true)}
+                                title="Atualizar valor de mercado"
+                            >
+                                Atualizar valor
+                            </button>
+                        )}
+                        <button
+                            className="inv-aporte-btn"
+                            onClick={() => setIsAporteModalOpen(true)}
+                            title="Registrar um novo aporte"
+                        >
+                            Aportar mais
+                        </button>
+                        <button
+                            className="inv-delete-btn"
+                            onClick={() => setIsConfirmingDelete(true)}
+                            title="Excluir este investimento"
+                        >
+                            Excluir
+                        </button>
+                    </div>
+                    <button className="inv-historico-link" onClick={() => setIsHistoricoModalOpen(true)}>
+                        Ver histórico de aportes
                     </button>
-                    <button
-                        className="inv-delete-btn"
-                        onClick={() => setIsConfirmingDelete(true)}
-                        title="Excluir este investimento"
-                    >
-                        Excluir
-                    </button>
-                </div>
+                </>
             )}
 
             {isEditModalOpen && (
@@ -147,6 +185,26 @@ export function InvestimentoCard({ investimento, onUpdateSuccess, onDeleteSucces
                         setIsEditModalOpen(false);
                         onUpdateSuccess();
                     }}
+                />
+            )}
+
+            {isAporteModalOpen && (
+                <AporteInvestimentoModal
+                    investimentoId={investimento.id}
+                    investimentoNome={investimento.nome}
+                    onClose={() => setIsAporteModalOpen(false)}
+                    onSuccess={() => {
+                        setIsAporteModalOpen(false);
+                        onUpdateSuccess();
+                    }}
+                />
+            )}
+
+            {isHistoricoModalOpen && (
+                <HistoricoAportesModal
+                    investimentoId={investimento.id}
+                    investimentoNome={investimento.nome}
+                    onClose={() => setIsHistoricoModalOpen(false)}
                 />
             )}
         </div>

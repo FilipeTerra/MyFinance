@@ -155,6 +155,12 @@
 }
 .inv-balance-hint.insufficient { color: #ef4444; font-weight: 600; }
 
+.inv-ticker-hint {
+    font-size: 0.78rem;
+    margin: 0.3rem 0 0;
+    color: #64748b;
+}
+
 /* ── Error message ─────────────────────────────────────────────────────── */
 .inv-error {
     display: block;

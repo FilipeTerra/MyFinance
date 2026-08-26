@@ -5,6 +5,14 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- Segredos (token do brapi, connection string, JWT secret) ficam fora do controle
+         de versão. Dev: arquivo .env na raiz de MyFinance.Api (ex: BRAPI_TOKEN=...,
+         ConnectionStrings__DefaultConnection=..., JwtSettings__Secret=..., ignorado pelo
+         git — ver Program.cs/DotEnvLoader), mesmo padrão do .env do MyFinance.AiAgent.
+         Prod: variáveis de ambiente equivalentes (ex: ExternalServices__Brapi__Token,
+         ConnectionStrings__DefaultConnection, JwtSettings__Secret).
+         UserSecretsId mantido como alternativa suportada nativamente pelo .NET. -->
+    <UserSecretsId>myfinance-api-3f9c2a10-6b4e-4d21-9c88-2ab7e5d10f43</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>

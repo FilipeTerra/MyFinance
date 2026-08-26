@@ -97,11 +97,30 @@
     word-break: break-word;
 }
 
-/* ── Value block ───────────────────────────────────────────────────────── */
-.inv-value-block {
+/* ── Value section: Total aportado x Valor atual ──────────────────────── */
+.inv-value-section {
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
+    gap: 0.5rem;
+}
+
+.inv-value-columns {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.inv-value-col {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    min-width: 0;
+}
+
+.inv-value-col--current {
+    align-items: flex-end;
+    text-align: right;
 }
 
 .inv-value-label {
@@ -112,11 +131,18 @@
     color: #94a3b8;
 }
 
-.inv-value-current {
+.inv-value-amount {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #64748b;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+}
+
+.inv-value-amount--current {
     font-size: 1.9rem;
     font-weight: 800;
     color: #1e293b;
-    line-height: 1;
     letter-spacing: -0.02em;
 }
 
@@ -124,14 +150,13 @@
     display: inline-flex;
     align-items: center;
     gap: 0.35rem;
-    align-self: flex-start;
+    align-self: flex-end;
     font-size: 0.82rem;
     font-weight: 700;
     padding: 0.2rem 0.55rem;
     border-radius: 999px;
     background: var(--t-badge);
     color: var(--t-fg);
-    margin-top: 0.2rem;
 }
 
 .inv-trend-arrow {
@@ -144,50 +169,53 @@
     opacity: 0.8;
 }
 
-/* ── Stats row ─────────────────────────────────────────────────────────── */
-.inv-stats-row {
-    display: grid;
-    grid-template-columns: 1fr auto 1fr;
-    align-items: center;
-    background: #f8fafc;
-    border-radius: 10px;
-    padding: 0.875rem 1rem;
-    border: 1px solid #f1f5f9;
-}
-
-.inv-stat {
-    display: flex;
-    flex-direction: column;
-    gap: 0.2rem;
-}
-
-.inv-stat--align-end {
-    align-items: flex-end;
-}
-
-.inv-stat-label {
-    font-size: 0.68rem;
+.inv-auto-sync-badge {
+    align-self: flex-end;
+    font-size: 0.7rem;
     font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
     color: #94a3b8;
 }
 
-.inv-stat-value {
-    font-size: 1rem;
-    font-weight: 700;
-    color: #1e293b;
+/* ── Variação 3 meses ──────────────────────────────────────────────────── */
+.inv-variacao-block {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    background: #f8fafc;
+    border: 1px solid #f1f5f9;
+    border-radius: 10px;
+    padding: 0.6rem 0.85rem;
 }
 
-.inv-stat-value--up   { color: #10b981; }
-.inv-stat-value--down { color: #ef4444; }
-.inv-stat-value--flat { color: #64748b; }
+.inv-variacao-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;
+}
 
-.inv-stat-divider {
-    width: 1px;
-    height: 2rem;
-    background: #e2e8f0;
-    margin: 0 0.75rem;
+.inv-variacao-label {
+    font-size: 0.66rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #94a3b8;
+}
+
+.inv-variacao-value {
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+.inv-variacao-value--up   { color: #10b981; }
+.inv-variacao-value--down { color: #ef4444; }
+.inv-variacao-value--flat { color: #94a3b8; font-weight: 600; font-size: 0.78rem; }
+
+.inv-sparkline {
+    width: 90px;
+    height: 26px;
+    flex-shrink: 0;
 }
 
 /* ── Footer ────────────────────────────────────────────────────────────── */
@@ -233,6 +261,35 @@
 }
 .inv-update-btn:hover { opacity: 0.85; transform: translateY(-1px); }
 .inv-update-btn:active { transform: translateY(0); }
+
+.inv-aporte-btn {
+    flex: 1;
+    padding: 0.6rem 1rem;
+    background: transparent;
+    color: var(--type-color, #3b82f6);
+    border: 1px solid var(--type-color, #3b82f6);
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.2s ease, transform 0.1s ease;
+}
+.inv-aporte-btn:hover { background: color-mix(in srgb, var(--type-color) 10%, #ffffff); transform: translateY(-1px); }
+.inv-aporte-btn:active { transform: translateY(0); }
+
+.inv-historico-link {
+    align-self: center;
+    background: none;
+    border: none;
+    color: #64748b;
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-decoration: underline;
+    cursor: pointer;
+    padding: 0;
+}
+.inv-historico-link:hover { color: #1e293b; }
 
 .inv-delete-btn {
     padding: 0.6rem 0.875rem;

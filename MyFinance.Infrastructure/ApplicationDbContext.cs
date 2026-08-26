@@ -14,6 +14,7 @@ namespace MyFinance.Infrastructure
       public DbSet<Category> Categories { get; set; }
       public DbSet<FinancialGoal> FinancialGoals { get; set; }
       public DbSet<Investimento> Investimentos { get; set; }
+      public DbSet<CotacaoHistorico> CotacoesHistorico { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -92,8 +93,10 @@ namespace MyFinance.Infrastructure
                   {
                         entity.ToTable("Investimentos");
                         entity.HasKey(inv => inv.Id);
-                        entity.Property(inv => inv.ValorInicial).HasColumnType("decimal(18,2)");
+                        // Coluna física continua "ValorInicial" (sem migration) — só o nome do domínio mudou.
+                        entity.Property(inv => inv.TotalAportado).HasColumnName("ValorInicial").HasColumnType("decimal(18,2)");
                         entity.Property(inv => inv.ValorAtual).HasColumnType("decimal(18,2)");
+                        entity.Property(inv => inv.Ticker).HasMaxLength(20);
                         entity.Property(inv => inv.Tipo)
                               .HasConversion(
                                   v => v.ToString(),
@@ -102,6 +105,24 @@ namespace MyFinance.Infrastructure
                         entity.HasOne<User>()
                                 .WithMany()
                                 .HasForeignKey(inv => inv.UserId)
+                                .OnDelete(DeleteBehavior.Cascade);
+                  });
+
+                  modelBuilder.Entity<CotacaoHistorico>(entity =>
+                  {
+                        entity.ToTable("CotacoesHistorico");
+                        entity.HasKey(c => c.Id);
+                        entity.Property(c => c.Valor).HasColumnType("decimal(18,2)");
+                        entity.Property(c => c.Data)
+                              .HasColumnType("date")
+                              .HasConversion(
+                                v => v.ToUniversalTime(),
+                                v => DateTime.SpecifyKind(v, DateTimeKind.Utc));
+                        entity.HasIndex(c => new { c.InvestimentoId, c.Data });
+                        // Relacionamento 1-N: Investimento -> CotacoesHistorico
+                        entity.HasOne<Investimento>()
+                                .WithMany()
+                                .HasForeignKey(c => c.InvestimentoId)
                                 .OnDelete(DeleteBehavior.Cascade);
                   });
             }

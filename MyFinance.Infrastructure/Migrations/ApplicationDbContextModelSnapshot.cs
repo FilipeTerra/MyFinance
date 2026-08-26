@@ -52,7 +52,7 @@ namespace MyFinance.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Accounts");
+                    b.ToTable("Accounts", (string)null);
                 });
 
             modelBuilder.Entity("MyFinance.Domain.Entities.Category", b =>
@@ -75,7 +75,29 @@ namespace MyFinance.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Categories");
+                    b.ToTable("Categories", (string)null);
+                });
+
+            modelBuilder.Entity("MyFinance.Domain.Entities.CotacaoHistorico", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("Data")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("InvestimentoId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Valor")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InvestimentoId", "Data");
+
+                    b.ToTable("CotacoesHistorico", (string)null);
                 });
 
             modelBuilder.Entity("MyFinance.Domain.Entities.FinancialGoal", b =>
@@ -125,6 +147,10 @@ namespace MyFinance.Infrastructure.Migrations
                     b.Property<string>("Nome")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<string>("Ticker")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
 
                     b.Property<string>("Tipo")
                         .IsRequired()
@@ -191,7 +217,7 @@ namespace MyFinance.Infrastructure.Migrations
 
                     b.HasIndex("InvestimentoId");
 
-                    b.ToTable("Transactions");
+                    b.ToTable("Transactions", (string)null);
                 });
 
             modelBuilder.Entity("MyFinance.Domain.Entities.User", b =>
@@ -223,7 +249,7 @@ namespace MyFinance.Infrastructure.Migrations
                     b.HasIndex("Email")
                         .IsUnique();
 
-                    b.ToTable("Users");
+                    b.ToTable("Users", (string)null);
                 });
 
             modelBuilder.Entity("MyFinance.Domain.Entities.Account", b =>
@@ -246,6 +272,15 @@ namespace MyFinance.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("MyFinance.Domain.Entities.CotacaoHistorico", b =>
+                {
+                    b.HasOne("MyFinance.Domain.Entities.Investimento", null)
+                        .WithMany()
+                        .HasForeignKey("InvestimentoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("MyFinance.Domain.Entities.FinancialGoal", b =>

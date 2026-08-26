@@ -9,10 +9,8 @@ Princípio de Separação entre Decisão e Execução:
 Todas as funções retornam dicionários com os valores brutos calculados.
 O nó de exibição (response node) é responsável por formatar para o usuário.
 """
-import asyncio
 import logging
 
-import httpx
 from pydantic import BaseModel, Field
 from langchain_core.tools import tool
 
@@ -260,83 +258,6 @@ def calcular_juros_financiamento(
     }
 
 
-_BCB_SELIC_URL = "https://api.bcb.gov.br/dados/serie/bcdata.sgs.432/dados/ultimos/1?formato=json"
-_BCB_IPCA_URL = "https://api.bcb.gov.br/dados/serie/bcdata.sgs.13522/dados/ultimos/1?formato=json"
-
-
-@tool(extras={"retorna_dinheiro": True})
-async def buscar_taxa_selic() -> dict:
-    """
-    Retorna as taxas de referência da economia brasileira: SELIC (taxa básica de juros)
-    e IPCA (inflação oficial), bem como os juros reais (SELIC descontada a inflação).
-
-    Use esta ferramenta ANTES de qualquer simulação de investimento ou análise de
-    cenário econômico que dependa de juros ou inflação.
-    """
-    # 1. Valores de fallback (acionados se a API do BCB falhar)
-    selic_anual = 14.25
-    ipca_anual = 4.72
-    fonte = "Banco Central do Brasil (Fallback Estático)"
-    data_ref_selic = "2025-01 (Fallback)"
-    data_ref_ipca = "2025-01 (Fallback)"
-
-    try:
-        # SELIC Meta (série 432) e IPCA 12 meses (série 13522) em PARALELO —
-        # async: não bloqueia o event loop enquanto aguarda o BCB responder.
-        async with httpx.AsyncClient(timeout=5.0) as client:
-            resp_selic, resp_ipca = await asyncio.gather(
-                client.get(_BCB_SELIC_URL),
-                client.get(_BCB_IPCA_URL),
-            )
-        resp_selic.raise_for_status()
-        resp_ipca.raise_for_status()
-
-        dados_selic = resp_selic.json()[0]
-        selic_anual = float(dados_selic["valor"])
-        data_ref_selic = dados_selic["data"]
-
-        dados_ipca = resp_ipca.json()[0]
-        ipca_anual = float(dados_ipca["valor"])
-        data_ref_ipca = dados_ipca["data"]
-
-        fonte = "Banco Central do Brasil (API SGS em tempo real)"
-
-    except Exception as e:
-        # Se a API cair ou demorar mais de 5s, mantém os valores de fallback
-        _logger.warning("⚠️  [BCB API] Falha ao buscar dados em tempo real. Usando fallback. Erro: %s", e)
-
-    # 2. Cálculos derivados (executados independentemente da origem dos dados)
-    
-    # Conversão de taxa anual para mensal (capitalização composta)
-    # Fórmula: i_m = (1 + i_a)^(1/12) - 1
-    selic_mensal = ((1 + selic_anual / 100) ** (1 / 12) - 1) * 100
-    ipca_mensal = ((1 + ipca_anual / 100) ** (1 / 12) - 1) * 100
-
-    # Juros reais via Equação de Fisher
-    juros_real = ((1 + selic_anual / 100) / (1 + ipca_anual / 100) - 1) * 100
-
-    # CDI: convencionalmente ~0,10pp abaixo da SELIC Meta
-    cdi_anual = selic_anual - 0.10
-
-    _logger.info(
-        "💹 [TOOL:selic] SELIC %.2f%% | IPCA %.2f%% | juros reais %.2f%% | %s",
-        selic_anual, ipca_anual,
-        ((1 + selic_anual / 100) / (1 + ipca_anual / 100) - 1) * 100,
-        "tempo real" if "tempo real" in fonte else "FALLBACK",
-    )
-    return {
-        "selic_anual_pct": round(selic_anual, 2),
-        "selic_mensal_pct": round(selic_mensal, 4),
-        "ipca_anual_pct": round(ipca_anual, 2),
-        "ipca_mensal_pct": round(ipca_mensal, 4),
-        "juros_real_anual_pct": round(juros_real, 4),
-        "cdi_anual_pct": round(cdi_anual, 2),
-        "data_referencia_selic": data_ref_selic,
-        "data_referencia_ipca": data_ref_ipca,
-        "fonte": fonte
-    }
-
-
 # ===========================================================================
 # Registro público das ferramentas deste módulo
 # Importado pelo grafo: from .tools import MATH_TOOLS
@@ -344,5 +265,4 @@ async def buscar_taxa_selic() -> dict:
 MATH_TOOLS = [
     simular_investimento,
     calcular_juros_financiamento,
-    buscar_taxa_selic,
 ]

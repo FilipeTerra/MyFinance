@@ -6,7 +6,7 @@ função). Cada domínio (contas, metas, transações, perfil, proativas) vive e
 seu próprio módulo e expõe build(session) -> list[BaseTool]; este arquivo só
 cria a ApiSession compartilhada e concatena o resultado de cada um.
 """
-from . import contas, metas, perfil, proativas, transacoes
+from . import contas, mercado, metas, perfil, proativas, transacoes
 from .session import ApiSession
 
 
@@ -26,4 +26,5 @@ def make_api_tools(jwt_token: str) -> list:
         *transacoes.build(session),
         *perfil.build(session),
         *proativas.build(session),
+        *mercado.build(session),
     ]
