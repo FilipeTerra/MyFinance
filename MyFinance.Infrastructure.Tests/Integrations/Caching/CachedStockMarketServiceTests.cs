@@ -17,6 +17,8 @@ public class CachedStockMarketServiceTests
     private static readonly string PetrFixture =
         File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", "brapi-petr4.json"));
 
+    public CachedStockMarketServiceTests() => BrapiStockClient.ResetPlanCapabilityCacheForTests();
+
     private static (CachedStockMarketService Sut, FakeHttpMessageHandler Handler) BuildSut(
         HttpStatusCode status = HttpStatusCode.OK, string? body = null)
     {

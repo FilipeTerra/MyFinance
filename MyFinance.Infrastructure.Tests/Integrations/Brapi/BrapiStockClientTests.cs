@@ -11,6 +11,14 @@ public class BrapiStockClientTests
     private static readonly string PetrFixture =
         File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", "brapi-petr4.json"));
 
+    public BrapiStockClientTests()
+    {
+        // O client cacheia estaticamente (por processo) se o plano libera os módulos
+        // fundamentalistas — necessário para não gastar cota repetindo uma falha
+        // conhecida, mas exige reset explícito para isolar os testes entre si.
+        BrapiStockClient.ResetPlanCapabilityCacheForTests();
+    }
+
     private static BrapiStockClient BuildSut(FakeHttpMessageHandler handler, BrapiOptions? options = null) =>
         new(handler.ToHttpClient("https://brapi.dev/api/"),
             Options.Create(options ?? new BrapiOptions { Token = "tok-123" }),
@@ -188,6 +196,40 @@ public class BrapiStockClientTests
         Assert.Null(snapshot.Indicadores.EvEbitda);
         Assert.Null(snapshot.Indicadores.FluxoCaixaLivreBilhoes);
         Assert.Empty(snapshot.Historico);
+    }
+
+    [Fact]
+    public async Task GetSnapshotAsync_WhenModulesRequirePaidPlan_FallsBackToQuoteAndHistoryOnly()
+    {
+        // Descoberto com um token real de plano gratuito: os módulos fundamentalistas
+        // exigem o plano Pro para qualquer ticker fora da demo do brapi. O client
+        // precisa continuar entregando cotação/histórico em vez de falhar por inteiro.
+        const string moduleDenied = """
+        {"error":true,"message":"Os módulos não estão no plano Gratuito.","code":"MODULES_NOT_AVAILABLE"}
+        """;
+        const string semModulos = """
+        {"results":[{"symbol":"WEGE3","regularMarketPrice":50.23,
+                     "fiftyTwoWeekLow":35.41,"fiftyTwoWeekHigh":54.53,
+                     "historicalDataPrice":[{"date":1787713200,"close":50.23,"adjustedClose":50.23}]}]}
+        """;
+        var chamadas = 0;
+        var handler = new FakeHttpMessageHandler(req =>
+        {
+            chamadas++;
+            var comModulos = req.RequestUri!.ToString().Contains("modules=");
+            return comModulos
+                ? FakeHttpMessageHandler.Json(HttpStatusCode.Forbidden, moduleDenied)
+                : FakeHttpMessageHandler.Json(HttpStatusCode.OK, semModulos);
+        });
+        var sut = BuildSut(handler);
+
+        var snapshot = await sut.GetSnapshotAsync("WEGE3", 3);
+
+        Assert.NotNull(snapshot);
+        Assert.Equal(50.23m, snapshot!.PrecoAtual);
+        Assert.Single(snapshot.Historico);
+        Assert.Null(snapshot.Indicadores.PL); // indicador fundamentalista, indisponível no plano
+        Assert.Equal(2, chamadas); // 1 tentativa com módulos + 1 retry sem módulos
     }
 
     [Fact]

@@ -18,6 +18,20 @@ namespace MyFinance.Infrastructure.Integrations.Brapi
     /// </summary>
     public class BrapiStockClient
     {
+        private const string ModulesQuery = "&modules=defaultKeyStatistics,financialData";
+
+        // Descoberto em produção com um token real de plano gratuito: cotação e
+        // histórico funcionam para qualquer ticker, mas os módulos fundamentalistas
+        // (defaultKeyStatistics/financialData) exigem o plano Pro — só os tickers de
+        // demonstração do brapi (PETR4, VALE3, ITUB4, MGLU3) os liberam de graça.
+        // Uma vez descoberto que o plano não os inclui, paramos de pedi-los: sem essa
+        // memória, todo ticker fora da demo custaria 2 requisições em vez de 1,
+        // contra uma cota de 15.000/mês.
+        private static volatile bool _modulesConhecidosIndisponiveis;
+
+        /// <summary>Uso exclusivo de testes: garante isolamento entre casos que manipulam o cache estático.</summary>
+        internal static void ResetPlanCapabilityCacheForTests() => _modulesConhecidosIndisponiveis = false;
+
         private readonly HttpClient _httpClient;
         private readonly BrapiOptions _options;
         private readonly ILogger<BrapiStockClient> _logger;
@@ -33,10 +47,16 @@ namespace MyFinance.Infrastructure.Integrations.Brapi
         }
 
         /// <summary>
-        /// Busca cotação, histórico e indicadores de um ticker numa única requisição.
-        /// Retorna null quando o ticker não existe ou a consulta falha.
+        /// Busca cotação, histórico e indicadores de um ticker numa única requisição
+        /// (quando o plano permite). Retorna null quando o ticker não existe ou a
+        /// consulta falha; degrada para cotação+histórico sem indicadores quando o
+        /// plano não inclui os módulos fundamentalistas, em vez de falhar por inteiro.
         /// </summary>
-        public async Task<AcaoSnapshot?> GetSnapshotAsync(string ticker, int meses, CancellationToken ct = default)
+        public Task<AcaoSnapshot?> GetSnapshotAsync(string ticker, int meses, CancellationToken ct = default) =>
+            GetSnapshotAsync(ticker, meses, comModulos: !_modulesConhecidosIndisponiveis, ct);
+
+        private async Task<AcaoSnapshot?> GetSnapshotAsync(
+            string ticker, int meses, bool comModulos, CancellationToken ct)
         {
             var normalizado = ticker.Trim().ToUpperInvariant();
             var (range, clamped) = BrapiRangeMapper.ToRange(meses, _options.MaxHistoryMonths);
@@ -48,7 +68,9 @@ namespace MyFinance.Infrastructure.Integrations.Brapi
                     meses, normalizado, _options.MaxHistoryMonths, range);
             }
 
-            var url = $"quote/{normalizado}?range={range}&interval=1d&modules=defaultKeyStatistics,financialData";
+            var url = $"quote/{normalizado}?range={range}&interval=1d";
+            if (comModulos)
+                url += ModulesQuery;
             if (!string.IsNullOrWhiteSpace(_options.Token))
                 url += $"&token={_options.Token}";
 
@@ -58,6 +80,16 @@ namespace MyFinance.Infrastructure.Integrations.Brapi
 
                 if (!response.IsSuccessStatusCode)
                 {
+                    if (comModulos && await IsModulesNotAvailableAsync(response, ct))
+                    {
+                        _modulesConhecidosIndisponiveis = true;
+                        _logger.LogWarning(
+                            "brapi: módulos de indicadores fundamentalistas exigem plano pago (ticker {Ticker}). " +
+                            "Cotação e histórico continuam disponíveis; indicadores ficarão vazios até upgrade do plano.",
+                            normalizado);
+                        return await GetSnapshotAsync(ticker, meses, comModulos: false, ct);
+                    }
+
                     await LogFalhaHttpAsync(response, normalizado, ct);
                     return null;
                 }
@@ -76,6 +108,22 @@ namespace MyFinance.Infrastructure.Integrations.Brapi
             {
                 _logger.LogWarning(ex, "Falha ao consultar o ticker {Ticker} no brapi.", normalizado);
                 return null;
+            }
+        }
+
+        private static async Task<bool> IsModulesNotAvailableAsync(HttpResponseMessage response, CancellationToken ct)
+        {
+            if (response.StatusCode != HttpStatusCode.Forbidden)
+                return false;
+
+            try
+            {
+                var corpo = await response.Content.ReadFromJsonAsync<BrapiQuoteResponse>(ct);
+                return corpo?.Code == "MODULES_NOT_AVAILABLE";
+            }
+            catch
+            {
+                return false;
             }
         }
 

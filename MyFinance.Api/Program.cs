@@ -113,3 +113,36 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+/// <summary>
+/// Leitor minimalista de arquivos .env — sem dependência de pacote externo.
+/// Formato: uma variável por linha (CHAVE=valor), linhas em branco e
+/// iniciadas com # são ignoradas, aspas ao redor do valor são removidas.
+/// Nunca sobrescreve uma variável de ambiente já definida no processo —
+/// em produção/CI/Docker, o valor real do ambiente sempre vence.
+/// </summary>
+internal static class DotEnvLoader
+{
+    public static void Load(string path)
+    {
+        if (!File.Exists(path))
+            return;
+
+        foreach (var linha in File.ReadAllLines(path))
+        {
+            var trimmed = linha.Trim();
+            if (trimmed.Length == 0 || trimmed.StartsWith('#'))
+                continue;
+
+            var separador = trimmed.IndexOf('=');
+            if (separador <= 0)
+                continue;
+
+            var chave = trimmed[..separador].Trim();
+            var valor = trimmed[(separador + 1)..].Trim().Trim('"', '\'');
+
+            if (Environment.GetEnvironmentVariable(chave) is null)
+                Environment.SetEnvironmentVariable(chave, valor);
+        }
+    }
+}
