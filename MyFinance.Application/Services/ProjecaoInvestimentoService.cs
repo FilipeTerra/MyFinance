@@ -40,6 +40,18 @@ namespace MyFinance.Application.Services
             var resultado = ProjecaoInvestimentoCalculator.Calcular(
                 request.AporteInicial, request.AporteMensal, taxa, request.PrazoMeses);
 
+            // Prazo aproximado em dias corridos, usado só para a faixa de IOF
+            // (o prazo simulado é sempre em meses inteiros, então o IOF só
+            // aparece nos meses mais curtos, próximos do limiar de 30 dias).
+            var diasCorridos = request.PrazoMeses * 30;
+
+            var iof = IofCalculator.Calcular(resultado.TotalJuros, diasCorridos);
+            var jurosAposIof = resultado.TotalJuros - iof.ValorIof;
+            var valorAposIof = resultado.ValorFinal - iof.ValorIof;
+
+            var ir = ImpostoRendaCalculator.Calcular(
+                jurosAposIof, valorAposIof, request.PrazoMeses, isento: !request.AplicarImpostoRenda);
+
             return new ProjecaoInvestimentoResponseDto
             {
                 ValorFinal = resultado.ValorFinal,
@@ -47,6 +59,11 @@ namespace MyFinance.Application.Services
                 TotalJuros = resultado.TotalJuros,
                 RentabilidadePercentual = resultado.RentabilidadePercentual,
                 TaxaJurosAnualUtilizada = taxa,
+                AliquotaIofPercentual = iof.AliquotaPercentual,
+                ValorIof = iof.ValorIof,
+                AliquotaImpostoRendaPercentual = ir.AliquotaPercentual,
+                ValorImpostoRenda = ir.ValorImposto,
+                ValorFinalLiquido = ir.ValorLiquido,
                 Evolucao = resultado.Evolucao.Select(m => new MesProjecaoDto
                 {
                     Mes = m.Mes,

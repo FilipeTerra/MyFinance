@@ -175,6 +175,68 @@
     color: #94a3b8;
 }
 
+/* ── Detalhamento de tributos ─────────────────────────────────────────── */
+.proj-tributos {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+.proj-tributos-title {
+    margin: 0 0 0.9rem;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #64748b;
+}
+
+.proj-tributos-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.55rem 0;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 0.9rem;
+}
+
+.proj-tributos-row:last-child { border-bottom: none; }
+
+.proj-tributos-label { color: #475569; }
+
+.proj-tributos-value {
+    font-weight: 700;
+    color: #1e293b;
+    font-variant-numeric: tabular-nums;
+}
+
+.proj-tributos-value--red { color: #ef4444; }
+
+.proj-tributos-row--total {
+    border-top: 1px dashed #cbd5e1;
+    border-bottom: none;
+    margin-top: 0.2rem;
+    padding-top: 0.75rem;
+}
+
+.proj-tributos-row--highlight {
+    margin-top: 0.4rem;
+    padding-top: 0.85rem;
+    border-top: 2px solid #e2e8f0;
+}
+
+.proj-tributos-row--highlight .proj-tributos-label {
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.proj-tributos-row--highlight .proj-tributos-value {
+    font-size: 1.15rem;
+    color: #3b82f6;
+}
+
 .proj-chart {
     background: #ffffff;
     border: 1px solid #e2e8f0;

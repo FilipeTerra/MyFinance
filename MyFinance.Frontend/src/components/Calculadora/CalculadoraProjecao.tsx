@@ -16,6 +16,7 @@ import './CalculadoraProjecao.css';
 
 type PrazoUnidade = 'anos' | 'meses';
 type TaxaModo = 'selic' | 'manual';
+type IrModo = 'tributavel' | 'isento';
 
 const formatCurrency = (value: number) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -50,6 +51,7 @@ export function CalculadoraProjecao() {
     const [prazoUnidade, setPrazoUnidade] = useState<PrazoUnidade>('anos');
     const [taxaModo, setTaxaModo] = useState<TaxaModo>('selic');
     const [taxaManual, setTaxaManual] = useState('');
+    const [irModo, setIrModo] = useState<IrModo>('tributavel');
 
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -82,6 +84,7 @@ export function CalculadoraProjecao() {
                 prazoMeses,
                 usarTaxaSelic: taxaModo === 'selic',
                 taxaJurosAnualPercentual: taxaModo === 'manual' ? taxaManualNumero! : undefined,
+                aplicarImpostoRenda: irModo === 'tributavel',
             });
             setResultado(data);
         } catch (err) {
@@ -204,6 +207,37 @@ export function CalculadoraProjecao() {
                     )}
                 </div>
 
+                <div className="proj-form-group">
+                    <label>Tributação (Imposto de Renda)</label>
+                    <div className="proj-toggle-group proj-toggle-group--full" role="radiogroup" aria-label="Tributação do investimento">
+                        <button
+                            type="button"
+                            role="radio"
+                            aria-checked={irModo === 'tributavel'}
+                            className={`proj-toggle-btn${irModo === 'tributavel' ? ' proj-toggle-btn--active' : ''}`}
+                            onClick={() => setIrModo('tributavel')}
+                            disabled={isLoading}
+                        >
+                            Tributável (CDB, Tesouro Direto, fundos)
+                        </button>
+                        <button
+                            type="button"
+                            role="radio"
+                            aria-checked={irModo === 'isento'}
+                            className={`proj-toggle-btn${irModo === 'isento' ? ' proj-toggle-btn--active' : ''}`}
+                            onClick={() => setIrModo('isento')}
+                            disabled={isLoading}
+                        >
+                            Isento (LCI, LCA, poupança)
+                        </button>
+                    </div>
+                    <p className="proj-hint">
+                        {irModo === 'tributavel'
+                            ? 'Aplica a tabela regressiva de IR (22,5% a 15%) sobre o rendimento, conforme o prazo.'
+                            : 'Nenhum IR é descontado do rendimento.'}
+                    </p>
+                </div>
+
                 {error && <span className="proj-error">{error}</span>}
 
                 <button type="submit" className="proj-btn-submit" disabled={isLoading}>
@@ -237,6 +271,46 @@ export function CalculadoraProjecao() {
                             </span>
                         </div>
                     </div>
+
+                    {(resultado.valorIof > 0 || resultado.valorImpostoRenda > 0) && (
+                        <div className="proj-tributos">
+                            <h3 className="proj-tributos-title">Detalhamento de tributos</h3>
+                            <div className="proj-tributos-row">
+                                <span className="proj-tributos-label">Rendimento bruto</span>
+                                <span className="proj-tributos-value">{formatCurrency(resultado.totalJuros)}</span>
+                            </div>
+                            {resultado.valorIof > 0 && (
+                                <div className="proj-tributos-row">
+                                    <span className="proj-tributos-label">
+                                        IOF regressivo ({resultado.aliquotaIofPercentual.toFixed(1)}%)
+                                    </span>
+                                    <span className="proj-tributos-value proj-tributos-value--red">
+                                        -{formatCurrency(resultado.valorIof)}
+                                    </span>
+                                </div>
+                            )}
+                            {resultado.valorImpostoRenda > 0 && (
+                                <div className="proj-tributos-row">
+                                    <span className="proj-tributos-label">
+                                        Imposto de Renda ({resultado.aliquotaImpostoRendaPercentual.toFixed(1)}%)
+                                    </span>
+                                    <span className="proj-tributos-value proj-tributos-value--red">
+                                        -{formatCurrency(resultado.valorImpostoRenda)}
+                                    </span>
+                                </div>
+                            )}
+                            <div className="proj-tributos-row proj-tributos-row--total">
+                                <span className="proj-tributos-label">Total de tributos</span>
+                                <span className="proj-tributos-value proj-tributos-value--red">
+                                    -{formatCurrency(resultado.valorIof + resultado.valorImpostoRenda)}
+                                </span>
+                            </div>
+                            <div className="proj-tributos-row proj-tributos-row--highlight">
+                                <span className="proj-tributos-label">Valor final líquido</span>
+                                <span className="proj-tributos-value">{formatCurrency(resultado.valorFinalLiquido)}</span>
+                            </div>
+                        </div>
+                    )}
 
                     <div className="proj-chart">
                         <ResponsiveContainer width="100%" height={320}>

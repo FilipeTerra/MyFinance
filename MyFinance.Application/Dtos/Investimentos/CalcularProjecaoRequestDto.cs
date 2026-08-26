@@ -16,5 +16,12 @@ namespace MyFinance.Application.Dtos.Investimentos
         /// real vigente (buscada via Banco Central) como taxa de referência do Tesouro Direto.
         /// </summary>
         public bool UsarTaxaSelic { get; init; }
+
+        /// <summary>
+        /// Quando verdadeiro, aplica a tabela regressiva de Imposto de Renda sobre o
+        /// rendimento (CDB, Tesouro Direto, fundos DI/RF). Deixe falso para simular
+        /// um ativo isento de IR (LCI, LCA, poupança, debêntures incentivadas).
+        /// </summary>
+        public bool AplicarImpostoRenda { get; init; }
     }
 }
