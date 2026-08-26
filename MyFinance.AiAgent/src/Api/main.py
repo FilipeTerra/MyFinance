@@ -23,8 +23,6 @@ import jwt
 from src.Application.Agents.chat_consultant_agent import invoke_chat
 from src.Application.Agents.proactive_analyzer_agent import invoke_proactive_analysis
 from src.Application.Agents.lifestyle_monitor_agent import invoke_lifestyle_monitor
-from src.Application.Agents.Tools.investment_tools import _buscar_cotacao_sync, _buscar_historico_sync
-from src.Application.Agents.Tools.tools import _buscar_taxa_selic_impl
 
 setup_logging()
 
@@ -177,29 +175,6 @@ async def proactive_lifestyle_inflation(request: ProactiveInsightRequest):
             "success": False,
             "erro": "Erro interno ao gerar o insight. Tente novamente em instantes.",
         }
-
-
-@app.get("/api/market/quote/{ticker}")
-async def get_market_quote(ticker: str):
-    """Cotação mais recente (preço de fechamento) de um ticker da B3, usada pela
-    sincronização automática de cotações dos investimentos no backend .NET."""
-    return await asyncio.to_thread(_buscar_cotacao_sync, ticker)
-
-
-@app.get("/api/market/history/{ticker}")
-async def get_market_history(ticker: str, meses: int = 3):
-    """Histórico de cotações (fechamento diário) de um ticker da B3 nos últimos
-    `meses` meses, usado para o backfill inicial da série de cotações."""
-    return await asyncio.to_thread(_buscar_historico_sync, ticker, meses)
-
-
-@app.get("/api/market/selic")
-async def get_market_selic():
-    """Taxa Selic real vigente (via BCB SGS), usada para preencher automaticamente
-    a taxa de juros da calculadora de projeção de investimento quando o usuário
-    escolhe "Tesouro Direto"."""
-    dados = await _buscar_taxa_selic_impl()
-    return {"success": True, **dados}
 
 
 @app.post("/api/ai/learn")

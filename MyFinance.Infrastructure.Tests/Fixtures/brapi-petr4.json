@@ -1,0 +1,53 @@
+{
+  "results": [
+    {
+      "symbol": "PETR4",
+      "regularMarketPrice": 41.52,
+      "fiftyTwoWeekLow": 29.31,
+      "fiftyTwoWeekHigh": 50.69,
+      "historicalDataPrice": [
+        {
+          "date": 1779937200,
+          "open": 43.1,
+          "high": 43.18,
+          "low": 42.24,
+          "close": 42.51,
+          "volume": 37534800,
+          "adjustedClose": 40.799
+        },
+        {
+          "date": 1780023600,
+          "open": 42.2,
+          "high": 42.35,
+          "low": 41.82,
+          "close": 42,
+          "volume": 73309200,
+          "adjustedClose": 40.3095
+        },
+        {
+          "date": 1787713200,
+          "open": 41.14,
+          "high": 42.27,
+          "low": 40.97,
+          "close": 41.52,
+          "volume": 68073500,
+          "adjustedClose": 41.52
+        }
+      ],
+      "defaultKeyStatistics": {
+        "trailingPE": 4.443258,
+        "enterpriseToEbitda": 4.2274823,
+        "dividendYield": 0.09,
+        "profitMargins": 0.2438609
+      },
+      "financialData": {
+        "totalDebt": 676283000000,
+        "freeCashflow": 85795000000,
+        "ebitdaMargins": 0.4983163,
+        "revenueGrowth": 0.11228661,
+        "returnOnEquity": 0.2781079,
+        "profitMargins": 0.2438609
+      }
+    }
+  ]
+}

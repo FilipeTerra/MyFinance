@@ -32,7 +32,6 @@ from src.Application.Agents.state import AgentState, ContextData, MAX_ITERATIONS
 from src.Application.Agents.Tools.tools import MATH_TOOLS
 from src.Application.Agents.Tools.financial_tools import consultar_teoria_financeira
 from src.Application.Agents.Tools.api.registry import make_api_tools
-from src.Application.Agents.Tools.investment_tools import QUANT_TOOLS
 from src.Infra.Llm.ollama_provider import get_chat_llm, ainvoke_with_retry
 
 _logger = logging.getLogger("myfinance.agent")
@@ -140,8 +139,8 @@ def inject_context(state: AgentState, config: RunnableConfig) -> dict:
 
 def collect_all_tools(jwt_token: str) -> list:
     """
-    Monta a lista unificada de ferramentas do agente: matemática pura → quant/B3
-    → conhecimento RAG → API .NET (autenticada com o JWT).
+    Monta a lista unificada de ferramentas do agente: matemática pura →
+    conhecimento RAG → API .NET (autenticada com o JWT — inclui dados de mercado).
 
     Extraído como função própria (não só inline em make_nodes) para que outros
     módulos possam introspectar as tools disponíveis — ex: tool_registry.py
@@ -149,7 +148,7 @@ def collect_all_tools(jwt_token: str) -> list:
     sem precisar manter uma segunda lista de nomes em outro arquivo.
     """
     api_tools = make_api_tools(jwt_token)
-    return MATH_TOOLS + QUANT_TOOLS + [consultar_teoria_financeira] + api_tools
+    return MATH_TOOLS + [consultar_teoria_financeira] + api_tools
 
 
 # ===========================================================================

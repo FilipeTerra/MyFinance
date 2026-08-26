@@ -4,12 +4,26 @@ using MyFinance.Application.Interfaces.Services;
 using MyFinance.Application.Interfaces.Repositories;
 using MyFinance.Application.Services;
 using MyFinance.Infrastructure.HostedServices;
+using MyFinance.Infrastructure.Integrations;
 using MyFinance.Infrastructure.Repositories;
 using MyFinance.Infrastructure.Security;
-using MyFinance.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer; // Para JwtBearerDefaults
 using Microsoft.IdentityModel.Tokens; // Para TokenValidationParameters, SymmetricSecurityKey
 using System.Text;
+
+// Carrega segredos de um .env local (não versionado — ver .gitignore), no mesmo
+// espírito do python-dotenv já usado no MyFinance.AiAgent. Precisa rodar ANTES de
+// CreateBuilder, pois é nesse momento que o provider de variáveis de ambiente lê
+// o processo. Em produção o .env não existe e as variáveis reais do ambiente
+// (ex: Docker, CI) prevalecem — LoadDotEnv nunca sobrescreve o que já está setado.
+DotEnvLoader.Load(Path.Combine(Directory.GetCurrentDirectory(), ".env"));
+
+// Ponte entre o nome do .env (BRAPI_TOKEN, mais curto para uso manual) e a chave
+// hierárquica que o binding de configuração espera (ExternalServices:Brapi:Token,
+// que via variável de ambiente vira ExternalServices__Brapi__Token).
+var brapiToken = Environment.GetEnvironmentVariable("BRAPI_TOKEN");
+if (!string.IsNullOrWhiteSpace(brapiToken))
+    Environment.SetEnvironmentVariable("ExternalServices__Brapi__Token", brapiToken);
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -74,11 +88,6 @@ builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();
 builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
-builder.Services.AddHttpClient<IAiIntegrationService, AiIntegrationService>(client =>
-{
-    client.BaseAddress = new Uri("http://127.0.0.1:8181/");
-    client.Timeout = TimeSpan.FromMinutes(10);
-});
 builder.Services.AddScoped<IFinancialGoalRepository, FinancialGoalRepository>();
 builder.Services.AddScoped<IFinancialGoalService, FinancialGoalService>();
 builder.Services.AddScoped<IInvestimentoRepository, InvestimentoRepository>();
@@ -86,11 +95,11 @@ builder.Services.AddScoped<IInvestimentoService, InvestimentoService>();
 builder.Services.AddScoped<IProjecaoInvestimentoService, ProjecaoInvestimentoService>();
 builder.Services.AddScoped<ICotacaoHistoricoRepository, CotacaoHistoricoRepository>();
 builder.Services.AddScoped<IMarketSyncService, MarketSyncService>();
-builder.Services.AddHttpClient<IStockMarketIntegrationService, StockMarketIntegrationService>(client =>
-{
-    client.BaseAddress = new Uri("http://127.0.0.1:8181/");
-    client.Timeout = TimeSpan.FromSeconds(30);
-});
+
+// Integrações externas (brapi/B3, Banco Central, Agente de IA) — URLs, tokens e
+// TTLs de cache vêm da seção ExternalServices da configuração.
+builder.Services.AddIntegrations(builder.Configuration);
+
 builder.Services.AddHostedService<StartupMarketSyncHostedService>();
 var app = builder.Build();
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);

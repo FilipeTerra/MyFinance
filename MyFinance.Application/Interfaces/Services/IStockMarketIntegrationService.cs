@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using MyFinance.Application.Dtos.Investimentos;
+using MyFinance.Application.Dtos.Mercado;
 
 namespace MyFinance.Application.Interfaces.Services
 {
@@ -19,9 +20,10 @@ namespace MyFinance.Application.Interfaces.Services
         Task<IEnumerable<CotacaoPontoDto>> GetHistoryAsync(string ticker, int meses);
 
         /// <summary>
-        /// Busca a taxa Selic anual vigente (real, via Banco Central). Retorna null
-        /// quando a consulta externa falha — o chamador decide o fallback.
+        /// Busca os indicadores fundamentalistas do ticker. Retorna null quando o
+        /// ticker não é encontrado ou a consulta externa falha. Indicadores que o
+        /// provedor não disponibiliza vêm como null dentro do DTO — nunca como zero.
         /// </summary>
-        Task<decimal?> GetTaxaSelicAsync();
+        Task<IndicadoresFundamentalistasDto?> GetIndicadoresAsync(string ticker);
     }
 }

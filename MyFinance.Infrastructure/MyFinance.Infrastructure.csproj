@@ -9,8 +9,11 @@
   <ItemGroup>
     <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.4" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.10" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="9.0.10" />
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.4" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="9.0.10" />
     <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="8.14.0" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.14.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.4">
@@ -23,6 +26,11 @@
   <ItemGroup>
     <ProjectReference Include="..\MyFinance.Domain\MyFinance.Domain.csproj" />
     <ProjectReference Include="..\MyFinance.Application\MyFinance.Application.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Os contratos de wire das integrações são internal; os testes precisam enxergá-los. -->
+    <InternalsVisibleTo Include="MyFinance.Infrastructure.Tests" />
   </ItemGroup>
 
 </Project>

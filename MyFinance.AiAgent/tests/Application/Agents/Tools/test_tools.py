@@ -6,7 +6,6 @@ o mesmo caminho usado pelo LLM — em vez de acessar a função Python crua.
 import pytest
 
 from src.Application.Agents.Tools.tools import (
-    _buscar_taxa_selic_impl,
     calcular_juros_financiamento,
     simular_investimento,
 )
@@ -65,16 +64,3 @@ def test_calcular_juros_financiamento_taxa_zero_e_divisao_simples():
     })
     assert resultado["valor_parcela"] == pytest.approx(1000.0)
     assert resultado["total_juros"] == pytest.approx(0.0)
-
-
-async def test_buscar_taxa_selic_impl_retorna_dict_com_chaves_esperadas():
-    # Chamada direta à implementação pura (sem @tool) — mesma função reaproveitada
-    # pelo endpoint REST GET /api/market/selic no backend .NET.
-    resultado = await _buscar_taxa_selic_impl()
-
-    assert "selic_anual_pct" in resultado
-    assert "ipca_anual_pct" in resultado
-    assert "cdi_anual_pct" in resultado
-    assert "juros_real_anual_pct" in resultado
-    assert "fonte" in resultado
-    assert resultado["selic_anual_pct"] > 0

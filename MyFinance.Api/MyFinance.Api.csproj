@@ -5,6 +5,10 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- Segredos de integração (ex: token do brapi) ficam fora do controle de versão.
+         Dev: dotnet user-secrets set "ExternalServices:Brapi:Token" "..."
+         Prod: variável de ambiente ExternalServices__Brapi__Token -->
+    <UserSecretsId>myfinance-api-3f9c2a10-6b4e-4d21-9c88-2ab7e5d10f43</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>

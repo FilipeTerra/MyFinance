@@ -9,11 +9,11 @@ namespace MyFinance.Application.Services
 {
     public class ProjecaoInvestimentoService : IProjecaoInvestimentoService
     {
-        private readonly IStockMarketIntegrationService _stockMarketIntegrationService;
+        private readonly ITaxasReferenciaIntegrationService _taxasReferenciaService;
 
-        public ProjecaoInvestimentoService(IStockMarketIntegrationService stockMarketIntegrationService)
+        public ProjecaoInvestimentoService(ITaxasReferenciaIntegrationService taxasReferenciaService)
         {
-            _stockMarketIntegrationService = stockMarketIntegrationService;
+            _taxasReferenciaService = taxasReferenciaService;
         }
 
         public async Task<ProjecaoInvestimentoResponseDto> CalcularProjecaoAsync(CalcularProjecaoRequestDto request)
@@ -22,12 +22,12 @@ namespace MyFinance.Application.Services
 
             if (request.UsarTaxaSelic)
             {
-                var selic = await _stockMarketIntegrationService.GetTaxaSelicAsync();
-                if (selic == null)
+                var taxas = await _taxasReferenciaService.GetTaxasReferenciaAsync();
+                if (taxas == null)
                     throw new InvalidOperationException(
                         "Não foi possível obter a taxa Selic no momento. Informe uma taxa manualmente ou tente novamente mais tarde.");
 
-                taxa = selic.Value;
+                taxa = taxas.SelicAnualPct;
             }
             else
             {

@@ -1,5 +1,6 @@
 using Moq;
 using MyFinance.Application.Dtos.Investimentos;
+using MyFinance.Application.Dtos.Mercado;
 using MyFinance.Application.Interfaces.Services;
 using MyFinance.Application.Services;
 
@@ -7,12 +8,12 @@ namespace MyFinance.Application.Tests.Services;
 
 public class ProjecaoInvestimentoServiceTests
 {
-    private readonly Mock<IStockMarketIntegrationService> _stockMarketIntegrationService = new();
+    private readonly Mock<ITaxasReferenciaIntegrationService> _taxasReferenciaService = new();
     private readonly ProjecaoInvestimentoService _sut;
 
     public ProjecaoInvestimentoServiceTests()
     {
-        _sut = new ProjecaoInvestimentoService(_stockMarketIntegrationService.Object);
+        _sut = new ProjecaoInvestimentoService(_taxasReferenciaService.Object);
     }
 
     [Fact]
@@ -31,7 +32,7 @@ public class ProjecaoInvestimentoServiceTests
 
         Assert.Equal(12.0m, result.TaxaJurosAnualUtilizada);
         Assert.Equal(57794.05m, result.ValorFinal, 1);
-        _stockMarketIntegrationService.Verify(s => s.GetTaxaSelicAsync(), Times.Never);
+        _taxasReferenciaService.Verify(s => s.GetTaxasReferenciaAsync(), Times.Never);
     }
 
     [Fact]
@@ -52,7 +53,8 @@ public class ProjecaoInvestimentoServiceTests
     [Fact]
     public async Task CalcularProjecaoAsync_UsingSelic_WithSuccessfulLookup_UsesReturnedRate()
     {
-        _stockMarketIntegrationService.Setup(s => s.GetTaxaSelicAsync()).ReturnsAsync(10.75m);
+        _taxasReferenciaService.Setup(s => s.GetTaxasReferenciaAsync())
+            .ReturnsAsync(new TaxasReferenciaDto { SelicAnualPct = 10.75m });
         var request = new CalcularProjecaoRequestDto
         {
             AporteInicial = 0m,
@@ -69,7 +71,7 @@ public class ProjecaoInvestimentoServiceTests
     [Fact]
     public async Task CalcularProjecaoAsync_UsingSelic_WithFailedLookup_ThrowsInvalidOperationException()
     {
-        _stockMarketIntegrationService.Setup(s => s.GetTaxaSelicAsync()).ReturnsAsync((decimal?)null);
+        _taxasReferenciaService.Setup(s => s.GetTaxasReferenciaAsync()).ReturnsAsync((TaxasReferenciaDto?)null);
         var request = new CalcularProjecaoRequestDto
         {
             AporteInicial = 0m,
