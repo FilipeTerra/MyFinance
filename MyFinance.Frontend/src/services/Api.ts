@@ -19,6 +19,19 @@ import type {
 } from '../types/InvestimentoResponseDto';
 import type { UserProfileResponseDto, UpdateUserProfileRequestDto } from '../types/UserProfileDto';
 import type { CalcularProjecaoRequestDto, ProjecaoInvestimentoResponseDto } from '../types/ProjecaoInvestimento';
+import type {
+    CalcularAporteNecessarioRequestDto,
+    CalcularPrazoNecessarioRequestDto,
+    AporteNecessarioResponseDto,
+    PrazoNecessarioResponseDto,
+    SimularMetaRequestDto,
+    SimularMetaResponseDto,
+} from '../types/MetaReversa';
+import type {
+    CalcularSaqueSustentavelRequestDto,
+    CalcularDuracaoRetiradaRequestDto,
+    RetiradaResponseDto,
+} from '../types/Retirada';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -188,6 +201,32 @@ const projecaoInvestimentoService = {
     },
 };
 
+const metaReversaService = {
+    calcularAporteNecessario: async (data: CalcularAporteNecessarioRequestDto): Promise<AporteNecessarioResponseDto> => {
+        const response = await apiClient.post<AporteNecessarioResponseDto>('/investimentos/meta-reversa/aporte-necessario', data);
+        return response.data;
+    },
+    calcularPrazoNecessario: async (data: CalcularPrazoNecessarioRequestDto): Promise<PrazoNecessarioResponseDto> => {
+        const response = await apiClient.post<PrazoNecessarioResponseDto>('/investimentos/meta-reversa/prazo-necessario', data);
+        return response.data;
+    },
+    simularMeta: async (goalId: string, data: SimularMetaRequestDto): Promise<SimularMetaResponseDto> => {
+        const response = await apiClient.post<SimularMetaResponseDto>(`/investimentos/meta-reversa/metas/${goalId}/simular`, data);
+        return response.data;
+    },
+};
+
+const retiradaService = {
+    calcularSaqueSustentavel: async (data: CalcularSaqueSustentavelRequestDto): Promise<RetiradaResponseDto> => {
+        const response = await apiClient.post<RetiradaResponseDto>('/investimentos/retirada/saque-sustentavel', data);
+        return response.data;
+    },
+    calcularDuracao: async (data: CalcularDuracaoRetiradaRequestDto): Promise<RetiradaResponseDto> => {
+        const response = await apiClient.post<RetiradaResponseDto>('/investimentos/retirada/duracao', data);
+        return response.data;
+    },
+};
+
 const profileService = {
     getProfile: async (): Promise<UserProfileResponseDto> => {
         const response = await apiClient.get<UserProfileResponseDto>('/profile');
@@ -218,6 +257,8 @@ export {
     financialGoalService,
     investimentoService,
     projecaoInvestimentoService,
+    metaReversaService,
+    retiradaService,
     profileService,
     aiService,
     tokenManager,

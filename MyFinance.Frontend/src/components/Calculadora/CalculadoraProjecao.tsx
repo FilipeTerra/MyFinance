@@ -1,57 +1,42 @@
 import { useState } from 'react';
-import {
-    ComposedChart,
-    Area,
-    Line,
-    XAxis,
-    YAxis,
-    CartesianGrid,
-    Tooltip,
-    Legend,
-    ResponsiveContainer,
-} from 'recharts';
 import { projecaoInvestimentoService, AxiosError, type ApiErrorResponse } from '../../services/Api';
 import type { ProjecaoInvestimentoResponseDto } from '../../types/ProjecaoInvestimento';
+import { TipoAtivoCalculadora } from '../../types/TipoAtivoCalculadora';
+import { FonteTaxaJuros } from '../../types/FonteTaxaJuros';
+import { ReajusteAporteModo } from '../../types/ReajusteAporteModo';
+import { maskCurrency, parseCurrency, parsePercent } from './calculadoraUtils';
+import { ComparadorCenarios } from './ComparadorCenarios';
+import { MetaReversaCalculadora } from './MetaReversaCalculadora';
+import { RetiradaCalculadora } from './RetiradaCalculadora';
+import { ResultadoProjecaoDetalhado } from './ResultadoProjecaoDetalhado';
+import { SeletorTipoAtivo } from './SeletorTipoAtivo';
 import './CalculadoraProjecao.css';
 
 type PrazoUnidade = 'anos' | 'meses';
-type TaxaModo = 'selic' | 'manual';
-type IrModo = 'tributavel' | 'isento';
+type TaxaModo = 'selic' | 'cdi' | 'manual';
+type ModoCalculadora = 'unico' | 'comparar' | 'meta-reversa' | 'retirada';
+type ReajusteModoUi = 'nenhum' | 'fixo' | 'ipca';
 
-const formatCurrency = (value: number) =>
-    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
-
-/** Máscara monetária: converte dígitos digitados em "1.234,56". */
-function maskCurrency(raw: string): string {
-    let digits = raw.replace(/\D/g, '');
-    if (digits === '') return '';
-    if (digits.length > 1) digits = digits.replace(/^0+/, '');
-    while (digits.length < 3) digits = '0' + digits;
-    const decimalIndex = digits.length - 2;
-    const integerPart = digits.slice(0, decimalIndex);
-    const decimalPart = digits.slice(decimalIndex);
-    const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-    return formattedInteger + ',' + decimalPart;
+let proximoIdAporteExtra = 0;
+interface AporteExtraForm {
+    id: string;
+    mes: string;
+    valor: string;
 }
 
-const parseCurrency = (masked: string): number => {
-    const parsed = parseFloat(masked.replace(/\./g, '').replace(',', '.'));
-    return isNaN(parsed) ? 0 : parsed;
-};
-
-const parsePercent = (raw: string): number | null => {
-    const parsed = parseFloat(raw.replace(',', '.'));
-    return isNaN(parsed) ? null : parsed;
-};
-
 export function CalculadoraProjecao() {
+    const [modo, setModo] = useState<ModoCalculadora>('unico');
     const [aporteInicial, setAporteInicial] = useState('');
     const [aporteMensal, setAporteMensal] = useState('');
     const [prazoValor, setPrazoValor] = useState('10');
     const [prazoUnidade, setPrazoUnidade] = useState<PrazoUnidade>('anos');
     const [taxaModo, setTaxaModo] = useState<TaxaModo>('selic');
     const [taxaManual, setTaxaManual] = useState('');
-    const [irModo, setIrModo] = useState<IrModo>('tributavel');
+    const [percentualCdi, setPercentualCdi] = useState('100');
+    const [tipoAtivo, setTipoAtivo] = useState<TipoAtivoCalculadora>(TipoAtivoCalculadora.TesouroSelic);
+    const [aportesExtras, setAportesExtras] = useState<AporteExtraForm[]>([]);
+    const [reajusteModo, setReajusteModo] = useState<ReajusteModoUi>('nenhum');
+    const [reajusteFixo, setReajusteFixo] = useState('');
 
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -60,6 +45,15 @@ export function CalculadoraProjecao() {
     const prazoMeses = prazoUnidade === 'anos'
         ? Math.round(parseFloat(prazoValor || '0') * 12)
         : Math.round(parseFloat(prazoValor || '0'));
+
+    const adicionarAporteExtra = () =>
+        setAportesExtras(prev => [...prev, { id: `extra-${proximoIdAporteExtra++}`, mes: '', valor: '' }]);
+
+    const removerAporteExtra = (id: string) =>
+        setAportesExtras(prev => prev.filter(a => a.id !== id));
+
+    const atualizarAporteExtra = (id: string, patch: Partial<AporteExtraForm>) =>
+        setAportesExtras(prev => prev.map(a => (a.id === id ? { ...a, ...patch } : a)));
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -76,15 +70,54 @@ export function CalculadoraProjecao() {
             return;
         }
 
+        const percentualCdiNumero = taxaModo === 'cdi' ? parsePercent(percentualCdi) : null;
+        if (taxaModo === 'cdi' && (percentualCdiNumero === null || percentualCdiNumero < 0)) {
+            setError('Informe um percentual do CDI válido.');
+            return;
+        }
+
+        const aportesExtrasValidados: { mes: number; valor: number }[] = [];
+        for (const extra of aportesExtras) {
+            const mes = parseInt(extra.mes, 10);
+            const valor = parseCurrency(extra.valor);
+            if (!mes || mes <= 0 || mes > prazoMeses || !valor || valor <= 0) {
+                setError('Confira os aportes extras: o mês deve estar dentro do prazo e o valor maior que zero.');
+                return;
+            }
+            aportesExtrasValidados.push({ mes, valor });
+        }
+
+        const reajusteFixoNumero = reajusteModo === 'fixo' ? parsePercent(reajusteFixo) : null;
+        if (reajusteModo === 'fixo' && (reajusteFixoNumero === null || reajusteFixoNumero < 0)) {
+            setError('Informe um percentual de reajuste anual válido.');
+            return;
+        }
+
+        const fonteTaxaJuros = taxaModo === 'selic'
+            ? FonteTaxaJuros.Selic
+            : taxaModo === 'cdi'
+                ? FonteTaxaJuros.PercentualCdi
+                : FonteTaxaJuros.Manual;
+
+        const reajusteAporteModo = reajusteModo === 'fixo'
+            ? ReajusteAporteModo.PercentualFixo
+            : reajusteModo === 'ipca'
+                ? ReajusteAporteModo.Ipca
+                : ReajusteAporteModo.Nenhum;
+
         setIsLoading(true);
         try {
             const data = await projecaoInvestimentoService.calcular({
                 aporteInicial: parseCurrency(aporteInicial),
                 aporteMensal: parseCurrency(aporteMensal),
                 prazoMeses,
-                usarTaxaSelic: taxaModo === 'selic',
+                fonteTaxaJuros,
                 taxaJurosAnualPercentual: taxaModo === 'manual' ? taxaManualNumero! : undefined,
-                aplicarImpostoRenda: irModo === 'tributavel',
+                percentualCdi: taxaModo === 'cdi' ? percentualCdiNumero! : undefined,
+                tipoAtivo,
+                aportesExtras: aportesExtrasValidados.length > 0 ? aportesExtrasValidados : undefined,
+                reajusteAporteModo,
+                reajusteAporteAnualPercentual: reajusteModo === 'fixo' ? reajusteFixoNumero! : undefined,
             });
             setResultado(data);
         } catch (err) {
@@ -96,266 +129,291 @@ export function CalculadoraProjecao() {
         }
     };
 
-    const chartTickFormatter = (mes: number) =>
-        prazoMeses > 24 ? `${Math.round(mes / 12)}a` : `${mes}m`;
-
     return (
         <div className="proj-container">
-            <form className="proj-form" onSubmit={handleSubmit}>
-                <div className="proj-form-row">
-                    <div className="proj-form-group">
-                        <label htmlFor="projAporteInicial">Aporte inicial (R$)</label>
-                        <input
-                            id="projAporteInicial"
-                            type="text"
-                            inputMode="numeric"
-                            placeholder="0,00"
-                            value={aporteInicial}
-                            onChange={e => setAporteInicial(maskCurrency(e.target.value))}
-                            disabled={isLoading}
-                        />
-                    </div>
-                    <div className="proj-form-group">
-                        <label htmlFor="projAporteMensal">Aporte mensal (R$)</label>
-                        <input
-                            id="projAporteMensal"
-                            type="text"
-                            inputMode="numeric"
-                            placeholder="0,00"
-                            value={aporteMensal}
-                            onChange={e => setAporteMensal(maskCurrency(e.target.value))}
-                            disabled={isLoading}
-                        />
-                    </div>
-                </div>
-
-                <div className="proj-form-group">
-                    <label htmlFor="projPrazo">Prazo</label>
-                    <div className="proj-prazo-row">
-                        <input
-                            id="projPrazo"
-                            type="number"
-                            min={1}
-                            value={prazoValor}
-                            onChange={e => setPrazoValor(e.target.value)}
-                            disabled={isLoading}
-                        />
-                        <div className="proj-toggle-group" role="radiogroup" aria-label="Unidade do prazo">
-                            <button
-                                type="button"
-                                role="radio"
-                                aria-checked={prazoUnidade === 'anos'}
-                                className={`proj-toggle-btn${prazoUnidade === 'anos' ? ' proj-toggle-btn--active' : ''}`}
-                                onClick={() => setPrazoUnidade('anos')}
-                                disabled={isLoading}
-                            >
-                                Anos
-                            </button>
-                            <button
-                                type="button"
-                                role="radio"
-                                aria-checked={prazoUnidade === 'meses'}
-                                className={`proj-toggle-btn${prazoUnidade === 'meses' ? ' proj-toggle-btn--active' : ''}`}
-                                onClick={() => setPrazoUnidade('meses')}
-                                disabled={isLoading}
-                            >
-                                Meses
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="proj-form-group">
-                    <label>Taxa de juros</label>
-                    <div className="proj-toggle-group proj-toggle-group--full" role="radiogroup" aria-label="Fonte da taxa de juros">
-                        <button
-                            type="button"
-                            role="radio"
-                            aria-checked={taxaModo === 'selic'}
-                            className={`proj-toggle-btn${taxaModo === 'selic' ? ' proj-toggle-btn--active' : ''}`}
-                            onClick={() => setTaxaModo('selic')}
-                            disabled={isLoading}
-                        >
-                            Tesouro Direto (Selic atual)
-                        </button>
-                        <button
-                            type="button"
-                            role="radio"
-                            aria-checked={taxaModo === 'manual'}
-                            className={`proj-toggle-btn${taxaModo === 'manual' ? ' proj-toggle-btn--active' : ''}`}
-                            onClick={() => setTaxaModo('manual')}
-                            disabled={isLoading}
-                        >
-                            Taxa manual
-                        </button>
-                    </div>
-                    {taxaModo === 'manual' && (
-                        <input
-                            className="proj-taxa-manual-input"
-                            type="text"
-                            inputMode="decimal"
-                            placeholder="Ex: 10,5 (% ao ano)"
-                            value={taxaManual}
-                            onChange={e => setTaxaManual(e.target.value)}
-                            disabled={isLoading}
-                        />
-                    )}
-                    {taxaModo === 'selic' && (
-                        <p className="proj-hint">
-                            A taxa Selic real vigente será buscada automaticamente ao calcular.
-                        </p>
-                    )}
-                </div>
-
-                <div className="proj-form-group">
-                    <label>Tributação (Imposto de Renda)</label>
-                    <div className="proj-toggle-group proj-toggle-group--full" role="radiogroup" aria-label="Tributação do investimento">
-                        <button
-                            type="button"
-                            role="radio"
-                            aria-checked={irModo === 'tributavel'}
-                            className={`proj-toggle-btn${irModo === 'tributavel' ? ' proj-toggle-btn--active' : ''}`}
-                            onClick={() => setIrModo('tributavel')}
-                            disabled={isLoading}
-                        >
-                            Tributável (CDB, Tesouro Direto, fundos)
-                        </button>
-                        <button
-                            type="button"
-                            role="radio"
-                            aria-checked={irModo === 'isento'}
-                            className={`proj-toggle-btn${irModo === 'isento' ? ' proj-toggle-btn--active' : ''}`}
-                            onClick={() => setIrModo('isento')}
-                            disabled={isLoading}
-                        >
-                            Isento (LCI, LCA, poupança)
-                        </button>
-                    </div>
-                    <p className="proj-hint">
-                        {irModo === 'tributavel'
-                            ? 'Aplica a tabela regressiva de IR (22,5% a 15%) sobre o rendimento, conforme o prazo.'
-                            : 'Nenhum IR é descontado do rendimento.'}
-                    </p>
-                </div>
-
-                {error && <span className="proj-error">{error}</span>}
-
-                <button type="submit" className="proj-btn-submit" disabled={isLoading}>
-                    {isLoading ? 'Calculando...' : 'Calcular projeção'}
+            <div className="proj-modo-toggle proj-toggle-group" role="radiogroup" aria-label="Modo da calculadora">
+                <button
+                    type="button"
+                    role="radio"
+                    aria-checked={modo === 'unico'}
+                    className={`proj-toggle-btn${modo === 'unico' ? ' proj-toggle-btn--active' : ''}`}
+                    onClick={() => setModo('unico')}
+                >
+                    Cenário único
                 </button>
-            </form>
+                <button
+                    type="button"
+                    role="radio"
+                    aria-checked={modo === 'comparar'}
+                    className={`proj-toggle-btn${modo === 'comparar' ? ' proj-toggle-btn--active' : ''}`}
+                    onClick={() => setModo('comparar')}
+                >
+                    Comparar cenários
+                </button>
+                <button
+                    type="button"
+                    role="radio"
+                    aria-checked={modo === 'meta-reversa'}
+                    className={`proj-toggle-btn${modo === 'meta-reversa' ? ' proj-toggle-btn--active' : ''}`}
+                    onClick={() => setModo('meta-reversa')}
+                >
+                    Meta reversa
+                </button>
+                <button
+                    type="button"
+                    role="radio"
+                    aria-checked={modo === 'retirada'}
+                    className={`proj-toggle-btn${modo === 'retirada' ? ' proj-toggle-btn--active' : ''}`}
+                    onClick={() => setModo('retirada')}
+                >
+                    Fase de retirada
+                </button>
+            </div>
 
-            {resultado && (
-                <div className="proj-result">
-                    <div className="proj-result-stats">
-                        <div className="proj-result-stat proj-result-stat--highlight">
-                            <span className="proj-result-stat-value">{formatCurrency(resultado.valorFinal)}</span>
-                            <span className="proj-result-stat-label">Valor final projetado</span>
-                        </div>
-                        <div className="proj-result-stat">
-                            <span className="proj-result-stat-value">{formatCurrency(resultado.totalAportado)}</span>
-                            <span className="proj-result-stat-label">Total aportado</span>
-                        </div>
-                        <div className="proj-result-stat">
-                            <span className="proj-result-stat-value proj-result-stat-value--green">
-                                {formatCurrency(resultado.totalJuros)}
-                            </span>
-                            <span className="proj-result-stat-label">Total em juros</span>
-                        </div>
-                        <div className="proj-result-stat">
-                            <span className="proj-result-stat-value">
-                                {resultado.rentabilidadePercentual.toFixed(2)}%
-                            </span>
-                            <span className="proj-result-stat-label">
-                                Rentabilidade ({resultado.taxaJurosAnualUtilizada.toFixed(2)}% a.a.)
-                            </span>
-                        </div>
-                    </div>
+            {modo === 'comparar' && <ComparadorCenarios />}
+            {modo === 'meta-reversa' && <MetaReversaCalculadora />}
+            {modo === 'retirada' && <RetiradaCalculadora />}
 
-                    {(resultado.valorIof > 0 || resultado.valorImpostoRenda > 0) && (
-                        <div className="proj-tributos">
-                            <h3 className="proj-tributos-title">Detalhamento de tributos</h3>
-                            <div className="proj-tributos-row">
-                                <span className="proj-tributos-label">Rendimento bruto</span>
-                                <span className="proj-tributos-value">{formatCurrency(resultado.totalJuros)}</span>
+            {modo === 'unico' && (
+                <>
+                    <form className="proj-form" onSubmit={handleSubmit}>
+                        <div className="proj-form-row">
+                            <div className="proj-form-group">
+                                <label htmlFor="projAporteInicial">Aporte inicial (R$)</label>
+                                <input
+                                    id="projAporteInicial"
+                                    type="text"
+                                    inputMode="numeric"
+                                    placeholder="0,00"
+                                    value={aporteInicial}
+                                    onChange={e => setAporteInicial(maskCurrency(e.target.value))}
+                                    disabled={isLoading}
+                                />
                             </div>
-                            {resultado.valorIof > 0 && (
-                                <div className="proj-tributos-row">
-                                    <span className="proj-tributos-label">
-                                        IOF regressivo ({resultado.aliquotaIofPercentual.toFixed(1)}%)
-                                    </span>
-                                    <span className="proj-tributos-value proj-tributos-value--red">
-                                        -{formatCurrency(resultado.valorIof)}
-                                    </span>
+                            <div className="proj-form-group">
+                                <label htmlFor="projAporteMensal">Aporte mensal (R$)</label>
+                                <input
+                                    id="projAporteMensal"
+                                    type="text"
+                                    inputMode="numeric"
+                                    placeholder="0,00"
+                                    value={aporteMensal}
+                                    onChange={e => setAporteMensal(maskCurrency(e.target.value))}
+                                    disabled={isLoading}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="proj-form-group">
+                            <label htmlFor="projPrazo">Prazo</label>
+                            <div className="proj-prazo-row">
+                                <input
+                                    id="projPrazo"
+                                    type="number"
+                                    min={1}
+                                    value={prazoValor}
+                                    onChange={e => setPrazoValor(e.target.value)}
+                                    disabled={isLoading}
+                                />
+                                <div className="proj-toggle-group" role="radiogroup" aria-label="Unidade do prazo">
+                                    <button
+                                        type="button"
+                                        role="radio"
+                                        aria-checked={prazoUnidade === 'anos'}
+                                        className={`proj-toggle-btn${prazoUnidade === 'anos' ? ' proj-toggle-btn--active' : ''}`}
+                                        onClick={() => setPrazoUnidade('anos')}
+                                        disabled={isLoading}
+                                    >
+                                        Anos
+                                    </button>
+                                    <button
+                                        type="button"
+                                        role="radio"
+                                        aria-checked={prazoUnidade === 'meses'}
+                                        className={`proj-toggle-btn${prazoUnidade === 'meses' ? ' proj-toggle-btn--active' : ''}`}
+                                        onClick={() => setPrazoUnidade('meses')}
+                                        disabled={isLoading}
+                                    >
+                                        Meses
+                                    </button>
                                 </div>
-                            )}
-                            {resultado.valorImpostoRenda > 0 && (
-                                <div className="proj-tributos-row">
-                                    <span className="proj-tributos-label">
-                                        Imposto de Renda ({resultado.aliquotaImpostoRendaPercentual.toFixed(1)}%)
-                                    </span>
-                                    <span className="proj-tributos-value proj-tributos-value--red">
-                                        -{formatCurrency(resultado.valorImpostoRenda)}
-                                    </span>
-                                </div>
-                            )}
-                            <div className="proj-tributos-row proj-tributos-row--total">
-                                <span className="proj-tributos-label">Total de tributos</span>
-                                <span className="proj-tributos-value proj-tributos-value--red">
-                                    -{formatCurrency(resultado.valorIof + resultado.valorImpostoRenda)}
-                                </span>
-                            </div>
-                            <div className="proj-tributos-row proj-tributos-row--highlight">
-                                <span className="proj-tributos-label">Valor final líquido</span>
-                                <span className="proj-tributos-value">{formatCurrency(resultado.valorFinalLiquido)}</span>
                             </div>
                         </div>
-                    )}
 
-                    <div className="proj-chart">
-                        <ResponsiveContainer width="100%" height={320}>
-                            <ComposedChart data={resultado.evolucao} margin={{ top: 8, right: 16, left: 8, bottom: 0 }}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                                <XAxis
-                                    dataKey="mes"
-                                    tickFormatter={chartTickFormatter}
-                                    interval={Math.max(0, Math.ceil(resultado.evolucao.length / 10) - 1)}
-                                    stroke="#94a3b8"
-                                    fontSize={12}
+                        <div className="proj-form-group">
+                            <label>Taxa de juros</label>
+                            <div className="proj-toggle-group proj-toggle-group--full" role="radiogroup" aria-label="Fonte da taxa de juros">
+                                <button
+                                    type="button"
+                                    role="radio"
+                                    aria-checked={taxaModo === 'selic'}
+                                    className={`proj-toggle-btn${taxaModo === 'selic' ? ' proj-toggle-btn--active' : ''}`}
+                                    onClick={() => setTaxaModo('selic')}
+                                    disabled={isLoading}
+                                >
+                                    Tesouro Direto (Selic atual)
+                                </button>
+                                <button
+                                    type="button"
+                                    role="radio"
+                                    aria-checked={taxaModo === 'cdi'}
+                                    className={`proj-toggle-btn${taxaModo === 'cdi' ? ' proj-toggle-btn--active' : ''}`}
+                                    onClick={() => setTaxaModo('cdi')}
+                                    disabled={isLoading}
+                                >
+                                    % do CDI
+                                </button>
+                                <button
+                                    type="button"
+                                    role="radio"
+                                    aria-checked={taxaModo === 'manual'}
+                                    className={`proj-toggle-btn${taxaModo === 'manual' ? ' proj-toggle-btn--active' : ''}`}
+                                    onClick={() => setTaxaModo('manual')}
+                                    disabled={isLoading}
+                                >
+                                    Taxa manual
+                                </button>
+                            </div>
+                            {taxaModo === 'manual' && (
+                                <input
+                                    className="proj-taxa-manual-input"
+                                    type="text"
+                                    inputMode="decimal"
+                                    placeholder="Ex: 10,5 (% ao ano)"
+                                    value={taxaManual}
+                                    onChange={e => setTaxaManual(e.target.value)}
+                                    disabled={isLoading}
                                 />
-                                <YAxis
-                                    tickFormatter={(v: number) => formatCurrency(v)}
-                                    width={90}
-                                    stroke="#94a3b8"
-                                    fontSize={12}
+                            )}
+                            {taxaModo === 'cdi' && (
+                                <>
+                                    <input
+                                        className="proj-taxa-manual-input"
+                                        type="text"
+                                        inputMode="decimal"
+                                        placeholder="Ex: 110 (% do CDI)"
+                                        value={percentualCdi}
+                                        onChange={e => setPercentualCdi(e.target.value)}
+                                        disabled={isLoading}
+                                    />
+                                    <p className="proj-hint">
+                                        O CDI vigente será buscado automaticamente ao calcular. CDB e fundos costumam
+                                        ser cotados como um percentual do CDI (ex.: "110% do CDI").
+                                    </p>
+                                </>
+                            )}
+                            {taxaModo === 'selic' && (
+                                <p className="proj-hint">
+                                    A taxa Selic real vigente será buscada automaticamente ao calcular.
+                                </p>
+                            )}
+                        </div>
+
+                        <div className="proj-form-group">
+                            <label>Aportes extras (13º, bônus)</label>
+                            {aportesExtras.map(extra => (
+                                <div key={extra.id} className="proj-aporte-extra-row">
+                                    <input
+                                        type="number"
+                                        min={1}
+                                        max={prazoMeses || undefined}
+                                        placeholder="Mês"
+                                        value={extra.mes}
+                                        onChange={e => atualizarAporteExtra(extra.id, { mes: e.target.value })}
+                                        disabled={isLoading}
+                                    />
+                                    <input
+                                        type="text"
+                                        inputMode="numeric"
+                                        placeholder="Valor (R$)"
+                                        value={extra.valor}
+                                        onChange={e => atualizarAporteExtra(extra.id, { valor: maskCurrency(e.target.value) })}
+                                        disabled={isLoading}
+                                    />
+                                    <button
+                                        type="button"
+                                        className="proj-aporte-extra-remover"
+                                        onClick={() => removerAporteExtra(extra.id)}
+                                        disabled={isLoading}
+                                        aria-label="Remover aporte extra"
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+                            ))}
+                            <button
+                                type="button"
+                                className="proj-aporte-extra-adicionar"
+                                onClick={adicionarAporteExtra}
+                                disabled={isLoading}
+                            >
+                                + Adicionar aporte extra
+                            </button>
+                        </div>
+
+                        <div className="proj-form-group">
+                            <label>Reajuste do aporte mensal (a cada 12 meses)</label>
+                            <div className="proj-toggle-group proj-toggle-group--full" role="radiogroup" aria-label="Reajuste do aporte mensal">
+                                <button
+                                    type="button"
+                                    role="radio"
+                                    aria-checked={reajusteModo === 'nenhum'}
+                                    className={`proj-toggle-btn${reajusteModo === 'nenhum' ? ' proj-toggle-btn--active' : ''}`}
+                                    onClick={() => setReajusteModo('nenhum')}
+                                    disabled={isLoading}
+                                >
+                                    Sem reajuste
+                                </button>
+                                <button
+                                    type="button"
+                                    role="radio"
+                                    aria-checked={reajusteModo === 'fixo'}
+                                    className={`proj-toggle-btn${reajusteModo === 'fixo' ? ' proj-toggle-btn--active' : ''}`}
+                                    onClick={() => setReajusteModo('fixo')}
+                                    disabled={isLoading}
+                                >
+                                    % fixo ao ano
+                                </button>
+                                <button
+                                    type="button"
+                                    role="radio"
+                                    aria-checked={reajusteModo === 'ipca'}
+                                    className={`proj-toggle-btn${reajusteModo === 'ipca' ? ' proj-toggle-btn--active' : ''}`}
+                                    onClick={() => setReajusteModo('ipca')}
+                                    disabled={isLoading}
+                                >
+                                    Pelo IPCA
+                                </button>
+                            </div>
+                            {reajusteModo === 'fixo' && (
+                                <input
+                                    className="proj-taxa-manual-input"
+                                    type="text"
+                                    inputMode="decimal"
+                                    placeholder="Ex: 5 (% ao ano)"
+                                    value={reajusteFixo}
+                                    onChange={e => setReajusteFixo(e.target.value)}
+                                    disabled={isLoading}
                                 />
-                                <Tooltip
-                                    formatter={(value, name) => [formatCurrency(Number(value)), name]}
-                                    labelFormatter={(mes) => `Mês ${mes}`}
-                                />
-                                <Legend />
-                                <Area
-                                    type="monotone"
-                                    dataKey="valorAcumulado"
-                                    name="Valor acumulado"
-                                    stroke="#3b82f6"
-                                    strokeWidth={2}
-                                    fill="#3b82f6"
-                                    fillOpacity={0.15}
-                                />
-                                <Line
-                                    type="monotone"
-                                    dataKey="totalAportadoAcumulado"
-                                    name="Total aportado"
-                                    stroke="#94a3b8"
-                                    strokeWidth={2}
-                                    strokeDasharray="4 4"
-                                    dot={false}
-                                />
-                            </ComposedChart>
-                        </ResponsiveContainer>
-                    </div>
-                </div>
+                            )}
+                            {reajusteModo === 'ipca' && (
+                                <p className="proj-hint">
+                                    O IPCA real vigente será buscado automaticamente ao calcular, mesmo com taxa manual.
+                                </p>
+                            )}
+                        </div>
+
+                        <SeletorTipoAtivo tipoAtivo={tipoAtivo} onChange={setTipoAtivo} disabled={isLoading} />
+
+                        {error && <span className="proj-error">{error}</span>}
+
+                        <button type="submit" className="proj-btn-submit" disabled={isLoading}>
+                            {isLoading ? 'Calculando...' : 'Calcular projeção'}
+                        </button>
+                    </form>
+
+                    {resultado && <ResultadoProjecaoDetalhado resultado={resultado} prazoMeses={prazoMeses} />}
+                </>
             )}
         </div>
     );
