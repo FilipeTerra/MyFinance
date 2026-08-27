@@ -32,6 +32,11 @@ import type {
     CalcularDuracaoRetiradaRequestDto,
     RetiradaResponseDto,
 } from '../types/Retirada';
+import type {
+    ExpenseAnalyticsFilterParams,
+    ExpenseOverviewResponseDto,
+    ExpenseTimelineResponseDto,
+} from '../types/ExpenseAnalytics';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -249,6 +254,17 @@ const aiService = {
     },
 };
 
+const analyticsService = {
+    getExpenseOverview: async (params: ExpenseAnalyticsFilterParams): Promise<ExpenseOverviewResponseDto> => {
+        const response = await apiClient.get<ExpenseOverviewResponseDto>('/analytics/expenses/overview', { params });
+        return response.data;
+    },
+    getExpenseTimeline: async (params: ExpenseAnalyticsFilterParams): Promise<ExpenseTimelineResponseDto> => {
+        const response = await apiClient.get<ExpenseTimelineResponseDto>('/analytics/expenses/timeline', { params });
+        return response.data;
+    },
+};
+
 export {
     authService,
     accountService,
@@ -261,6 +277,7 @@ export {
     retiradaService,
     profileService,
     aiService,
+    analyticsService,
     tokenManager,
     apiClient as api,
     AxiosError

@@ -1,0 +1,58 @@
+.fluxo-top-expenses {
+    margin-top: 1.5rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid #e2e8f0;
+}
+
+.fluxo-top-expenses-title {
+    margin: 0 0 0.85rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #94a3b8;
+}
+
+.fluxo-top-expenses-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+}
+
+.fluxo-top-expense-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.fluxo-top-expense-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;
+}
+
+.fluxo-top-expense-desc {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #334155;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.fluxo-top-expense-meta {
+    font-size: 0.72rem;
+    color: #94a3b8;
+}
+
+.fluxo-top-expense-valor {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #ef4444;
+    white-space: nowrap;
+}

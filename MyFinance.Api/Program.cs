@@ -97,6 +97,8 @@ builder.Services.AddScoped<IMetaReversaService, MetaReversaService>();
 builder.Services.AddScoped<IRetiradaService, RetiradaService>();
 builder.Services.AddScoped<ICotacaoHistoricoRepository, CotacaoHistoricoRepository>();
 builder.Services.AddScoped<IMarketSyncService, MarketSyncService>();
+builder.Services.AddScoped<IAnalyticsRepository, AnalyticsRepository>();
+builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
 
 // Integrações externas (brapi/B3, Banco Central, Agente de IA) — URLs, tokens e
 // TTLs de cache vêm da seção ExternalServices da configuração.
