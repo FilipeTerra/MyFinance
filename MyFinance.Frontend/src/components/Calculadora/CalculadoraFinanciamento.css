@@ -1,0 +1,121 @@
+.fin-tabela-wrap {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+    overflow-x: auto;
+}
+
+.fin-tabela-wrap--scroll {
+    max-height: 420px;
+    overflow-y: auto;
+}
+
+.fin-tabela {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+}
+
+.fin-tabela th,
+.fin-tabela td {
+    padding: 0.6rem 0.9rem;
+    text-align: right;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+.fin-tabela th:first-child,
+.fin-tabela td:first-child {
+    text-align: left;
+    color: #64748b;
+    font-weight: 500;
+}
+
+.fin-tabela thead th {
+    border-bottom: 2px solid #e2e8f0;
+    color: #1e293b;
+    font-weight: 700;
+    position: sticky;
+    top: 0;
+    background: #ffffff;
+}
+
+.fin-tabela tbody tr {
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.fin-tabela--comparativo td:first-child {
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.fin-row-melhor {
+    background: #f0fdf4;
+}
+
+.fin-row-melhor td:first-child {
+    color: #15803d;
+}
+
+.fin-cronograma-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.fin-btn-export {
+    padding: 0.55rem 1rem;
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    color: #334155;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.fin-btn-export:hover {
+    background: #f8fafc;
+    border-color: #94a3b8;
+}
+
+.fin-conversor {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px dashed #e2e8f0;
+}
+
+.fin-conversor-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0 0 0.5rem;
+}
+
+.fin-conversor-form {
+    display: flex;
+    align-items: flex-end;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-top: 0.75rem;
+}
+
+.fin-conversor-form .proj-form-group {
+    min-width: 200px;
+}
+
+.fin-conversor-resultado {
+    display: flex;
+    flex-direction: column;
+    margin-top: 1rem;
+    padding: 0.9rem 1.1rem;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 10px;
+    width: fit-content;
+}

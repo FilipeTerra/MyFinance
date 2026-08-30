@@ -37,6 +37,12 @@ import type {
     ExpenseOverviewResponseDto,
     ExpenseTimelineResponseDto,
 } from '../types/ExpenseAnalytics';
+import type {
+    FinanciamentoRequestDto,
+    FinanciamentoResponseDto,
+    TaxaEfetivaRequestDto,
+    TaxaEfetivaResponseDto,
+} from '../types/Financiamento';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -232,6 +238,17 @@ const retiradaService = {
     },
 };
 
+const financiamentoService = {
+    simular: async (data: FinanciamentoRequestDto): Promise<FinanciamentoResponseDto> => {
+        const response = await apiClient.post<FinanciamentoResponseDto>('/financiamento/simular', data);
+        return response.data;
+    },
+    calcularTaxaEfetiva: async (data: TaxaEfetivaRequestDto): Promise<TaxaEfetivaResponseDto> => {
+        const response = await apiClient.post<TaxaEfetivaResponseDto>('/financiamento/taxa-efetiva', data);
+        return response.data;
+    },
+};
+
 const profileService = {
     getProfile: async (): Promise<UserProfileResponseDto> => {
         const response = await apiClient.get<UserProfileResponseDto>('/profile');
@@ -275,6 +292,7 @@ export {
     projecaoInvestimentoService,
     metaReversaService,
     retiradaService,
+    financiamentoService,
     profileService,
     aiService,
     analyticsService,

@@ -8,13 +8,14 @@ import { maskCurrency, parseCurrency, parsePercent } from './calculadoraUtils';
 import { ComparadorCenarios } from './ComparadorCenarios';
 import { MetaReversaCalculadora } from './MetaReversaCalculadora';
 import { RetiradaCalculadora } from './RetiradaCalculadora';
+import { CalculadoraFinanciamento } from './CalculadoraFinanciamento';
 import { ResultadoProjecaoDetalhado } from './ResultadoProjecaoDetalhado';
 import { SeletorTipoAtivo } from './SeletorTipoAtivo';
 import './CalculadoraProjecao.css';
 
 type PrazoUnidade = 'anos' | 'meses';
 type TaxaModo = 'selic' | 'cdi' | 'manual';
-type ModoCalculadora = 'unico' | 'comparar' | 'meta-reversa' | 'retirada';
+type ModoCalculadora = 'unico' | 'comparar' | 'meta-reversa' | 'retirada' | 'financiamento';
 type ReajusteModoUi = 'nenhum' | 'fixo' | 'ipca';
 
 let proximoIdAporteExtra = 0;
@@ -168,11 +169,21 @@ export function CalculadoraProjecao() {
                 >
                     Fase de retirada
                 </button>
+                <button
+                    type="button"
+                    role="radio"
+                    aria-checked={modo === 'financiamento'}
+                    className={`proj-toggle-btn${modo === 'financiamento' ? ' proj-toggle-btn--active' : ''}`}
+                    onClick={() => setModo('financiamento')}
+                >
+                    Financiamento
+                </button>
             </div>
 
             {modo === 'comparar' && <ComparadorCenarios />}
             {modo === 'meta-reversa' && <MetaReversaCalculadora />}
             {modo === 'retirada' && <RetiradaCalculadora />}
+            {modo === 'financiamento' && <CalculadoraFinanciamento />}
 
             {modo === 'unico' && (
                 <>
