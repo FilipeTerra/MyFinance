@@ -67,4 +67,64 @@ public class ProjecaoInvestimentoCalculatorTests
         Assert.Throws<ArgumentException>(() =>
             ProjecaoInvestimentoCalculator.Calcular(aporteInicial, aporteMensal, taxaJurosAnualPercentual, meses));
     }
+
+    // ---------- Aportes extras ----------
+
+    [Fact]
+    public void Calcular_WithAporteExtra_AddsToAporteInTheGivenMonth()
+    {
+        var semExtra = ProjecaoInvestimentoCalculator.Calcular(0m, 100m, 0m, 3);
+        var comExtra = ProjecaoInvestimentoCalculator.Calcular(0m, 100m, 0m, 3, new[] { new AporteExtra(2, 5000m) });
+
+        Assert.Equal(semExtra.TotalAportado + 5000m, comExtra.TotalAportado);
+        Assert.Equal(semExtra.Evolucao[0].ValorAcumulado, comExtra.Evolucao[0].ValorAcumulado);
+        Assert.Equal(semExtra.Evolucao[1].ValorAcumulado + 5000m, comExtra.Evolucao[1].ValorAcumulado);
+    }
+
+    [Fact]
+    public void Calcular_WithMultipleAportesExtrasSameMonth_SumsThem()
+    {
+        var resultado = ProjecaoInvestimentoCalculator.Calcular(
+            0m, 100m, 0m, 2, new[] { new AporteExtra(1, 1000m), new AporteExtra(1, 500m) });
+
+        Assert.Equal(100m + 1500m + 100m, resultado.TotalAportado);
+    }
+
+    [Theory]
+    [InlineData(0, 100)]
+    [InlineData(1, 0)]
+    [InlineData(1, -1)]
+    public void Calcular_WithInvalidAporteExtra_ThrowsArgumentException(int mes, decimal valor)
+    {
+        Assert.Throws<ArgumentException>(() =>
+            ProjecaoInvestimentoCalculator.Calcular(0m, 100m, 10m, 12, new[] { new AporteExtra(mes, valor) }));
+    }
+
+    // ---------- Reajuste anual do aporte ----------
+
+    [Fact]
+    public void Calcular_WithReajusteAnual_IncreasesAporteEveryTwelveMonths()
+    {
+        var resultado = ProjecaoInvestimentoCalculator.Calcular(0m, 100m, 0m, 25, reajusteAnualPercentual: 10m);
+
+        Assert.Equal(100m, resultado.Evolucao[11].ValorAcumulado - resultado.Evolucao[10].ValorAcumulado);
+        Assert.Equal(110m, resultado.Evolucao[12].ValorAcumulado - resultado.Evolucao[11].ValorAcumulado);
+        Assert.Equal(121m, resultado.Evolucao[24].ValorAcumulado - resultado.Evolucao[23].ValorAcumulado);
+    }
+
+    [Fact]
+    public void Calcular_WithZeroReajuste_BehavesLikeConstanteAporte()
+    {
+        var constante = ProjecaoInvestimentoCalculator.Calcular(0m, 100m, 12m, 24);
+        var comReajusteZero = ProjecaoInvestimentoCalculator.Calcular(0m, 100m, 12m, 24, reajusteAnualPercentual: 0m);
+
+        Assert.Equal(constante.ValorFinal, comReajusteZero.ValorFinal);
+    }
+
+    [Fact]
+    public void Calcular_WithNegativeReajuste_ThrowsArgumentException()
+    {
+        Assert.Throws<ArgumentException>(() =>
+            ProjecaoInvestimentoCalculator.Calcular(0m, 100m, 10m, 12, reajusteAnualPercentual: -1m));
+    }
 }

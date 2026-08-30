@@ -282,6 +282,25 @@
     transform: none;
 }
 
+/* ── Simulate investment button ────────────────────────────────────────── */
+.goal-simular-btn {
+    flex: 1;
+    padding: 0.6rem 0.75rem;
+    background: transparent;
+    color: var(--s-color);
+    border: 1px solid var(--s-color);
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.2s ease;
+}
+
+.goal-simular-btn:hover {
+    background: color-mix(in srgb, var(--s-color) 10%, transparent);
+}
+
 /* ── Delete button ─────────────────────────────────────────────────────── */
 .goal-delete-btn {
     padding: 0.6rem 0.875rem;

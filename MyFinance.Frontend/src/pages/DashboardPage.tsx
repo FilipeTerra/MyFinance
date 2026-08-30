@@ -4,6 +4,7 @@ import { FinancialGoalCard } from '../components/FinancialGoals/FinancialGoalCar
 import { InvestimentoCard } from '../components/Investimentos/InvestimentoCard';
 import { InvestimentoModal } from '../components/Investimentos/InvestimentoModal';
 import { CalculadoraProjecao } from '../components/Calculadora/CalculadoraProjecao';
+import { AnaliseGastos } from '../components/Gastos/AnaliseGastos';
 import { InsightCard } from '../components/Shared/InsightCard';
 import { financialGoalService, investimentoService, aiService } from '../services/Api';
 import type { FinancialGoalResponseDto } from '../types/FinancialGoalResponseDto';
@@ -11,7 +12,14 @@ import type { InvestimentoResponseDto } from '../types/InvestimentoResponseDto';
 import type { ProactiveInsightResponseDto } from '../types/AiIntegration';
 import './DashboardPage.css';
 
-type DashboardTab = 'metas' | 'investimentos' | 'calculadora';
+type DashboardTab = 'metas' | 'investimentos' | 'calculadora' | 'gastos';
+
+const TAB_SUBTITLES: Record<DashboardTab, string> = {
+    metas: 'Acompanhe a evolução dos seus objetivos financeiros',
+    investimentos: 'Gerencie sua carteira e acompanhe a rentabilidade dos seus ativos',
+    calculadora: 'Simule quanto você pode acumular investindo a longo prazo',
+    gastos: 'Entenda para onde seu dinheiro está indo',
+};
 
 const formatCurrency = (value: number) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -101,11 +109,7 @@ export function DashboardPage() {
     const investStats = useMemo(() => computeInvestStats(investimentos), [investimentos]);
     const resultTrend = investStats.resultado > 0 ? 'green' : investStats.resultado < 0 ? 'red' : 'flat';
 
-    const subtitle = activeTab === 'metas'
-        ? 'Acompanhe a evolução dos seus objetivos financeiros'
-        : activeTab === 'investimentos'
-        ? 'Gerencie sua carteira e acompanhe a rentabilidade dos seus ativos'
-        : 'Simule quanto você pode acumular investindo a longo prazo';
+    const subtitle = TAB_SUBTITLES[activeTab];
 
     return (
         <div className="dashboard-container">
@@ -154,6 +158,15 @@ export function DashboardPage() {
                     >
                         <span className="dashboard-tab-icon" aria-hidden="true">🧮</span>
                         Calculadora
+                    </button>
+                    <button
+                        role="tab"
+                        aria-selected={activeTab === 'gastos'}
+                        className={`dashboard-tab${activeTab === 'gastos' ? ' dashboard-tab--active' : ''}`}
+                        onClick={() => setActiveTab('gastos')}
+                    >
+                        <span className="dashboard-tab-icon" aria-hidden="true">💸</span>
+                        Gastos
                     </button>
                 </div>
 
@@ -307,6 +320,9 @@ export function DashboardPage() {
 
                 {/* ═══ Calculadora ═══════════════════════════════════════════ */}
                 {activeTab === 'calculadora' && <CalculadoraProjecao />}
+
+                {/* ═══ Gastos ═════════════════════════════════════════════════ */}
+                {activeTab === 'gastos' && <AnaliseGastos />}
             </main>
 
             {isCreateOpen && (

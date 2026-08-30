@@ -1,0 +1,177 @@
+.cmp-cenarios-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.1rem;
+}
+
+.cmp-cenario-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-top: 3px solid #94a3b8;
+    border-radius: 10px;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.cmp-cenario-card label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #64748b;
+    margin-bottom: -0.25rem;
+}
+
+.cmp-cenario-card select {
+    width: 100%;
+    padding: 0.55rem 0.6rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    background-color: #ffffff;
+    color: #334155;
+    font-size: 0.9rem;
+    box-sizing: border-box;
+}
+
+.cmp-cenario-card .proj-toggle-btn {
+    padding: 0.45rem 0.7rem;
+    font-size: 0.75rem;
+}
+
+.cmp-cenario-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.2rem;
+}
+
+.cmp-cenario-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.cmp-cenario-titulo {
+    font-weight: 700;
+    color: #1e293b;
+    font-size: 0.9rem;
+    flex: 1;
+}
+
+.cmp-cenario-remover {
+    background: none;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    font-size: 0.85rem;
+    padding: 0.1rem 0.35rem;
+    border-radius: 4px;
+}
+
+.cmp-cenario-remover:hover {
+    background: #fee2e2;
+    color: #ef4444;
+}
+
+.cmp-cenario-adicionar {
+    background: #f8fafc;
+    border: 1px dashed #cbd5e1;
+    border-radius: 10px;
+    color: #64748b;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    min-height: 100px;
+    transition: border-color 0.15s, color 0.15s;
+}
+
+.cmp-cenario-adicionar:hover:not(:disabled) {
+    border-color: #3b82f6;
+    color: #3b82f6;
+}
+
+.cmp-cenario-adicionar:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ── Tabela de comparação ──────────────────────────────────────────────── */
+.cmp-tabela-wrap {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+    overflow-x: auto;
+}
+
+.cmp-tabela {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+}
+
+.cmp-tabela th,
+.cmp-tabela td {
+    padding: 0.6rem 0.9rem;
+    text-align: right;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+.cmp-tabela th:first-child,
+.cmp-tabela td:first-child {
+    text-align: left;
+    color: #64748b;
+    font-weight: 500;
+    white-space: normal;
+}
+
+.cmp-tabela thead th {
+    border-bottom: 2px solid #e2e8f0;
+    color: #1e293b;
+    font-weight: 700;
+}
+
+.cmp-th-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 0.4rem;
+}
+
+.cmp-badge-melhor {
+    display: inline-block;
+    margin-left: 0.4rem;
+    padding: 0.1rem 0.45rem;
+    background: #dcfce7;
+    color: #15803d;
+    border-radius: 999px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.cmp-tabela tbody tr {
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.cmp-td-red {
+    color: #ef4444;
+}
+
+.cmp-row-highlight td {
+    font-weight: 800;
+    font-size: 1rem;
+    color: #1e293b;
+    padding-top: 0.85rem;
+    border-top: 2px solid #e2e8f0;
+}
+
+.cmp-td-melhor {
+    color: #15803d !important;
+}

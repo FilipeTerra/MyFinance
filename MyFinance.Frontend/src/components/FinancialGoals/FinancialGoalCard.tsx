@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { FinancialGoalResponseDto } from '../../types/FinancialGoalResponseDto';
 import { ContributeToGoalModal } from './ContributeToGoalModal';
+import { SimularMetaModal } from './SimularMetaModal';
 import { financialGoalService } from '../../services/Api';
 import './FinancialGoalCard.css';
 
@@ -56,6 +57,7 @@ function buildInsight(goal: FinancialGoalResponseDto, status: GoalStatus, daysLe
 
 export function FinancialGoalCard({ goal, onContributionSuccess, onDeleteSuccess }: FinancialGoalCardProps) {
     const [isContributeModalOpen, setIsContributeModalOpen] = useState(false);
+    const [isSimularModalOpen, setIsSimularModalOpen] = useState(false);
     const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
 
@@ -159,6 +161,13 @@ export function FinancialGoalCard({ goal, onContributionSuccess, onDeleteSuccess
                         Aportar
                     </button>
                     <button
+                        className="goal-simular-btn"
+                        onClick={() => setIsSimularModalOpen(true)}
+                        title="Simular se um investimento atinge esta meta"
+                    >
+                        Simular investimento
+                    </button>
+                    <button
                         className="goal-delete-btn"
                         onClick={() => setIsConfirmingDelete(true)}
                         title="Excluir esta meta"
@@ -176,6 +185,14 @@ export function FinancialGoalCard({ goal, onContributionSuccess, onDeleteSuccess
                         setIsContributeModalOpen(false);
                         onContributionSuccess();
                     }}
+                />
+            )}
+
+            {isSimularModalOpen && (
+                <SimularMetaModal
+                    goalId={goal.id}
+                    goalName={goal.name}
+                    onClose={() => setIsSimularModalOpen(false)}
                 />
             )}
         </div>

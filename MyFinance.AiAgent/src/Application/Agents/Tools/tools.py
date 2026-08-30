@@ -224,7 +224,7 @@ def calcular_juros_financiamento(
 
     Example:
         Input:  valor_financiado=50000, taxa_juros_mensal=1.5, num_parcelas=48
-        Output: {"valor_parcela": ~1494.27, "total_juros": ~21724.90, ...}
+        Output: {"valor_parcela": ~1468.75, "total_juros": ~20500.00, ...}
     """
     i = taxa_juros_mensal / 100  # Converte percentual para decimal
 

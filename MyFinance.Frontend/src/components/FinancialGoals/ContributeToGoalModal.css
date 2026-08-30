@@ -18,6 +18,8 @@
     border-radius: 12px;
     width: 100%;
     max-width: 460px;
+    max-height: calc(100vh - 2rem);
+    overflow-y: auto;
     margin: 1rem;
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.18);
     animation: contributeScaleIn 0.18s ease-out;
@@ -132,6 +134,46 @@
 .contribute-btn-submit:hover:not(:disabled) { background: #2563eb; }
 .contribute-btn-submit:disabled,
 .contribute-btn-cancel:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* ── Resultado da simulação de meta ───────────────────────────────────────── */
+.sim-meta-resultado {
+    margin-top: 1.25rem;
+    padding: 1rem 1.25rem;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.sim-meta-resultado--ok {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+}
+
+.sim-meta-resultado--falta {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+}
+
+.sim-meta-resultado-label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.sim-meta-resultado-valor {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #1e293b;
+}
+
+.sim-meta-resultado-prazo {
+    font-size: 0.8rem;
+    color: #64748b;
+    margin-top: 0.3rem;
+}
 
 /* ── Animations ────────────────────────────────────────────────────────── */
 @keyframes contributeFadeIn  { from { opacity: 0; }                      to { opacity: 1; } }

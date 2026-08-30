@@ -1,0 +1,121 @@
+.categoria-layout {
+    display: flex;
+    gap: 1.5rem;
+    align-items: center;
+}
+
+.categoria-donut {
+    position: relative;
+    flex: 0 0 220px;
+}
+
+.categoria-donut-total {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    pointer-events: none;
+}
+
+.categoria-donut-total-value {
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: #1e293b;
+    letter-spacing: -0.02em;
+}
+
+.categoria-donut-total-label {
+    font-size: 0.68rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #94a3b8;
+}
+
+.categoria-ranking {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    max-height: 280px;
+    overflow-y: auto;
+    min-width: 0;
+}
+
+.categoria-ranking-item {
+    display: flex;
+    gap: 0.65rem;
+    align-items: flex-start;
+}
+
+.categoria-ranking-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    flex-shrink: 0;
+    margin-top: 0.3rem;
+}
+
+.categoria-ranking-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.categoria-ranking-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.categoria-ranking-name {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #334155;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.categoria-ranking-value {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #1e293b;
+    white-space: nowrap;
+}
+
+.categoria-ranking-bar-track {
+    margin-top: 0.3rem;
+    height: 5px;
+    border-radius: 999px;
+    background: #f1f5f9;
+    overflow: hidden;
+}
+
+.categoria-ranking-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+}
+
+.categoria-ranking-meta {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.72rem;
+    color: #94a3b8;
+}
+
+@media (max-width: 640px) {
+    .categoria-layout {
+        flex-direction: column;
+    }
+
+    .categoria-donut {
+        flex: none;
+        width: 100%;
+    }
+}
