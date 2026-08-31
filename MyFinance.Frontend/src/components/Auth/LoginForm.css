@@ -3,14 +3,14 @@
     width: 100%; /* Ocupa a largura do container pai (o card) */
     display: flex;
     flex-direction: column;
-    gap: 1.5rem; /* Espaçamento entre os grupos de formulário e botão */
+    gap: var(--space-12); /* Espaçamento entre os grupos de formulário e botão */
 }
 
     .login-form h2 {
         margin-top: 0;
-        margin-bottom: 0.5rem; /* Menos espaço abaixo do tí­tulo interno */
-        color: #334155;
-        font-size: 1.75rem;
+        margin-bottom: var(--space-4); /* Menos espaço abaixo do tí­tulo interno */
+        color: var(--slate-700);
+        font-size: var(--text-2xl);
         font-weight: 600;
         text-align: center;
     }
@@ -23,51 +23,51 @@
 
         .login-form .form-group label {
             display: block;
-            margin-bottom: 0.5rem;
-            color: #64748b;
+            margin-bottom: var(--space-4);
+            color: var(--slate-500);
             font-weight: 500;
-            font-size: 0.9rem;
+            font-size: var(--text-base);
         }
 
         .login-form .form-group input {
             width: 100%;
-            padding: 0.85rem 1rem;
-            border: 1px solid #cbd5e1;
-            border-radius: 8px; /* Bordas arredondadas */
-            background-color: #f8fafc;
-            color: #334155;
-            font-size: 1rem;
+            padding: var(--space-7) var(--space-8);
+            border: 1px solid var(--slate-300);
+            border-radius: var(--radius-md); /* Bordas arredondadas */
+            background-color: var(--slate-50);
+            color: var(--slate-700);
+            font-size: var(--text-md);
             box-sizing: border-box;
             transition: border-color 0.2s ease, box-shadow 0.2s ease;
         }
 
             .login-form .form-group input:focus {
                 outline: none;
-                border-color: #3b82f6;
+                border-color: var(--blue-500);
                 box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
             }
 
             .login-form .form-group input::placeholder {
-                color: #94a3b8;
+                color: var(--slate-500);
             }
 
     /* Botão de Login */
     .login-form .login-button {
         width: 100%;
-        padding: 0.9rem;
-        /* margin-top: 1rem; */ /* Removido, o gap cuida disso */
+        padding: var(--space-7);
+        /* margin-top: var(--space-8); */ /* Removido, o gap cuida disso */
         border: none;
-        border-radius: 8px; /* Bordas arredondadas */
-        background-color: #3b82f6;
+        border-radius: var(--radius-md); /* Bordas arredondadas */
+        background-color: var(--blue-500);
         color: white;
-        font-size: 1.05rem;
+        font-size: var(--text-md);
         font-weight: 600;
         cursor: pointer;
         transition: background-color 0.2s ease, transform 0.1s ease;
     }
 
         .login-form .login-button:hover {
-            background-color: #2563eb;
+            background-color: var(--blue-600);
         }
 
         .login-form .login-button:active {
@@ -76,50 +76,50 @@
 
     /* Mensagem de Erro */
     .login-form .error-message {
-        color: #ef4444;
-        background-color: #fee2e2;
-        padding: 0.8rem;
-        border-radius: 6px;
-        border: 1px solid #fca5a5;
+        color: var(--red-500);
+        background-color: var(--red-100);
+        padding: var(--space-6);
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--red-300);
         margin-top: -0.5rem; /* Aproxima a msg de erro do campo acima */
         margin-bottom: -0.5rem; /* Reduz espaço extra */
-        font-size: 0.9rem;
+        font-size: var(--text-base);
         text-align: center;
     }
 
     /* Links abaixo */
     .login-form .login-links {
-        /* margin-top: 2rem; */ /* Removido, o gap cuida disso */
-        font-size: 0.9rem;
-        color: #64748b;
+        /* margin-top: var(--space-16); */ /* Removido, o gap cuida disso */
+        font-size: var(--text-base);
+        color: var(--slate-500);
         text-align: center; /* Centraliza os links */
     }
 
         .login-form .login-links p {
-            margin: 0.6rem 0;
+            margin: var(--space-5) 0;
         }
 
         .login-form .login-links a {
-            color: #3b82f6;
+            color: var(--blue-500);
             text-decoration: none;
             font-weight: 500;
         }
 
             .login-form .login-links a:hover {
                 text-decoration: underline;
-                color: #2563eb;
+                color: var(--blue-600);
             }
 
     /* Mensagem de Sucesso */
     .login-form .success-message {
-        color: #059669; /* Verde */
+        color: var(--green-600); /* Verde */
         background-color: #d1fae5; /* Fundo verde bem claro */
-        padding: 0.8rem;
-        border-radius: 6px;
+        padding: var(--space-6);
+        border-radius: var(--radius-sm);
         border: 1px solid #6ee7b7; /* Borda verde clara */
         margin-top: -0.5rem;
         margin-bottom: -0.5rem;
-        font-size: 0.9rem;
+        font-size: var(--text-base);
         text-align: center;
     }
 

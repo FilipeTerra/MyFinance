@@ -1,22 +1,22 @@
 /* src/components/Transactions/CreateTransactionButton.css */
 .create-transaction-button{
-    background-color: #3b82f6; /* Azul padrão */
+    background-color: var(--blue-500); /* Azul padrão */
     color: white;
     border: none;
-    padding: 0.8rem 1.5rem;
-    border-radius: 6px;
-    font-size: 1rem;
+    padding: var(--space-6) var(--space-12);
+    border-radius: var(--radius-sm);
+    font-size: var(--text-md);
     font-weight: 600;
     cursor: pointer;
     transition: background-color 0.2s ease, transform 0.1s ease;
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: var(--space-4);
     box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
 }
 
 .create-transaction-button:hover {
-    background-color: #2563eb;
+    background-color: var(--blue-600);
     transform: translateY(-1px);
 }
 

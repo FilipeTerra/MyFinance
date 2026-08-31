@@ -6,13 +6,13 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 1000;
+    z-index: var(--z-overlay);
 }
 
 .modal-content {
     background: white;
-    padding: 2rem;
-    border-radius: 8px;
+    padding: var(--space-16);
+    border-radius: var(--radius-md);
     width: 100%;
     max-width: 450px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -20,60 +20,60 @@
 
 .modal-content h2 {
     margin-top: 0;
-    color: #1e293b;
-    margin-bottom: 1.5rem;
+    color: var(--slate-800);
+    margin-bottom: var(--space-12);
 }
 
 .form-group {
-    margin-bottom: 1.2rem;
+    margin-bottom: var(--space-10);
 }
 
 .form-group label {
     display: block;
-    margin-bottom: 0.5rem;
-    color: #64748b;
+    margin-bottom: var(--space-4);
+    color: var(--slate-500);
     font-weight: 500;
 }
 
 .form-group input, .form-group select {
     width: 100%;
-    padding: 0.7rem;
-    border: 1px solid #cbd5e1;
-    border-radius: 6px;
-    font-size: 1rem;
-    background-color: #f8fafc;
+    padding: var(--space-6);
+    border: 1px solid var(--slate-300);
+    border-radius: var(--radius-sm);
+    font-size: var(--text-md);
+    background-color: var(--slate-50);
 }
 
 .hint-text {
     display: block;
-    font-size: 0.8rem;
-    color: #94a3b8;
-    margin-top: 0.3rem;
+    font-size: var(--text-sm);
+    color: var(--slate-500);
+    margin-top: var(--space-2);
 }
 
 .modal-actions {
     display: flex;
     justify-content: flex-end;
-    gap: 1rem;
-    margin-top: 2rem;
+    gap: var(--space-8);
+    margin-top: var(--space-16);
 }
 
 .cancel-button {
-    background: #f1f5f9;
-    color: #475569;
-    padding: 0.6rem 1.2rem;
+    background: var(--slate-100);
+    color: var(--slate-600);
+    padding: var(--space-5) var(--space-10);
     border: none;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     cursor: pointer;
     font-weight: 600;
 }
 
 .save-button {
-    background: #3b82f6;
+    background: var(--blue-500);
     color: white;
-    padding: 0.6rem 1.2rem;
+    padding: var(--space-5) var(--space-10);
     border: none;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     cursor: pointer;
     font-weight: 600;
 }
@@ -84,21 +84,21 @@
 }
 
 .modal-error-message {
-    background-color: #fee2e2;
-    color: #ef4444;
-    padding: 0.75rem;
-    border-radius: 6px;
-    margin-bottom: 1rem;
-    font-size: 0.9rem;
+    background-color: var(--red-100);
+    color: var(--red-500);
+    padding: var(--space-6);
+    border-radius: var(--radius-sm);
+    margin-bottom: var(--space-8);
+    font-size: var(--text-base);
 }
 
 .input-error {
-    border-color: #ef4444 !important;
+    border-color: var(--red-500) !important;
 }
 
 .field-error-message {
-    color: #ef4444;
-    font-size: 0.8rem;
-    margin-top: 0.25rem;
+    color: var(--red-500);
+    font-size: var(--text-sm);
+    margin-top: var(--space-2);
     display: block;
 }

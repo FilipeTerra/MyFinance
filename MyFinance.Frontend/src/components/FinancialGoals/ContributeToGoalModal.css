@@ -7,21 +7,21 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 9999;
+    z-index: var(--z-overlay);
     animation: contributeFadeIn 0.18s ease-out;
 }
 
 /* ── Card ──────────────────────────────────────────────────────────────── */
 .contribute-modal {
-    background: #ffffff;
-    padding: 2rem;
-    border-radius: 12px;
+    background: var(--white);
+    padding: var(--space-16);
+    border-radius: var(--radius-xl);
     width: 100%;
     max-width: 460px;
     max-height: calc(100vh - 2rem);
     overflow-y: auto;
-    margin: 1rem;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.18);
+    margin: var(--space-8);
+    box-shadow: var(--shadow-2xl);
     animation: contributeScaleIn 0.18s ease-out;
 }
 
@@ -30,14 +30,14 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 1.5rem;
+    margin-bottom: var(--space-12);
 }
 
 .contribute-modal-title {
     margin: 0;
-    font-size: 1.1rem;
+    font-size: var(--text-lg);
     font-weight: 700;
-    color: #1e293b;
+    color: var(--slate-800);
 }
 
 .contribute-modal-close {
@@ -45,120 +45,120 @@
     border: none;
     font-size: 1.6rem;
     line-height: 1;
-    color: #94a3b8;
+    color: var(--slate-500);
     cursor: pointer;
-    padding: 0 0.25rem;
+    padding: 0 var(--space-2);
     transition: color 0.15s;
 }
-.contribute-modal-close:hover { color: #1e293b; }
+.contribute-modal-close:hover { color: var(--slate-800); }
 
 /* ── Balance hint below account selector ───────────────────────────────── */
 .contribute-balance-hint {
-    font-size: 0.78rem;
-    margin-top: 0.3rem;
-    color: #64748b;
+    font-size: var(--text-xs);
+    margin-top: var(--space-2);
+    color: var(--slate-500);
 }
-.contribute-balance-hint.insufficient { color: #ef4444; font-weight: 600; }
+.contribute-balance-hint.insufficient { color: var(--red-500); font-weight: 600; }
 
 /* ── Error message ─────────────────────────────────────────────────────── */
 .contribute-error {
     display: block;
-    color: #ef4444;
-    font-size: 0.82rem;
-    margin-top: 0.25rem;
-    margin-bottom: 0.5rem;
+    color: var(--red-500);
+    font-size: var(--text-sm);
+    margin-top: var(--space-2);
+    margin-bottom: var(--space-4);
 }
 
 /* ── Form groups (self-contained so no dependency on TransactionModal.css) */
 .contribute-form-group {
-    margin-bottom: 1rem;
+    margin-bottom: var(--space-8);
 }
 
 .contribute-form-group label {
     display: block;
-    margin-bottom: 0.45rem;
-    font-size: 0.875rem;
+    margin-bottom: var(--space-4);
+    font-size: var(--text-base);
     font-weight: 500;
-    color: #64748b;
+    color: var(--slate-500);
 }
 
 .contribute-form-group input {
     width: 100%;
-    padding: 0.7rem 0.8rem;
-    border: 1px solid #cbd5e1;
-    border-radius: 6px;
-    background-color: #f8fafc;
-    color: #334155;
-    font-size: 1rem;
+    padding: var(--space-6) var(--space-6);
+    border: 1px solid var(--slate-300);
+    border-radius: var(--radius-sm);
+    background-color: var(--slate-50);
+    color: var(--slate-700);
+    font-size: var(--text-md);
     box-sizing: border-box;
 }
 
 .contribute-form-group input:focus {
     outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    border-color: var(--blue-500);
+    box-shadow: var(--focus-ring);
 }
 
 /* ── Actions ───────────────────────────────────────────────────────────── */
 .contribute-actions {
     display: flex;
     justify-content: flex-end;
-    gap: 0.75rem;
-    margin-top: 1.75rem;
+    gap: var(--space-6);
+    margin-top: var(--space-14);
 }
 
 .contribute-btn-cancel {
-    padding: 0.6rem 1.3rem;
-    border: 1px solid #e2e8f0;
-    border-radius: 6px;
-    background: #f8fafc;
-    color: #475569;
-    font-size: 0.9rem;
+    padding: var(--space-5) var(--space-10);
+    border: 1px solid var(--slate-200);
+    border-radius: var(--radius-sm);
+    background: var(--slate-50);
+    color: var(--slate-600);
+    font-size: var(--text-base);
     font-weight: 600;
     cursor: pointer;
     transition: background 0.15s;
 }
-.contribute-btn-cancel:hover:not(:disabled) { background: #f1f5f9; }
+.contribute-btn-cancel:hover:not(:disabled) { background: var(--slate-100); }
 
 .contribute-btn-submit {
-    padding: 0.6rem 1.3rem;
+    padding: var(--space-5) var(--space-10);
     border: none;
-    border-radius: 6px;
-    background: #3b82f6;
-    color: #ffffff;
-    font-size: 0.9rem;
+    border-radius: var(--radius-sm);
+    background: var(--blue-500);
+    color: var(--white);
+    font-size: var(--text-base);
     font-weight: 600;
     cursor: pointer;
     transition: background 0.15s, opacity 0.15s;
 }
-.contribute-btn-submit:hover:not(:disabled) { background: #2563eb; }
+.contribute-btn-submit:hover:not(:disabled) { background: var(--blue-600); }
 .contribute-btn-submit:disabled,
 .contribute-btn-cancel:disabled { opacity: 0.55; cursor: not-allowed; }
 
 /* ── Resultado da simulação de meta ───────────────────────────────────────── */
 .sim-meta-resultado {
-    margin-top: 1.25rem;
-    padding: 1rem 1.25rem;
-    border-radius: 10px;
+    margin-top: var(--space-10);
+    padding: var(--space-8) var(--space-10);
+    border-radius: var(--radius-lg);
     display: flex;
     flex-direction: column;
-    gap: 0.2rem;
+    gap: var(--space-2);
 }
 
 .sim-meta-resultado--ok {
-    background: #f0fdf4;
-    border: 1px solid #bbf7d0;
+    background: var(--green-50);
+    border: 1px solid var(--green-200);
 }
 
 .sim-meta-resultado--falta {
-    background: #fef2f2;
-    border: 1px solid #fecaca;
+    background: var(--red-50);
+    border: 1px solid var(--red-200);
 }
 
 .sim-meta-resultado-label {
-    font-size: 0.78rem;
+    font-size: var(--text-xs);
     font-weight: 600;
-    color: #64748b;
+    color: var(--slate-500);
     text-transform: uppercase;
     letter-spacing: 0.03em;
 }
@@ -166,13 +166,13 @@
 .sim-meta-resultado-valor {
     font-size: 1.5rem;
     font-weight: 800;
-    color: #1e293b;
+    color: var(--slate-800);
 }
 
 .sim-meta-resultado-prazo {
-    font-size: 0.8rem;
-    color: #64748b;
-    margin-top: 0.3rem;
+    font-size: var(--text-sm);
+    color: var(--slate-500);
+    margin-top: var(--space-2);
 }
 
 /* ── Animations ────────────────────────────────────────────────────────── */

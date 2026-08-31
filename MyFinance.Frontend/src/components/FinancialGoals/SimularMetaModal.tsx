@@ -5,7 +5,7 @@ import type { SimularMetaResponseDto } from '../../types/MetaReversa';
 import { TipoAtivoCalculadora } from '../../types/TipoAtivoCalculadora';
 import { FonteTaxaJuros } from '../../types/FonteTaxaJuros';
 import { maskCurrency, parseCurrency, parsePercent, formatCurrency } from '../Calculadora/calculadoraUtils';
-import { SeletorTipoAtivo } from '../Calculadora/SeletorTipoAtivo';
+import { CampoTipoAtivo } from '../Calculadora/campos/CampoTipoAtivo';
 import '../Calculadora/CalculadoraProjecao.css';
 import './ContributeToGoalModal.css';
 
@@ -185,7 +185,7 @@ export function SimularMetaModal({ goalId, goalName, onClose }: SimularMetaModal
                         )}
                     </div>
 
-                    <SeletorTipoAtivo tipoAtivo={tipoAtivo} onChange={setTipoAtivo} disabled={isLoading} />
+                    <CampoTipoAtivo id="metaModalTipoAtivo" value={tipoAtivo} onChange={setTipoAtivo} disabled={isLoading} />
 
                     {error && <span className="contribute-error">{error}</span>}
 

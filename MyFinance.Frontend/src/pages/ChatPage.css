@@ -40,8 +40,8 @@
     max-width: 780px;
     display: flex;
     flex-direction: column;
-    background: #ffffff;
-    border-radius: 16px 16px 0 0;
+    background: var(--white);
+    border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
     box-shadow: 0 4px 32px rgba(0, 0, 0, 0.07);
     overflow: hidden;
 }
@@ -62,8 +62,8 @@
     width: 42px;
     height: 42px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
-    color: #ffffff;
+    background: linear-gradient(135deg, var(--blue-500) 0%, #6366f1 100%);
+    color: var(--white);
     font-weight: 700;
     font-size: 1.0625rem;
     display: flex;
@@ -102,7 +102,7 @@
 .messages-container::-webkit-scrollbar-track { background: transparent; }
 .messages-container::-webkit-scrollbar-thumb {
     background: #d1d5db;
-    border-radius: 4px;
+    border-radius: var(--radius-xs);
 }
 
 
@@ -122,10 +122,10 @@
     width: 28px;
     height: 28px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
-    color: #ffffff;
+    background: linear-gradient(135deg, var(--blue-500) 0%, #6366f1 100%);
+    color: var(--white);
     font-weight: 700;
-    font-size: 0.6875rem;
+    font-size: var(--text-2xs);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -139,7 +139,7 @@
 .bubble {
     max-width: 75%;
     padding: 10px 15px;
-    font-size: 0.875rem;
+    font-size: var(--text-base);
     line-height: 1.55;
     word-wrap: break-word;
     overflow-wrap: break-word;
@@ -149,9 +149,9 @@
 /* pre-wrap: mensagem do usuário é texto puro (sem markdown), então quebras
    de linha literais precisam ser preservadas visualmente. */
 .bubble-user {
-    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-    color: #ffffff;
-    border-radius: 18px 18px 4px 18px;
+    background: linear-gradient(135deg, var(--blue-500) 0%, var(--blue-600) 100%);
+    color: var(--white);
+    border-radius: 18px 18px var(--radius-xs) 18px;
     box-shadow: 0 2px 10px rgba(59, 130, 246, 0.32);
     white-space: pre-wrap;
 }
@@ -162,9 +162,9 @@
    caso duplicava o espaçamento — cada quebra de linha "soft" do markdown
    virava uma linha em branco visível em cima do margin do próprio elemento. */
 .bubble-agent {
-    background: #ffffff;
+    background: var(--white);
     color: #1f2937;
-    border-radius: 4px 18px 18px 18px;
+    border-radius: var(--radius-xs) 18px 18px 18px;
     box-shadow: 0 1px 6px rgba(0, 0, 0, 0.07), 0 1px 2px rgba(0, 0, 0, 0.04);
     border: 1px solid #f1f3f5;
     line-height: 1.55;
@@ -185,9 +185,9 @@
 .bubble-agent h1:first-child,
 .bubble-agent h2:first-child,
 .bubble-agent h3:first-child { margin-top: 0; }
-.bubble-agent h1 { font-size: 1rem; }
+.bubble-agent h1 { font-size: var(--text-md); }
 .bubble-agent h2 { font-size: 0.9375rem; }
-.bubble-agent h3 { font-size: 0.875rem; }
+.bubble-agent h3 { font-size: var(--text-base); }
 
 .bubble-agent ul,
 .bubble-agent ol {
@@ -199,17 +199,17 @@
 .bubble-agent em     { color: #4b5563; font-style: italic; }
 
 .bubble-agent code {
-    background: #f1f5f9;
-    border-radius: 4px;
+    background: var(--slate-100);
+    border-radius: var(--radius-xs);
     padding: 0.1em 0.35em;
-    font-size: 0.8125rem;
+    font-size: var(--text-sm);
     font-family: 'JetBrains Mono', 'Courier New', monospace;
     color: #1e40af;
 }
 
 .bubble-agent blockquote {
-    border-left: 3px solid #3b82f6;
-    padding-left: 0.75rem;
+    border-left: 3px solid var(--blue-500);
+    padding-left: var(--space-6);
     margin: 0.4em 0;
     color: #4b5563;
     font-style: italic;
@@ -257,7 +257,7 @@
     gap: 10px;
     padding: 14px 20px;
     border-top: 1px solid #f1f3f5;
-    background: #ffffff;
+    background: var(--white);
     flex-shrink: 0;
 }
 
@@ -265,8 +265,8 @@
     flex: 1;
     padding: 10px 18px;
     border: 1.5px solid #e5e7eb;
-    border-radius: 24px;
-    font-size: 0.875rem;
+    border-radius: var(--radius-3xl);
+    font-size: var(--text-base);
     font-family: inherit;
     color: #111827;
     background: #f9fafb;
@@ -278,8 +278,8 @@
 .prompt-input::placeholder { color: #9ca3af; }
 
 .prompt-input:focus {
-    border-color: #3b82f6;
-    background: #ffffff;
+    border-color: var(--blue-500);
+    background: var(--white);
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
@@ -293,8 +293,8 @@
     height: 42px;
     border-radius: 50%;
     border: none;
-    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-    color: #ffffff;
+    background: linear-gradient(135deg, var(--blue-500) 0%, var(--blue-600) 100%);
+    color: var(--white);
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -332,7 +332,7 @@
     display: flex;
     flex-direction: column;
     padding: 32px 24px 28px;
-    background: #f8fafc;
+    background: var(--slate-50);
     border-left: 1px solid #e9ecef;
     overflow-y: auto;
 }
@@ -347,7 +347,7 @@
 }
 
 .sidebar-sparkle {
-    font-size: 1.375rem;
+    font-size: var(--text-xl);
     line-height: 1;
     margin-top: 1px;
     color: #6366f1;
@@ -364,7 +364,7 @@
 
 .sidebar-subtitle {
     margin: 0;
-    font-size: 0.75rem;
+    font-size: var(--text-xs);
     color: #9ca3af;
     line-height: 1;
 }
@@ -383,7 +383,7 @@
     align-items: flex-start;
     gap: 12px;
     padding: 14px 16px;
-    background: #ffffff;
+    background: var(--white);
     border: 1.5px solid #e5e7eb;
     border-radius: 14px;
     cursor: pointer;
@@ -394,8 +394,8 @@
 }
 
 .quick-prompt-btn:hover:not(:disabled) {
-    border-color: #3b82f6;
-    background: #eff6ff;
+    border-color: var(--blue-500);
+    background: var(--blue-50);
     box-shadow: 0 2px 12px rgba(59, 130, 246, 0.14);
     transform: translateY(-2px);
 }
@@ -418,7 +418,7 @@
 }
 
 .prompt-text {
-    font-size: 0.8125rem;
+    font-size: var(--text-sm);
     font-weight: 500;
     color: #374151;
     line-height: 1.4;
@@ -434,7 +434,7 @@
     align-items: center;
     justify-content: center;
     gap: 5px;
-    font-size: 0.75rem;
+    font-size: var(--text-xs);
     color: #9ca3af;
 }
 

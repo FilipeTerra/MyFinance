@@ -2,23 +2,19 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { accountService, analyticsService, AxiosError, type ApiErrorResponse } from '../../services/Api';
 import type { AccountResponseDto } from '../../types/AccountResponseDto';
 import type { ExpenseOverviewResponseDto, ExpenseTimelineResponseDto } from '../../types/ExpenseAnalytics';
+import { GastosFiltros } from './GastosFiltros';
 import { GastosKpiRow } from './GastosKpiRow';
 import { GastosPorCategoria } from './GastosPorCategoria';
-import { GastosEvolucaoTemporal } from './GastosEvolucaoTemporal';
-import { GastosComparacaoPeriodos } from './GastosComparacaoPeriodos';
-import { GastosFluxoMensal } from './GastosFluxoMensal';
-import { construirMapaCoresCategorias } from './gastosUtils';
+import { GastosEvolucao } from './GastosEvolucao';
+import { GastosMaioresLancamentos } from './GastosMaioresLancamentos';
+import { GastosSkeleton } from './GastosSkeleton';
+import { construirRanking, descreverIntervalo, calcularMesParcial, type PeriodoPreset } from './gastosSelectors';
+import { Alerta, EstadoVazio } from '../Shared/ui';
 import './AnaliseGastos.css';
 
-type PeriodoPreset = '3m' | '6m' | '12m' | 'ano' | 'custom';
-
-const PRESETS: { value: PeriodoPreset; label: string }[] = [
-    { value: '3m', label: '3 meses' },
-    { value: '6m', label: '6 meses' },
-    { value: '12m', label: '12 meses' },
-    { value: 'ano', label: 'Este ano' },
-    { value: 'custom', label: 'Personalizado' },
-];
+const PRESET_LABEL: Record<PeriodoPreset, string> = {
+    '3m': '3 meses', '6m': '6 meses', '12m': '12 meses', ano: 'este ano', custom: 'personalizado',
+};
 
 interface Intervalo {
     startDate: string;
@@ -53,10 +49,18 @@ function calcularIntervalo(preset: PeriodoPreset, customStart: string, customEnd
     }
 }
 
+/** "2026-08" → "agosto". */
+function nomeDoMes(label: string): string {
+    const [ano, mes] = label.split('-').map(Number);
+    const data = new Date(Date.UTC(ano, mes - 1, 1));
+    return new Intl.DateTimeFormat('pt-BR', { month: 'long', timeZone: 'UTC' }).format(data);
+}
+
 /**
- * Container da aba "Gastos" do dashboard: filtro de período/conta em uma única linha (regra da
- * skill dataviz — filtros escopam tudo abaixo, nunca por gráfico) e composição dos quatro blocos
- * de análise. Único componente da seção que fala com a API.
+ * Container da aba "Gastos" do dashboard: filtro de período/conta em uma única linha, fixo no
+ * topo (regra da skill dataviz — filtros escopam tudo abaixo, nunca por gráfico), seguido de KPIs
+ * e três cards de largura total (categoria, evolução com seletor de visão, maiores lançamentos).
+ * Único componente da seção que fala com a API.
  */
 export function AnaliseGastos() {
     const [preset, setPreset] = useState<PeriodoPreset>('3m');
@@ -70,6 +74,7 @@ export function AnaliseGastos() {
     const [isLoading, setLoading] = useState(true);
     const [isRefetching, setRefetching] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [refetchToken, setRefetchToken] = useState(0);
     const carregouAntes = useRef(false);
 
     useEffect(() => {
@@ -103,6 +108,9 @@ export function AnaliseGastos() {
                 if (cancelado) return;
                 const axiosError = err as AxiosError<ApiErrorResponse>;
                 setError(axiosError.response?.data?.message || 'Não foi possível carregar a análise de gastos. Tente novamente mais tarde.');
+                // Mantém overview/timeline anteriores (se houver) de propósito — o
+                // card de erro deixa claro que o que está na tela pode estar
+                // desatualizado, em vez de trocar tudo por uma aba em branco.
             })
             .finally(() => {
                 if (cancelado) return;
@@ -111,105 +119,69 @@ export function AnaliseGastos() {
             });
 
         return () => { cancelado = true; };
-    }, [intervalo, accountId]);
+    }, [intervalo, accountId, refetchToken]);
 
-    // Mesma cor para a mesma categoria em todos os gráficos da seção — ranqueada pelo período atual.
-    const coresCategorias = useMemo(
-        () => (overview ? construirMapaCoresCategorias(overview.categories) : new Map<string, string>()),
-        [overview],
-    );
+    // Ranking único da aba — donut, ranking e evolução por composição/tendência
+    // usam exatamente este corte, em vez de cada um calcular o seu.
+    const ranking = useMemo(() => (overview ? construirRanking(overview.categories) : null), [overview]);
+
+    const mesParcialLabel = intervalo ? calcularMesParcial(preset, intervalo.endDate) : null;
+    const nomeMesParcial = mesParcialLabel ? nomeDoMes(mesParcialLabel) : null;
+    const legendaIntervalo = intervalo ? `${descreverIntervalo(intervalo.startDate, intervalo.endDate)} · ${PRESET_LABEL[preset]}` : null;
+    const avisoMesParcial = nomeMesParcial ? `${nomeMesParcial} ainda em curso` : null;
+    const dadosDesatualizados = !!error && !!overview;
 
     return (
         <div className="gastos-container">
-            <div className="gastos-filters">
-                <div className="gastos-toggle-group" role="radiogroup" aria-label="Período">
-                    {PRESETS.map(p => (
-                        <button
-                            key={p.value}
-                            type="button"
-                            role="radio"
-                            aria-checked={preset === p.value}
-                            className={`gastos-toggle-btn${preset === p.value ? ' gastos-toggle-btn--active' : ''}`}
-                            onClick={() => setPreset(p.value)}
-                        >
-                            {p.label}
-                        </button>
-                    ))}
-                </div>
+            <GastosFiltros
+                preset={preset}
+                onPresetChange={setPreset}
+                customStart={customStart}
+                customEnd={customEnd}
+                onCustomStartChange={setCustomStart}
+                onCustomEndChange={setCustomEnd}
+                accounts={accounts}
+                accountId={accountId}
+                onAccountChange={setAccountId}
+                legenda={legendaIntervalo}
+                avisoMesParcial={avisoMesParcial}
+            />
 
-                {preset === 'custom' && (
-                    <div className="gastos-custom-range">
-                        <input
-                            type="date"
-                            value={customStart}
-                            max={customEnd || undefined}
-                            onChange={e => setCustomStart(e.target.value)}
-                            aria-label="Data inicial"
-                        />
-                        <span className="gastos-custom-range-sep">→</span>
-                        <input
-                            type="date"
-                            value={customEnd}
-                            min={customStart || undefined}
-                            onChange={e => setCustomEnd(e.target.value)}
-                            aria-label="Data final"
-                        />
-                    </div>
-                )}
-
-                {accounts.length > 0 && (
-                    <select
-                        className="gastos-account-select"
-                        value={accountId}
-                        onChange={e => setAccountId(e.target.value)}
-                        aria-label="Conta"
-                    >
-                        <option value="">Todas as contas</option>
-                        {accounts.map(a => (
-                            <option key={a.id} value={a.id}>{a.name}</option>
-                        ))}
-                    </select>
-                )}
-            </div>
-
-            {error && <div className="dashboard-error">{error}</div>}
+            {error && (
+                <Alerta rotuloAcao="Tentar novamente" onAcao={() => setRefetchToken(t => t + 1)}>
+                    {error}{dadosDesatualizados && ' Os dados abaixo podem estar desatualizados.'}
+                </Alerta>
+            )}
 
             {isLoading ? (
-                <div className="goals-skeleton-grid">
-                    {[1, 2, 3, 4].map(i => <div key={i} className="goal-skeleton" />)}
-                </div>
+                <GastosSkeleton />
             ) : preset === 'custom' && !intervalo ? (
-                <div className="dashboard-empty">
-                    <div className="dashboard-empty-icon" aria-hidden="true">📅</div>
-                    <h3 className="dashboard-empty-title">Selecione um período</h3>
-                    <p className="dashboard-empty-desc">Escolha a data inicial e a data final para analisar seus gastos.</p>
-                </div>
-            ) : overview && timeline ? (
-                <div className={`gastos-content${isRefetching ? ' gastos-content--loading' : ''}`}>
+                <EstadoVazio
+                    variante="hero"
+                    icone="📅"
+                    titulo="Selecione um período"
+                    descricao="Escolha a data inicial e a data final para analisar seus gastos."
+                />
+            ) : overview && timeline && ranking ? (
+                <div className={`gastos-content${isRefetching || dadosDesatualizados ? ' gastos-content--loading' : ''}`}>
                     {overview.totalExpenses === 0 && overview.totalIncome === 0 ? (
-                        <div className="dashboard-empty">
-                            <div className="dashboard-empty-icon" aria-hidden="true">💸</div>
-                            <h3 className="dashboard-empty-title">Nenhuma movimentação no período</h3>
-                            <p className="dashboard-empty-desc">
-                                Não encontramos despesas ou receitas nesse intervalo. Importe seu extrato na
-                                página <strong>Início</strong> ou ajuste o período acima.
-                            </p>
-                        </div>
+                        <EstadoVazio
+                            variante="hero"
+                            icone="💸"
+                            titulo="Nenhuma movimentação no período"
+                            descricao={<>Não encontramos despesas ou receitas nesse intervalo. Importe seu extrato na página <strong>Início</strong> ou ajuste o período acima.</>}
+                        />
                     ) : (
                         <>
-                            <GastosKpiRow overview={overview} />
-
-                            <div className="gastos-grid">
-                                <GastosPorCategoria overview={overview} coresCategorias={coresCategorias} />
-                                <GastosFluxoMensal timeline={timeline} overview={overview} />
-                            </div>
-
-                            <GastosEvolucaoTemporal timeline={timeline} coresCategorias={coresCategorias} />
-
-                            <GastosComparacaoPeriodos overview={overview} />
+                            <GastosKpiRow overview={overview} nomeMesParcial={nomeMesParcial} />
+                            <GastosPorCategoria overview={overview} ranking={ranking} />
+                            <GastosEvolucao overview={overview} timeline={timeline} ranking={ranking} />
+                            <GastosMaioresLancamentos overview={overview} />
                         </>
                     )}
                 </div>
+            ) : error ? (
+                <EstadoVazio variante="hero" icone="⚠️" titulo="Não foi possível carregar a análise" descricao="Tente novamente em instantes." />
             ) : null}
         </div>
     );

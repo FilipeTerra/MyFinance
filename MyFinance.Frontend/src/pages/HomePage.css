@@ -2,46 +2,46 @@
     display: flex;
     flex-direction: column;
     min-height: 100vh;
-    background-color: #f1f5f9; /* Fundo cinza bem claro para a página */
+    background-color: var(--slate-100); /* Fundo cinza bem claro para a página */
 }
 
 .homepage-content {
     width: 100%;
     max-width: 1200px; /* Largura máxima do conteíºdo */
     margin: 0 auto; /* Centraliza */
-    padding: 2rem;
+    padding: var(--space-16);
     box-sizing: border-box;
 }
 
     .homepage-content h2 {
         margin-top: 0;
-        color: #1e293b;
-        font-size: 1.8rem;
-        margin-bottom: 1.5rem;
+        color: var(--slate-800);
+        font-size: var(--text-2xl);
+        margin-bottom: var(--space-12);
     }
 
 /* Mensagem de erro geral da página */
 .error-message {
-    color: #ef4444;
-    background-color: #fee2e2;
-    padding: 1rem;
-    border-radius: 6px;
-    border: 1px solid #fca5a5;
-    margin-bottom: 1.5rem;
-    font-size: 1rem;
+    color: var(--red-500);
+    background-color: var(--red-100);
+    padding: var(--space-8);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--red-300);
+    margin-bottom: var(--space-12);
+    font-size: var(--text-md);
     text-align: center;
 }
 
 .homepage-actions {
     display: flex;
     justify-content: flex-end;
-    margin-bottom: 1.5rem;
-    gap: 1rem;
+    margin-bottom: var(--space-12);
+    gap: var(--space-8);
 }
 
 .accounts-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 1.5rem;
-    margin-bottom: 2.5rem;
+    gap: var(--space-12);
+    margin-bottom: var(--space-20);
 }

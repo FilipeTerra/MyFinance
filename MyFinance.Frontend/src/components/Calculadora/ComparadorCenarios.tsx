@@ -12,16 +12,23 @@ import {
 import { projecaoInvestimentoService, AxiosError, type ApiErrorResponse } from '../../services/Api';
 import type { ProjecaoInvestimentoResponseDto } from '../../types/ProjecaoInvestimento';
 import { TipoAtivoCalculadora } from '../../types/TipoAtivoCalculadora';
-import { FonteTaxaJuros } from '../../types/FonteTaxaJuros';
-import { GRUPOS_TIPO_ATIVO, GRUPO_TIPO_ATIVO_LABEL, TIPO_ATIVO_CALCULADORA_META, tiposAtivoPorGrupo } from './tipoAtivoCalculadoraMeta';
-import { formatCurrency, maskCurrency, parseCurrency, parsePercent } from './calculadoraUtils';
+import { TIPO_ATIVO_CALCULADORA_META } from './tipoAtivoCalculadoraMeta';
+import { formatCurrency, parseCurrency } from './calculadoraUtils';
+import { prazoParaMeses, validarPrazo, validarTaxaRendimento, parametrosTaxa } from './calculadoraValidacao';
+import type { BaseAportePrazo, TaxaRendimentoValue } from './calculadoraTypes';
+import { CampoMoeda } from './campos/CampoMoeda';
+import { CampoPrazo } from './campos/CampoPrazo';
+import { CampoTaxaRendimento } from './campos/CampoTaxaRendimento';
+import { CampoTipoAtivo } from './campos/CampoTipoAtivo';
+import { FormFooterCalculadora } from './campos/FormFooterCalculadora';
+import { ResultadoSecao } from './campos/ResultadoSecao';
+import { useResultadoFoco } from '../../hooks/useResultadoFoco';
+import { useErrosFormulario } from '../../hooks/useErrosFormulario';
+import { CORES_CATEGORIA } from '../Shared/charts/chartTheme';
 import './ComparadorCenarios.css';
 
-type PrazoUnidade = 'anos' | 'meses';
-type TaxaModo = 'selic' | 'cdi' | 'manual';
-
-/** Paleta categórica validada (ordem fixa — nunca reatribuída por rank). */
-const CORES_CENARIO = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100'];
+/** Paleta categórica validada (ordem fixa — nunca reatribuída por rank), a mesma usada em Gastos. */
+const CORES_CENARIO = CORES_CATEGORIA;
 
 const MIN_CENARIOS = 2;
 const MAX_CENARIOS = 4;
@@ -29,23 +36,20 @@ const MAX_CENARIOS = 4;
 interface CenarioConfig {
     id: string;
     tipoAtivo: TipoAtivoCalculadora;
-    taxaModo: TaxaModo;
-    taxaManual: string;
-    percentualCdi: string;
+    taxa: TaxaRendimentoValue;
 }
 
 let proximoId = 0;
-const novoCenario = (tipoAtivo: TipoAtivoCalculadora, taxaModo: TaxaModo): CenarioConfig => ({
+/** Novo cenário nasce em "selic" — sempre válido sem exigir nenhum campo extra (o modo "manual" já causou submits fadados a falhar por vir com o campo de taxa vazio). */
+const novoCenario = (tipoAtivo: TipoAtivoCalculadora): CenarioConfig => ({
     id: `cenario-${proximoId++}`,
     tipoAtivo,
-    taxaModo,
-    taxaManual: '',
-    percentualCdi: '100',
+    taxa: { modo: 'selic', taxaManual: '', percentualCdi: '100' },
 });
 
 const cenariosIniciais = (): CenarioConfig[] => [
-    novoCenario(TipoAtivoCalculadora.TesouroSelic, 'selic'),
-    novoCenario(TipoAtivoCalculadora.Cdb, 'cdi'),
+    novoCenario(TipoAtivoCalculadora.TesouroSelic),
+    novoCenario(TipoAtivoCalculadora.Cdb),
 ];
 
 interface ResultadoCenario {
@@ -53,27 +57,28 @@ interface ResultadoCenario {
     resultado: ProjecaoInvestimentoResponseDto;
 }
 
-export function ComparadorCenarios() {
-    const [aporteInicial, setAporteInicial] = useState('');
-    const [aporteMensal, setAporteMensal] = useState('');
-    const [prazoValor, setPrazoValor] = useState('10');
-    const [prazoUnidade, setPrazoUnidade] = useState<PrazoUnidade>('anos');
+interface ComparadorCenariosProps {
+    base: BaseAportePrazo;
+    onBaseChange: (base: BaseAportePrazo) => void;
+}
+
+/** Compara até 4 cenários de investimento com o mesmo aporte/prazo — reaproveita aporteInicial/aporteMensal/prazo do "Cenário único" via props, para o usuário não redigitar os mesmos três campos. */
+export function ComparadorCenarios({ base, onBaseChange }: ComparadorCenariosProps) {
     const [cenarios, setCenarios] = useState<CenarioConfig[]>(cenariosIniciais);
 
     const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
     const [resultados, setResultados] = useState<ResultadoCenario[] | null>(null);
+    const { erroGeral, limpar, limparTudo, setErroGeral, definirEFocar } = useErrosFormulario<'prazo'>();
+    const resultadoRef = useResultadoFoco(resultados);
 
-    const prazoMeses = prazoUnidade === 'anos'
-        ? Math.round(parseFloat(prazoValor || '0') * 12)
-        : Math.round(parseFloat(prazoValor || '0'));
+    const prazoMeses = prazoParaMeses(base.prazo);
 
     const atualizarCenario = (id: string, patch: Partial<CenarioConfig>) =>
         setCenarios(prev => prev.map(c => (c.id === id ? { ...c, ...patch } : c)));
 
     const adicionarCenario = () => {
         if (cenarios.length >= MAX_CENARIOS) return;
-        setCenarios(prev => [...prev, novoCenario(TipoAtivoCalculadora.Lci, 'manual')]);
+        setCenarios(prev => [...prev, novoCenario(TipoAtivoCalculadora.Lci)]);
     };
 
     const removerCenario = (id: string) => {
@@ -83,59 +88,41 @@ export function ComparadorCenarios() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setError(null);
+        limparTudo();
 
-        if (!prazoMeses || prazoMeses <= 0) {
-            setError('Informe um prazo válido maior que zero.');
+        const erroPrazo = validarPrazo(base.prazo);
+        if (erroPrazo) {
+            definirEFocar({ prazo: erroPrazo }, { prazo: 'cmpPrazo' });
             return;
         }
 
         for (const cenario of cenarios) {
-            if (cenario.taxaModo === 'manual') {
-                const valor = parsePercent(cenario.taxaManual);
-                if (valor === null || valor < 0) {
-                    setError('Informe uma taxa de juros anual válida em todos os cenários manuais.');
-                    return;
-                }
-            }
-            if (cenario.taxaModo === 'cdi') {
-                const valor = parsePercent(cenario.percentualCdi);
-                if (valor === null || valor < 0) {
-                    setError('Informe um percentual do CDI válido em todos os cenários "% do CDI".');
-                    return;
-                }
+            const erro = validarTaxaRendimento(cenario.taxa);
+            if (erro) {
+                setErroGeral(`Cenário "${TIPO_ATIVO_CALCULADORA_META[cenario.tipoAtivo].label}": ${erro.charAt(0).toLowerCase()}${erro.slice(1)}`);
+                return;
             }
         }
 
-        const aporteInicialNumero = parseCurrency(aporteInicial);
-        const aporteMensalNumero = parseCurrency(aporteMensal);
+        const aporteInicialNumero = parseCurrency(base.aporteInicial);
+        const aporteMensalNumero = parseCurrency(base.aporteMensal);
 
         setIsLoading(true);
         try {
             const respostas = await Promise.all(
-                cenarios.map(cenario => {
-                    const fonteTaxaJuros = cenario.taxaModo === 'selic'
-                        ? FonteTaxaJuros.Selic
-                        : cenario.taxaModo === 'cdi'
-                            ? FonteTaxaJuros.PercentualCdi
-                            : FonteTaxaJuros.Manual;
-
-                    return projecaoInvestimentoService.calcular({
-                        aporteInicial: aporteInicialNumero,
-                        aporteMensal: aporteMensalNumero,
-                        prazoMeses,
-                        fonteTaxaJuros,
-                        taxaJurosAnualPercentual: cenario.taxaModo === 'manual' ? parsePercent(cenario.taxaManual)! : undefined,
-                        percentualCdi: cenario.taxaModo === 'cdi' ? parsePercent(cenario.percentualCdi)! : undefined,
-                        tipoAtivo: cenario.tipoAtivo,
-                    });
-                })
+                cenarios.map(cenario => projecaoInvestimentoService.calcular({
+                    aporteInicial: aporteInicialNumero,
+                    aporteMensal: aporteMensalNumero,
+                    prazoMeses,
+                    ...parametrosTaxa(cenario.taxa),
+                    tipoAtivo: cenario.tipoAtivo,
+                }))
             );
 
             setResultados(cenarios.map((cenario, i) => ({ cenario, resultado: respostas[i] })));
         } catch (err) {
             const axiosError = err as AxiosError<ApiErrorResponse>;
-            setError(axiosError.response?.data?.message || 'Não foi possível calcular a comparação. Tente novamente.');
+            setErroGeral(axiosError.response?.data?.message || 'Não foi possível calcular a comparação. Tente novamente.');
             setResultados(null);
         } finally {
             setIsLoading(false);
@@ -162,67 +149,19 @@ export function ComparadorCenarios() {
         <div className="proj-container">
             <form className="proj-form" onSubmit={handleSubmit}>
                 <div className="proj-form-row">
-                    <div className="proj-form-group">
-                        <label htmlFor="cmpAporteInicial">Aporte inicial (R$)</label>
-                        <input
-                            id="cmpAporteInicial"
-                            type="text"
-                            inputMode="numeric"
-                            placeholder="0,00"
-                            value={aporteInicial}
-                            onChange={e => setAporteInicial(maskCurrency(e.target.value))}
-                            disabled={isLoading}
-                        />
-                    </div>
-                    <div className="proj-form-group">
-                        <label htmlFor="cmpAporteMensal">Aporte mensal (R$)</label>
-                        <input
-                            id="cmpAporteMensal"
-                            type="text"
-                            inputMode="numeric"
-                            placeholder="0,00"
-                            value={aporteMensal}
-                            onChange={e => setAporteMensal(maskCurrency(e.target.value))}
-                            disabled={isLoading}
-                        />
-                    </div>
+                    <CampoMoeda id="cmpAporteInicial" label="Aporte inicial (R$)" value={base.aporteInicial}
+                        onChange={v => onBaseChange({ ...base, aporteInicial: v })} disabled={isLoading} />
+                    <CampoMoeda id="cmpAporteMensal" label="Aporte mensal (R$)" value={base.aporteMensal}
+                        onChange={v => onBaseChange({ ...base, aporteMensal: v })} disabled={isLoading} />
                 </div>
 
-                <div className="proj-form-group">
-                    <label htmlFor="cmpPrazo">Prazo (igual para todos os cenários)</label>
-                    <div className="proj-prazo-row">
-                        <input
-                            id="cmpPrazo"
-                            type="number"
-                            min={1}
-                            value={prazoValor}
-                            onChange={e => setPrazoValor(e.target.value)}
-                            disabled={isLoading}
-                        />
-                        <div className="proj-toggle-group" role="radiogroup" aria-label="Unidade do prazo">
-                            <button
-                                type="button"
-                                role="radio"
-                                aria-checked={prazoUnidade === 'anos'}
-                                className={`proj-toggle-btn${prazoUnidade === 'anos' ? ' proj-toggle-btn--active' : ''}`}
-                                onClick={() => setPrazoUnidade('anos')}
-                                disabled={isLoading}
-                            >
-                                Anos
-                            </button>
-                            <button
-                                type="button"
-                                role="radio"
-                                aria-checked={prazoUnidade === 'meses'}
-                                className={`proj-toggle-btn${prazoUnidade === 'meses' ? ' proj-toggle-btn--active' : ''}`}
-                                onClick={() => setPrazoUnidade('meses')}
-                                disabled={isLoading}
-                            >
-                                Meses
-                            </button>
-                        </div>
-                    </div>
-                </div>
+                <CampoPrazo
+                    id="cmpPrazo"
+                    label="Prazo (igual para todos os cenários)"
+                    value={base.prazo}
+                    onChange={prazo => { onBaseChange({ ...base, prazo }); limpar('prazo'); }}
+                    disabled={isLoading}
+                />
 
                 <div className="cmp-cenarios-grid">
                     {cenarios.map((cenario, i) => (
@@ -243,97 +182,36 @@ export function ComparadorCenarios() {
                                 )}
                             </div>
 
-                            <label htmlFor={`cmpTipo-${cenario.id}`}>Tipo de ativo</label>
-                            <select
+                            <CampoTipoAtivo
                                 id={`cmpTipo-${cenario.id}`}
                                 value={cenario.tipoAtivo}
-                                onChange={e => atualizarCenario(cenario.id, { tipoAtivo: Number(e.target.value) as TipoAtivoCalculadora })}
+                                onChange={tipoAtivo => atualizarCenario(cenario.id, { tipoAtivo })}
+                                mostrarHint={false}
                                 disabled={isLoading}
-                            >
-                                {GRUPOS_TIPO_ATIVO.map(grupo => (
-                                    <optgroup key={grupo} label={GRUPO_TIPO_ATIVO_LABEL[grupo]}>
-                                        {tiposAtivoPorGrupo(grupo).map(tipo => (
-                                            <option key={tipo} value={tipo}>
-                                                {TIPO_ATIVO_CALCULADORA_META[tipo].label}
-                                            </option>
-                                        ))}
-                                    </optgroup>
-                                ))}
-                            </select>
-
-                            <label>Taxa de juros</label>
-                            <div className="proj-toggle-group proj-toggle-group--full">
-                                <button
-                                    type="button"
-                                    className={`proj-toggle-btn${cenario.taxaModo === 'selic' ? ' proj-toggle-btn--active' : ''}`}
-                                    onClick={() => atualizarCenario(cenario.id, { taxaModo: 'selic' })}
-                                    disabled={isLoading}
-                                >
-                                    Selic
-                                </button>
-                                <button
-                                    type="button"
-                                    className={`proj-toggle-btn${cenario.taxaModo === 'cdi' ? ' proj-toggle-btn--active' : ''}`}
-                                    onClick={() => atualizarCenario(cenario.id, { taxaModo: 'cdi' })}
-                                    disabled={isLoading}
-                                >
-                                    % CDI
-                                </button>
-                                <button
-                                    type="button"
-                                    className={`proj-toggle-btn${cenario.taxaModo === 'manual' ? ' proj-toggle-btn--active' : ''}`}
-                                    onClick={() => atualizarCenario(cenario.id, { taxaModo: 'manual' })}
-                                    disabled={isLoading}
-                                >
-                                    Manual
-                                </button>
-                            </div>
-                            {cenario.taxaModo === 'manual' && (
-                                <input
-                                    className="proj-taxa-manual-input"
-                                    type="text"
-                                    inputMode="decimal"
-                                    placeholder="Ex: 6,17 (% ao ano)"
-                                    value={cenario.taxaManual}
-                                    onChange={e => atualizarCenario(cenario.id, { taxaManual: e.target.value })}
-                                    disabled={isLoading}
-                                />
-                            )}
-                            {cenario.taxaModo === 'cdi' && (
-                                <input
-                                    className="proj-taxa-manual-input"
-                                    type="text"
-                                    inputMode="decimal"
-                                    placeholder="Ex: 100 (% do CDI)"
-                                    value={cenario.percentualCdi}
-                                    onChange={e => atualizarCenario(cenario.id, { percentualCdi: e.target.value })}
-                                    disabled={isLoading}
-                                />
-                            )}
+                            />
+                            <CampoTaxaRendimento
+                                idPrefix={`cmp-${cenario.id}`}
+                                value={cenario.taxa}
+                                onChange={taxa => atualizarCenario(cenario.id, { taxa })}
+                                compacto
+                                mostrarHints={false}
+                                disabled={isLoading}
+                            />
                         </div>
                     ))}
 
                     {cenarios.length < MAX_CENARIOS && (
-                        <button
-                            type="button"
-                            className="cmp-cenario-adicionar"
-                            onClick={adicionarCenario}
-                            disabled={isLoading}
-                        >
+                        <button type="button" className="cmp-cenario-adicionar" onClick={adicionarCenario} disabled={isLoading}>
                             + Adicionar cenário
                         </button>
                     )}
                 </div>
 
-                {error && <span className="proj-error">{error}</span>}
-
-                <button type="submit" className="proj-btn-submit" disabled={isLoading}>
-                    {isLoading ? 'Calculando...' : 'Comparar cenários'}
-                </button>
+                <FormFooterCalculadora erro={erroGeral} isLoading={isLoading} rotulo="Comparar cenários" />
             </form>
 
             {resultados && (
-                <div className="proj-result">
+                <ResultadoSecao resultadoRef={resultadoRef}>
                     <div className="cmp-tabela-wrap">
                         <table className="cmp-tabela">
                             <thead>
@@ -445,7 +323,7 @@ export function ComparadorCenarios() {
                             </ComposedChart>
                         </ResponsiveContainer>
                     </div>
-                </div>
+                </ResultadoSecao>
             )}
         </div>
     );

@@ -1,15 +1,15 @@
 .transaction-list-container {
     background: #fff;
-    padding: 1.5rem;
-    border-radius: 8px;
+    padding: var(--space-12);
+    border-radius: var(--radius-md);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 .list-message {
     text-align: center;
-    padding: 2rem;
-    color: #64748b;
-    font-size: 1rem;
+    padding: var(--space-16);
+    color: var(--slate-500);
+    font-size: var(--text-md);
 }
 
 .transaction-table {
@@ -19,52 +19,52 @@
 
     .transaction-table th,
     .transaction-table td {
-        padding: 0.9rem 0.6rem;
+        padding: var(--space-7) var(--space-5);
         text-align: left;
-        border-bottom: 1px solid #eef2f7;
-        font-size: 0.95rem;
-        color: #334155;
+        border-bottom: 1px solid var(--slate-100);
+        font-size: var(--text-md);
+        color: var(--slate-700);
     }
 
     .transaction-table th {
-        color: #64748b;
+        color: var(--slate-500);
         font-weight: 600;
-        font-size: 0.85rem;
+        font-size: var(--text-base);
         text-transform: uppercase;
     }
 
 /* Cores para Receita/Despesa */
 .tx-amount.income {
-    color: #059669; /* Verde */
+    color: var(--green-600); /* Verde */
     font-weight: 500;
 }
 
 .tx-amount.expense {
-    color: #ef4444; /* Vermelho */
+    color: var(--red-500); /* Vermelho */
     font-weight: 500;
 }
 
 .tx-amount.investment {
-    color: #ef4444; /* Vermelho */
+    color: var(--red-500); /* Vermelho */
     font-weight: 500;
 }
 
 .tx-type {
-    padding: 0.2rem 0.5rem;
-    border-radius: 12px;
-    font-size: 0.85rem;
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-xl);
+    font-size: var(--text-base);
     font-weight: 500;
-    background-color: #f1f5f9;
+    background-color: var(--slate-100);
 }
 
     .tx-type.income {
         background-color: #d1fae5;
-        color: #065f46;
+        color: var(--green-800);
     }
 
     .tx-type.expense {
-        background-color: #fee2e2;
-        color: #b91c1c;
+        background-color: var(--red-100);
+        color: var(--red-700);
     }
 
     .tx-type.investment {
@@ -74,7 +74,7 @@
 
 .tx-actions {
     display: flex;
-    gap: 0.5rem;
+    gap: var(--space-4);
 }
 
 .action-btn {
@@ -82,25 +82,25 @@
     background: transparent;
     cursor: pointer;
     font-weight: 500;
-    font-size: 0.9rem;
-    padding: 0.2rem 0.4rem;
-    border-radius: 4px;
+    font-size: var(--text-base);
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-xs);
 }
 
 .edit-btn {
-    color: #3b82f6;
+    color: var(--blue-500);
 }
 
     .edit-btn:hover {
-        background-color: #eff6ff;
+        background-color: var(--blue-50);
     }
 
 .delete-btn {
-    color: #ef4444;
+    color: var(--red-500);
 }
 
     .delete-btn:hover {
-        background-color: #fee2e2;
+        background-color: var(--red-100);
     }
 
 /* Paginação */
@@ -108,34 +108,34 @@
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    gap: 0.25rem;
-    margin-top: 1rem;
-    padding-top: 0.75rem;
-    border-top: 1px solid #eef2f7;
+    gap: var(--space-2);
+    margin-top: var(--space-8);
+    padding-top: var(--space-6);
+    border-top: 1px solid var(--slate-100);
 }
 
 .pagination-info {
-    font-size: 0.85rem;
-    color: #64748b;
-    margin-right: 0.5rem;
+    font-size: var(--text-base);
+    color: var(--slate-500);
+    margin-right: var(--space-4);
 }
 
 .pagination-btn {
     min-width: 2rem;
     height: 2rem;
-    padding: 0 0.5rem;
-    border: 1px solid #e2e8f0;
-    border-radius: 6px;
+    padding: 0 var(--space-4);
+    border: 1px solid var(--slate-200);
+    border-radius: var(--radius-sm);
     background: #fff;
-    color: #334155;
-    font-size: 0.9rem;
+    color: var(--slate-700);
+    font-size: var(--text-base);
     cursor: pointer;
     transition: background 0.15s, border-color 0.15s;
 }
 
     .pagination-btn:hover:not(:disabled) {
-        background: #f1f5f9;
-        border-color: #cbd5e1;
+        background: var(--slate-100);
+        border-color: var(--slate-300);
     }
 
     .pagination-btn:disabled {
@@ -144,8 +144,8 @@
     }
 
     .pagination-btn.active {
-        background: #3b82f6;
-        border-color: #3b82f6;
+        background: var(--blue-500);
+        border-color: var(--blue-500);
         color: #fff;
         font-weight: 600;
     }

@@ -6,27 +6,27 @@
     align-items: center; /* Centraliza verticalmente */
     width: 100%;
     min-height: 100%; /* Ocupa toda a altura disponí­vel no #root */
-    padding: 1rem; /* Espaçamento das bordas em telas pequenas */
+    padding: var(--space-8); /* Espaçamento das bordas em telas pequenas */
     box-sizing: border-box;
-    background-color: #eef2f7; /* Fundo cinza bem claro */
+    background-color: var(--color-bg-app); /* Fundo cinza bem claro */
     flex-grow: 1; /* Permite que ele cresça para preencher o #root */
 }
 
 /* Marca exibida acima do card de login */
 .login-page-brand {
     color: #2263cc; /* Azul principal do sistema */
-    font-size: 4rem;
+    font-size: var(--text-4xl);
     font-weight: 700;
     letter-spacing: 0.5px;
-    margin: 0 0 1.5rem;
+    margin: 0 0 var(--space-12);
 }
 
 /* Card Externo da Página de Login */
 .login-page-card {
-    background-color: #ffffff; /* Fundo branco */
-    padding: 2.5rem 2rem; /* Espaçamento interno */
-    border-radius: 12px; /* Bordas arredondadas */
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08); /* Sombra suave */
+    background-color: var(--white); /* Fundo branco */
+    padding: var(--space-20) var(--space-16); /* Espaçamento interno */
+    border-radius: var(--radius-xl); /* Bordas arredondadas */
+    box-shadow: var(--shadow-lg); /* Sombra suave */
     width: 100%;
     max-width: 420px; /* Largura máxima */
     box-sizing: border-box;
@@ -35,7 +35,7 @@
 /* Responsividade para o card */
 @media (max-width: 480px) {
     .login-page-card {
-        padding: 2rem 1.5rem; /* Menos padding lateral em telas pequenas */
+        padding: var(--space-16) var(--space-12); /* Menos padding lateral em telas pequenas */
     }
 }
 

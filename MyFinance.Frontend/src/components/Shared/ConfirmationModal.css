@@ -3,12 +3,12 @@
 .conf-modal-overlay {
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
-    background-color: rgba(107, 114, 128, 0.75);
+    background-color: var(--color-overlay);
     backdrop-filter: blur(4px);
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 9999; /* Z-index bem alto para ficar por cima de tudo */
+    z-index: var(--z-modal); /* Mesmo token dos demais modais — antes usava 9999 isolado, hoje alinhado com AccountModal/TransactionModal (1000/var(--z-overlay)). */
     animation: confFadeIn 0.2s ease-out;
 }
 
@@ -16,11 +16,11 @@
     background-color: white;
     width: 100%;
     max-width: 28rem;
-    border-radius: 0.75rem;
+    border-radius: var(--radius-xl);
     box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
     overflow: hidden;
     animation: confScaleIn 0.2s ease-out;
-    padding: 1.5rem;
+    padding: var(--space-12);
 }
 
 .conf-modal-body {
@@ -29,11 +29,11 @@
 
 /* Ícone Vermelho */
 .conf-modal-icon-wrapper {
-    margin: 0 auto 1rem auto;
+    margin: 0 auto var(--space-8) auto;
     height: 3rem;
     width: 3rem;
-    border-radius: 9999px;
-    background-color: #fee2e2;
+    border-radius: var(--radius-full);
+    background-color: var(--red-100);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -42,21 +42,21 @@
 .conf-modal-icon-wrapper svg {
     height: 1.5rem;
     width: 1.5rem;
-    color: #dc2626;
+    color: var(--red-600);
 }
 
 /* Tipografia */
 .conf-modal-title {
-    font-size: 1.125rem;
+    font-size: var(--text-lg);
     font-weight: 600;
-    color: #111827;
-    margin: 0 0 0.5rem 0;
+    color: var(--slate-900);
+    margin: 0 0 var(--space-4) 0;
 }
 
 .conf-modal-description {
-    font-size: 0.875rem;
-    color: #6b7280;
-    margin-bottom: 1.5rem;
+    font-size: var(--text-base);
+    color: var(--slate-500);
+    margin-bottom: var(--space-12);
     line-height: 1.5;
 }
 
@@ -64,16 +64,16 @@
 .conf-modal-actions {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 0.75rem;
+    gap: var(--space-6);
 }
 
 .conf-modal-btn {
     display: inline-flex;
     justify-content: center;
     align-items: center;
-    padding: 0.5rem 1rem;
-    border-radius: 0.5rem;
-    font-size: 0.875rem;
+    padding: var(--space-4) var(--space-8);
+    border-radius: var(--radius-md);
+    font-size: var(--text-base);
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
@@ -82,18 +82,18 @@
 
 .conf-btn-cancel {
     background-color: white;
-    color: #374151;
-    border-color: #d1d5db;
+    color: var(--slate-700);
+    border-color: var(--slate-300);
     box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
 }
-.conf-btn-cancel:hover { background-color: #f9fafb; }
+.conf-btn-cancel:hover { background-color: var(--slate-50); }
 
 .conf-btn-confirm {
-    background-color: #dc2626;
+    background-color: var(--red-600);
     color: white;
     box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
 }
-.conf-btn-confirm:hover { background-color: #b91c1c; }
+.conf-btn-confirm:hover { background-color: var(--red-700); }
 
 /* Animações */
 @keyframes confFadeIn { from { opacity: 0; } to { opacity: 1; } }

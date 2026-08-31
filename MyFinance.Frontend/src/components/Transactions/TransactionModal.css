@@ -9,13 +9,13 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 1000;
+    z-index: var(--z-overlay);
 }
 
 .modal-content {
     background: white;
-    padding: 2rem;
-    border-radius: 8px;
+    padding: var(--space-16);
+    border-radius: var(--radius-md);
     width: 100%;
     max-width: 500px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -23,35 +23,35 @@
 
     .modal-content h2 {
         margin-top: 0;
-        margin-bottom: 1.5rem;
-        color: #1e293b;
+        margin-bottom: var(--space-12);
+        color: var(--slate-800);
     }
 
 .form-group {
-    margin-bottom: 1rem;
+    margin-bottom: var(--space-8);
 }
 
     .form-group label {
         display: block;
-        margin-bottom: 0.5rem;
-        color: #64748b;
+        margin-bottom: var(--space-4);
+        color: var(--slate-500);
         font-weight: 500;
     }
 
     .form-group input,
     .form-group select {
         width: 100%;
-        padding: 0.7rem 0.8rem;
-        border: 1px solid #cbd5e1;
-        border-radius: 6px;
-        background-color: #f8fafc;
-        color: #334155;
-        font-size: 1rem;
+        padding: var(--space-6) var(--space-6);
+        border: 1px solid var(--slate-300);
+        border-radius: var(--radius-sm);
+        background-color: var(--slate-50);
+        color: var(--slate-700);
+        font-size: var(--text-md);
     }
 
 .new-category-group {
     display: flex;
-    gap: 0.5rem;
+    gap: var(--space-4);
 }
 
     .new-category-group input {
@@ -59,54 +59,54 @@
     }
 
     .new-category-group button {
-        padding: 0.7rem 1rem;
-        border: 1px solid #cbd5e1;
-        border-radius: 6px;
-        background-color: #f1f5f9;
+        padding: var(--space-6) var(--space-8);
+        border: 1px solid var(--slate-300);
+        border-radius: var(--radius-sm);
+        background-color: var(--slate-100);
         cursor: pointer;
     }
 
 .modal-actions {
     display: flex;
     justify-content: flex-end;
-    gap: 1rem;
-    margin-top: 2rem;
+    gap: var(--space-8);
+    margin-top: var(--space-16);
 }
 
 .cancel-button,
 .save-button {
-    padding: 0.6rem 1.4rem;
+    padding: var(--space-5) 1.4rem;
     border: none;
-    border-radius: 6px;
-    font-size: 1rem;
+    border-radius: var(--radius-sm);
+    font-size: var(--text-md);
     font-weight: 600;
     cursor: pointer;
 }
 
 .cancel-button {
-    background-color: #f1f5f9;
-    color: #475569;
+    background-color: var(--slate-100);
+    color: var(--slate-600);
 }
 
 .save-button {
-    background-color: #3b82f6;
+    background-color: var(--blue-500);
     color: white;
 }
 
 /* Estilos para o Seletor de Tipo*/
 .type-selector {
     display: flex;
-    gap: 1.5rem;
-    padding: 0.5rem 0;
+    gap: var(--space-12);
+    padding: var(--space-4) 0;
 }
 
     .type-selector label {
         display: flex;
         align-items: center;
-        gap: 0.5rem;
+        gap: var(--space-4);
         cursor: pointer;
         font-weight: 500;
-        color: #334155; /* Cor do texto do label */
+        color: var(--slate-700); /* Cor do texto do label */
         margin-bottom: 0; /* Reseta a margem do form-group label */
     }
 
@@ -114,7 +114,7 @@
         width: 1.2em;
         height: 1.2em;
         margin: 0;
-        accent-color: #3b82f6; /* Cor do radio button */
+        accent-color: var(--blue-500); /* Cor do radio button */
     }
 
 
@@ -122,7 +122,7 @@
 .form-group-with-button {
     display: flex;
     align-items: flex-end; /* Alinha o botáo na base do input */
-    gap: 0.5rem;
+    gap: var(--space-4);
 }
 
     .form-group-with-button .input-wrapper {
@@ -132,7 +132,7 @@
         /* Garante que o label e o select dentro do wrapper funcionem */
         .form-group-with-button .input-wrapper label {
             display: block;
-            margin-bottom: 0.5rem;
+            margin-bottom: var(--space-4);
         }
 
         .form-group-with-button .input-wrapper select {
@@ -140,10 +140,10 @@
         }
 
 .add-new-button {
-    background-color: #10b981; /* Verde */
+    background-color: var(--green-500); /* Verde */
     color: white;
     border: none;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     font-size: 1.5rem; /* Tamanho do "+" */
     font-weight: 600;
     cursor: pointer;
@@ -157,14 +157,14 @@
 }
 
     .add-new-button:hover {
-        background-color: #059669; /* Verde mais escuro */
+        background-color: var(--green-600); /* Verde mais escuro */
     }
 
 
 .form-group input.input-error,
 .form-group select.input-error,
 .input-wrapper select.input-error { /* Adicionado para os selects dentro do wrapper */
-    border-color: #ef4444 !important; /* Vermelho - Borda */
+    border-color: var(--red-500) !important; /* Vermelho - Borda */
     border-width: 1px; /* Garante que a borda tenha espessura */
 }
 
@@ -172,57 +172,57 @@
     .form-group input.input-error:focus,
     .form-group select.input-error:focus,
     .input-wrapper select.input-error:focus {
-        box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.3) !important;
+        box-shadow: var(--focus-ring-danger) !important;
         outline: none; /* Remove o outline padráo do navegador no foco */
     }
 
 /* Estilo para a mensagem de erro abaixo do campo (mantido) */
 .field-error-message {
     display: block;
-    color: #ef4444;
-    font-size: 0.8rem;
-    margin-top: 0.3rem;
+    color: var(--red-500);
+    font-size: var(--text-sm);
+    margin-top: var(--space-2);
     text-align: left;
 }
 
 /* Ajuste para o erro dentro do input-wrapper (mantido) */
 .input-wrapper .field-error-message {
     display: block;
-    color: #ef4444;
-    font-size: 0.8rem;
-    margin-top: 0.3rem;
+    color: var(--red-500);
+    font-size: var(--text-sm);
+    margin-top: var(--space-2);
     text-align: left;
 }
 
 /* Estilos para o formulário de criação de conta dentro do modal */
 .create-account-form {
-    border: 1px solid #e2e8f0;
-    border-radius: 6px;
-    padding: 1.5rem;
-    margin-top: 1rem; /* Espaáo acima do formulário de conta */
-    margin-bottom: 1rem; /* Espaáo abaixo antes do práximo campo (categoria) */
-    background-color: #f8fafc; /* Um fundo levemente diferente */
+    border: 1px solid var(--slate-200);
+    border-radius: var(--radius-sm);
+    padding: var(--space-12);
+    margin-top: var(--space-8); /* Espaáo acima do formulário de conta */
+    margin-bottom: var(--space-8); /* Espaáo abaixo antes do práximo campo (categoria) */
+    background-color: var(--slate-50); /* Um fundo levemente diferente */
 }
 
 .create-account-form h4 {
     margin-top: 0;
-    margin-bottom: 1rem;
-    color: #475569;
-    font-size: 1.1rem;
+    margin-bottom: var(--space-8);
+    color: var(--slate-600);
+    font-size: var(--text-lg);
 }
 
 .create-account-actions {
     display: flex;
     justify-content: flex-end;
-    gap: 0.8rem;
-    margin-top: 1.5rem; /* Espaáo acima dos botáes Salvar/Cancelar Conta */
+    gap: var(--space-6);
+    margin-top: var(--space-12); /* Espaáo acima dos botáes Salvar/Cancelar Conta */
 }
 
 .create-category-actions {
     display: flex;
     justify-content: flex-end;
-    gap: 0.8rem;
-    margin-top: 1.5rem; /* Espaáo acima dos botáes Salvar/Cancelar Conta */
+    gap: var(--space-6);
+    margin-top: var(--space-12); /* Espaáo acima dos botáes Salvar/Cancelar Conta */
 }
 
 /* Ajuste opcional para o botáo '+' náo ficar estranho quando o form aparecer */
@@ -232,27 +232,27 @@
 
 .create-account-form,
 .create-category-form {
-    border: 1px solid #e2e8f0;
-    border-radius: 6px;
-    padding: 1.5rem;
-    margin-bottom: 1rem;
-    background-color: #f8fafc; /* Fundo cinza claro */
+    border: 1px solid var(--slate-200);
+    border-radius: var(--radius-sm);
+    padding: var(--space-12);
+    margin-bottom: var(--space-8);
+    background-color: var(--slate-50); /* Fundo cinza claro */
     animation: fadeIn 0.2s ease-in-out;
 }
 
     .create-account-form h4,
     .create-category-form h4 {
         margin-top: 0;
-        margin-bottom: 1rem;
-        color: #475569;
-        font-size: 1.1rem;
+        margin-bottom: var(--space-8);
+        color: var(--slate-600);
+        font-size: var(--text-lg);
         font-weight: 600;
     }
 
 /* Layout lado a lado para campos menores */
 .form-row {
     display: flex;
-    gap: 1rem;
+    gap: var(--space-8);
 }
 
     .form-row .form-group {
@@ -263,8 +263,8 @@
 .create-category-actions {
     display: flex;
     justify-content: flex-end;
-    gap: 0.8rem;
-    margin-top: 1.5rem;
+    gap: var(--space-6);
+    margin-top: var(--space-12);
 }
 
 @keyframes fadeIn {

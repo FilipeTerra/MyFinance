@@ -17,7 +17,7 @@ type DashboardTab = 'metas' | 'investimentos' | 'calculadora' | 'gastos';
 const TAB_SUBTITLES: Record<DashboardTab, string> = {
     metas: 'Acompanhe a evolução dos seus objetivos financeiros',
     investimentos: 'Gerencie sua carteira e acompanhe a rentabilidade dos seus ativos',
-    calculadora: 'Simule quanto você pode acumular investindo a longo prazo',
+    calculadora: 'Simuladores para planejar seus investimentos e financiamentos',
     gastos: 'Entenda para onde seu dinheiro está indo',
 };
 

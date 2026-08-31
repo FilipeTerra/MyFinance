@@ -79,10 +79,3 @@ export const getTipoAtivoHint = (tipoAtivo: TipoAtivoCalculadora): string => {
             return 'Aplica a tabela regressiva de IR (22,5% a 15%) e IOF regressivo sobre o rendimento, conforme o prazo.';
     }
 };
-
-/** Seletor agrupado de tipo de ativo — reaproveitado no cenário único, comparador e meta reversa. */
-export interface SeletorTipoAtivoProps {
-    tipoAtivo: TipoAtivoCalculadora;
-    onChange: (tipo: TipoAtivoCalculadora) => void;
-    disabled?: boolean;
-}
