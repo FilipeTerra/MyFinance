@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import ReactDOM from 'react-dom';
+import { Modal } from '../Shared/ui/Modal';
 import { metaReversaService, AxiosError, type ApiErrorResponse } from '../../services/Api';
 import type { SimularMetaResponseDto } from '../../types/MetaReversa';
 import { TipoAtivoCalculadora } from '../../types/TipoAtivoCalculadora';
@@ -77,13 +77,12 @@ export function SimularMetaModal({ goalId, goalName, onClose }: SimularMetaModal
         }
     };
 
-    return ReactDOM.createPortal(
-        <div className="contribute-overlay" onClick={onClose}>
-            <div className="contribute-modal" style={{ maxWidth: 520 }} onClick={e => e.stopPropagation()}>
-                <div className="contribute-modal-header">
-                    <h2 className="contribute-modal-title">Simular investimento — {goalName}</h2>
-                    <button className="contribute-modal-close" onClick={onClose} aria-label="Fechar">×</button>
-                </div>
+    return (
+        <Modal
+            onFechar={onClose}
+            titulo={`Simular investimento — ${goalName}`}
+            tamanho="lg"
+        >
 
                 <form onSubmit={handleSubmit}>
                     <div className="proj-form-group">
@@ -221,8 +220,6 @@ export function SimularMetaModal({ goalId, goalName, onClose }: SimularMetaModal
                         </span>
                     </div>
                 )}
-            </div>
-        </div>,
-        document.body
+        </Modal>
     );
 }

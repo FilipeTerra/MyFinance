@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import ReactDOM from 'react-dom';
+import { Modal } from '../Shared/ui/Modal';
 import { investimentoService } from '../../services/Api';
 import type { AporteHistoricoResponseDto } from '../../types/InvestimentoResponseDto';
 import './InvestimentoModal.css';
@@ -35,13 +35,12 @@ export function HistoricoAportesModal({ investimentoId, investimentoNome, onClos
         void load();
     }, [investimentoId]);
 
-    return ReactDOM.createPortal(
-        <div className="inv-overlay" onClick={onClose}>
-            <div className="inv-modal" onClick={e => e.stopPropagation()}>
-                <div className="inv-modal-header">
-                    <h2 className="inv-modal-title">Histórico de Aportes</h2>
-                    <button className="inv-modal-close" onClick={onClose} aria-label="Fechar">×</button>
-                </div>
+    return (
+        <Modal
+            onFechar={onClose}
+            titulo="Histórico de Aportes"
+            tamanho="md"
+        >
 
                 <div className="inv-edit-context">
                     <span className="inv-edit-context-name">{investimentoNome}</span>
@@ -68,8 +67,6 @@ export function HistoricoAportesModal({ investimentoId, investimentoNome, onClos
                         ))}
                     </ul>
                 )}
-            </div>
-        </div>,
-        document.body
+        </Modal>
     );
 }

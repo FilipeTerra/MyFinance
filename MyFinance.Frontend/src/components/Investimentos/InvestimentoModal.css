@@ -1,54 +1,5 @@
-/* ── Overlay ───────────────────────────────────────────────────────────── */
-.inv-overlay {
-    position: fixed;
-    inset: 0;
-    background-color: rgba(0, 0, 0, 0.55);
-    backdrop-filter: blur(2px);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: var(--z-overlay);
-    animation: invFadeIn 0.18s ease-out;
-}
-
-/* ── Card ──────────────────────────────────────────────────────────────── */
-.inv-modal {
-    background: var(--white);
-    padding: var(--space-16);
-    border-radius: var(--radius-xl);
-    width: 100%;
-    max-width: 480px;
-    margin: var(--space-8);
-    box-shadow: var(--shadow-2xl);
-    animation: invScaleIn 0.18s ease-out;
-}
-
-/* ── Header ────────────────────────────────────────────────────────────── */
-.inv-modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: var(--space-12);
-}
-
-.inv-modal-title {
-    margin: 0;
-    font-size: var(--text-lg);
-    font-weight: 700;
-    color: var(--slate-800);
-}
-
-.inv-modal-close {
-    background: none;
-    border: none;
-    font-size: 1.6rem;
-    line-height: 1;
-    color: var(--slate-500);
-    cursor: pointer;
-    padding: 0 var(--space-2);
-    transition: color 0.15s;
-}
-.inv-modal-close:hover { color: var(--slate-800); }
+/* O overlay, o painel e o cabeçalho agora vêm de Shared/ui/Modal — este
+   arquivo cuida só do miolo dos modais de investimento. */
 
 /* ── Edit context banner ───────────────────────────────────────────────── */
 .inv-edit-context {
@@ -206,6 +157,3 @@
 .inv-btn-submit:disabled,
 .inv-btn-cancel:disabled { opacity: 0.55; cursor: not-allowed; }
 
-/* ── Animations ────────────────────────────────────────────────────────── */
-@keyframes invFadeIn  { from { opacity: 0; }                          to { opacity: 1; } }
-@keyframes invScaleIn { from { opacity: 0; transform: scale(0.95); }  to { opacity: 1; transform: scale(1); } }

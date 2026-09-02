@@ -1,56 +1,6 @@
-/* ── Overlay ───────────────────────────────────────────────────────────── */
-.contribute-overlay {
-    position: fixed;
-    inset: 0;
-    background-color: rgba(0, 0, 0, 0.55);
-    backdrop-filter: blur(2px);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: var(--z-overlay);
-    animation: contributeFadeIn 0.18s ease-out;
-}
+/* O overlay, o painel e o cabeçalho agora vêm de Shared/ui/Modal — este
+   arquivo cuida só do miolo. */
 
-/* ── Card ──────────────────────────────────────────────────────────────── */
-.contribute-modal {
-    background: var(--white);
-    padding: var(--space-16);
-    border-radius: var(--radius-xl);
-    width: 100%;
-    max-width: 460px;
-    max-height: calc(100vh - 2rem);
-    overflow-y: auto;
-    margin: var(--space-8);
-    box-shadow: var(--shadow-2xl);
-    animation: contributeScaleIn 0.18s ease-out;
-}
-
-/* ── Header ────────────────────────────────────────────────────────────── */
-.contribute-modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: var(--space-12);
-}
-
-.contribute-modal-title {
-    margin: 0;
-    font-size: var(--text-lg);
-    font-weight: 700;
-    color: var(--slate-800);
-}
-
-.contribute-modal-close {
-    background: none;
-    border: none;
-    font-size: 1.6rem;
-    line-height: 1;
-    color: var(--slate-500);
-    cursor: pointer;
-    padding: 0 var(--space-2);
-    transition: color 0.15s;
-}
-.contribute-modal-close:hover { color: var(--slate-800); }
 
 /* ── Balance hint below account selector ───────────────────────────────── */
 .contribute-balance-hint {
@@ -176,5 +126,3 @@
 }
 
 /* ── Animations ────────────────────────────────────────────────────────── */
-@keyframes contributeFadeIn  { from { opacity: 0; }                      to { opacity: 1; } }
-@keyframes contributeScaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
