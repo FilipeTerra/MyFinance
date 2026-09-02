@@ -16,6 +16,14 @@
     box-sizing: border-box;
 }
 
+/* Os 2rem de cada lado comem 17% de uma tela de 375px, e ainda somam com o
+   padding do cartão de transação — sobravam 287px de 375 para o conteúdo. */
+@media (max-width: 767.98px) {
+    .homepage-content {
+        padding: var(--space-10) var(--space-6) var(--space-16);
+    }
+}
+
     .homepage-content h2 {
         margin-top: 0;
         color: var(--slate-800);

@@ -56,33 +56,37 @@ export function TransactionList({ transactions, isLoading, onDelete, onEdit }: T
         <div className="transaction-list-container">
             <h3>Transações</h3>
 
-            <table className="transaction-table">
-                <thead>
-                    <tr>
-                        <th>Data</th>
-                        <th>Descrição</th>
-                        <th>Categoria</th>
-                        <th>Tipo</th>
-                        <th>Valor</th>
-                        <th>Ações</th>
+            {/* Os `role` explícitos não são redundantes: no celular o CSS troca o
+                `display` de table/tr/td para virar cartões, e isso apaga a
+                semântica implícita de tabela. Sem eles, um leitor de tela
+                perderia a relação entre cada valor e o cabeçalho da coluna. */}
+            <table className="transaction-table" role="table">
+                <thead className="transaction-table-head" role="rowgroup">
+                    <tr role="row">
+                        <th role="columnheader" scope="col">Data</th>
+                        <th role="columnheader" scope="col">Descrição</th>
+                        <th role="columnheader" scope="col">Categoria</th>
+                        <th role="columnheader" scope="col">Tipo</th>
+                        <th role="columnheader" scope="col">Valor</th>
+                        <th role="columnheader" scope="col">Ações</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody role="rowgroup">
                     {paginated.map(tx => (
-                        <tr key={tx.id}>
-                            <td>{formatDate(tx.date)}</td>
-                            <td>{tx.description}</td>
-                            <td>{tx.categoryName}</td>
-                            <td>
+                        <tr key={tx.id} role="row">
+                            <td role="cell" className="tx-data">{formatDate(tx.date)}</td>
+                            <td role="cell" className="tx-descricao">{tx.description}</td>
+                            <td role="cell" className="tx-categoria">{tx.categoryName}</td>
+                            <td role="cell">
                                 <span className={`tx-type ${tx.typeName.toLowerCase()}`}>
                                     {tx.typeName === 'Income' ? 'Receita' : tx.typeName === 'Expense' ? 'Despesa' : 'Investimento'    }
                                 </span>
                             </td>
-                            <td className={`tx-amount ${tx.typeName.toLowerCase()}`}>
+                            <td role="cell" className={`tx-amount ${tx.typeName.toLowerCase()}`}>
                                 {tx.typeName === 'Income' ? '+ ' : '- '}
                                 {Math.abs(tx.amount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                             </td>
-                            <td className="tx-actions">
+                            <td role="cell" className="tx-actions">
                                 <button
                                     className="action-btn edit-btn"
                                     onClick={() => onEdit(tx)}
@@ -108,18 +112,28 @@ export function TransactionList({ transactions, isLoading, onDelete, onEdit }: T
                         className="pagination-btn"
                         onClick={() => setCurrentPage(p => p - 1)}
                         disabled={currentPage === 1}
+                        aria-label="Página anterior"
                     >‹</button>
+                    {/* No celular os números dão lugar a este resumo: com 500
+                        transações são 20 botões numa linha só, que estouravam a
+                        largura da tela. O CSS decide qual dos dois aparece. */}
+                    <span className="pagination-resumo">
+                        Página {currentPage} de {totalPages}
+                    </span>
                     {pageNumbers.map(page => (
                         <button
                             key={page}
-                            className={`pagination-btn${currentPage === page ? ' active' : ''}`}
+                            className={`pagination-btn pagination-numero${currentPage === page ? ' active' : ''}`}
                             onClick={() => setCurrentPage(page)}
+                            aria-label={`Página ${page}`}
+                            aria-current={currentPage === page ? 'page' : undefined}
                         >{page}</button>
                     ))}
                     <button
                         className="pagination-btn"
                         onClick={() => setCurrentPage(p => p + 1)}
                         disabled={currentPage === totalPages}
+                        aria-label="Próxima página"
                     >›</button>
                 </div>
             )}
