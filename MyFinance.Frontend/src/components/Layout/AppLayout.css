@@ -1,0 +1,21 @@
+/* Casca das telas autenticadas — ver AppLayout.tsx */
+
+.app-shell {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    /* `dvh` e não `vh`: no celular, `100vh` é a viewport *grande*, que ignora
+       a barra de endereço retrátil e empurra o rodapé para fora da tela. */
+    min-height: 100dvh;
+    background: var(--color-bg-app);
+}
+
+@media (max-width: 767.98px) {
+    /* Espaço para a barra de navegação fixa. Fica aqui, e só aqui: como
+       `box-sizing: border-box` é global, o padding entra *dentro* do
+       `100dvh`, então vale igual para as páginas que rolam e para o Chat,
+       que é `overflow: hidden`. Nenhuma página mexe em padding inferior. */
+    .app-shell {
+        padding-bottom: calc(var(--tabbar-height) + var(--safe-bottom));
+    }
+}

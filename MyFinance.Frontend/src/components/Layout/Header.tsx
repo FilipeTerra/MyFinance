@@ -1,18 +1,11 @@
-import { NavLink, useNavigate } from 'react-router-dom';
-import { tokenManager } from '../../services/Api'; // Importa o tokenManager
-import './Header.css'; // Criaremos este CSS a seguir
+import { NavLink } from 'react-router-dom';
+import { useSessao } from '../../hooks/useSessao';
+import './Header.css';
 
 export function Header() {
-    const navigate = useNavigate();
-    // Pega o nome do usuário do localStorage, com um fallback
-    const userName = localStorage.getItem('userName') || 'Usuário';
-
-    const handleLogout = () => {
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('userName');
-        tokenManager.clearAuthToken(); // Limpa o token do Axios
-        navigate('/login'); // Redireciona para a página de login
-    };
+    // A saudação e o "Sair" também aparecem no menu "Mais" do celular; a lógica
+    // de encerrar sessão vive em useSessao para não divergir entre os dois.
+    const { nome: userName, sair: handleLogout } = useSessao();
 
     return (
         <header className="app-header">

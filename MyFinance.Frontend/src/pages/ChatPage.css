@@ -4,18 +4,30 @@
    Nenhum scroll global — só o painel de mensagens rola.
 ════════════════════════════════════════════════════════════════ */
 
+/* A altura vem do `.app-shell` (100dvh menos a barra de navegação no celular).
+   Antes eram dois números mágicos: `height: 100vh` aqui e
+   `height: calc(100vh - 70px)` abaixo, onde 70px era a altura presumida do
+   header. Com o header movido para o AppLayout, essa subtração passou a
+   descontar um irmão que não existe mais — e no celular, onde o header é
+   `display: none`, o desconto correto seria zero. A correção não é uma
+   aritmética nova, é não ter aritmética nenhuma.
+
+   O `min-height: 0` é indispensável: o piso `min-height: auto` de um item flex
+   impediria o `overflow-y: auto` do painel de mensagens de rolar, e o conteúdo
+   transbordaria em silêncio. */
 .chat-page {
     display: flex;
     flex-direction: column;
-    height: 100vh;
+    flex: 1 1 auto;
+    min-height: 0;
     overflow: hidden;
-    background: #f0f4f8;
+    background: var(--color-bg-app);
 }
 
 .chat-content {
-    flex: 1;
+    flex: 1 1 auto;
+    min-height: 0;
     display: flex;
-    height: calc(100vh - 70px);
     overflow: hidden;
 }
 

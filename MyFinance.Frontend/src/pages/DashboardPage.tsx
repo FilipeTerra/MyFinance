@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Header } from '../components/Layout/Header';
 import { FinancialGoalCard } from '../components/FinancialGoals/FinancialGoalCard';
 import { InvestimentoCard } from '../components/Investimentos/InvestimentoCard';
 import { InvestimentoModal } from '../components/Investimentos/InvestimentoModal';
@@ -113,9 +112,8 @@ export function DashboardPage() {
 
     return (
         <div className="dashboard-container">
-            <Header />
 
-            <main className="dashboard-content">
+            <main className="dashboard-content" id="conteudo-principal">
                 <div className="dashboard-page-header">
                     <div>
                         <h2 className="dashboard-title">Meu Painel Financeiro</h2>

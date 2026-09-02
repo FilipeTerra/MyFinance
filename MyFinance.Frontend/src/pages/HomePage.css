@@ -1,7 +1,10 @@
 .homepage-container {
     display: flex;
     flex-direction: column;
-    min-height: 100vh;
+    /* Era `min-height: 100vh` de quando esta div continha o header. Com o
+       header no AppLayout (que já é da altura da viewport), 100vh aqui somaria
+       a altura do header ao documento e criaria rolagem fantasma. */
+    flex: 1 0 auto;
     background-color: var(--slate-100); /* Fundo cinza bem claro para a página */
 }
 

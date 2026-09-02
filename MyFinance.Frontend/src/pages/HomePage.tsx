@@ -1,6 +1,5 @@
 import './HomePage.css';
 import { useEffect, useState } from 'react';
-import { Header } from '../components/Layout/Header';
 import type { TransactionResponseDto } from '../types/TransactionResponseDto';
 import type { AccountResponseDto } from '../types/AccountResponseDto';
 import type { CategoryResponseDto } from '../types/CategoryResponseDto';
@@ -264,9 +263,8 @@ export function HomePage() {
 
     return (
         <div className="homepage-container">
-            <Header />
 
-            <main className="homepage-content">
+            <main className="homepage-content" id="conteudo-principal">
                 <h2>Contas e Transações</h2>
 
                 {lifestyleInsight && lifestyleInsight.curiosity && lifestyleInsight.information && lifestyleInsight.suggestion && (
