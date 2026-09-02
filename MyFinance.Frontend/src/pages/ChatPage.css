@@ -37,7 +37,7 @@
 
 .chat-panel {
     width: 100%;
-    max-width: 780px;
+    max-width: var(--container-reading);
     display: flex;
     flex-direction: column;
     background: var(--white);

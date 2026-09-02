@@ -147,11 +147,18 @@
     font-size: 1.5rem; /* Tamanho do "+" */
     font-weight: 600;
     cursor: pointer;
-    width: 42.5px; /* Largura fixa */
-    height: 42.5px; /* Altura fixa (para bater com o input/select) */
+    /* Quadrado que acompanha a altura do input ao lado. Antes eram
+       width/height/line-height fixos em 42.5px; o piso de toque de 44px
+       (index.css, `pointer: coarse`) esticava só a altura e o botão deixava
+       de ser quadrado, com o "+" fora de centro. Centrar por flex em vez de
+       line-height deixa a altura livre para crescer. */
+    min-width: 42.5px;
+    min-height: 42.5px;
+    aspect-ratio: 1;
     padding: 0;
-    line-height: 42.5px; /* Centraliza o "+" verticalmente */
-    text-align: center;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     transition: background-color 0.2s ease;
     flex-shrink: 0; /* Impede que o botáo encolha */
 }

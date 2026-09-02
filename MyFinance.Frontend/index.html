@@ -3,7 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/moneyman.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- viewport-fit=cover é pré-requisito do safe-area: sem ele, todo
+         env(safe-area-inset-*) retorna 0px no iPhone, silenciosamente. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>FinAI</title>
   </head>
   <body>

@@ -1,6 +1,27 @@
 /* src/index.css — estilos globais mínimos */
 
 /* ────────────────────────────────────────────────────────────────────────
+   Breakpoints — escada única do app
+
+     @media (max-width: 1024px)    tablet   — grids de 3-4 colunas caem para 2
+     @media (max-width:  767.98px) MOBILE   — linha principal: o header vira
+                                              bottom tab bar, grids caem para
+                                              1 coluna, tabelas viram cartões,
+                                              modais viram bottom sheet
+     @media (max-width:  480px)    compacto — ajuste fino de padding/tipografia
+
+   O par mobile/desktop é `max-width: 767.98px` / `min-width: 768px`. O `.98`
+   não é firula: em zoom do navegador e em telas Android de 1.5× DPR a largura
+   do viewport cai em valores fracionários, e o par 767/768 deixaria uma faixa
+   morta onde nenhuma das duas regras se aplica.
+
+   O app é desktop-first (usa `max-width`). Não existem tokens para estes
+   valores porque custom properties não funcionam dentro de `@media` — este
+   comentário é a fonte da convenção. Arquivos antigos ainda em 640px/600px/
+   900px migram para a escada acima conforme forem tocados.
+   ──────────────────────────────────────────────────────────────────────── */
+
+/* ────────────────────────────────────────────────────────────────────────
    Design tokens
    Camada de definição apenas — nada neste arquivo ainda consome os tokens
    abaixo (isso acontece na migração mecânica dos 35 arquivos CSS). Os
@@ -149,8 +170,11 @@
     --text-lg: 1.125rem;
     --text-xl: 1.375rem;
     --text-2xl: 1.75rem;
-    --text-3xl: 2.5rem;
-    --text-4xl: 4rem;
+    /* Os dois maiores degraus são fluidos: 40px e 64px fixos estouram a
+       largura de um celular de 375px. Chegam ao valor cheio por volta de
+       832px/960px, então nada muda no desktop. */
+    --text-3xl: clamp(1.75rem, 1.2rem + 2.5vw, 2.5rem);
+    --text-4xl: clamp(2.5rem, 1.6rem + 4vw, 4rem);
 
     --weight-normal: 400;
     --weight-medium: 500;
@@ -167,6 +191,21 @@
 
     /* Layout / movimento / camadas -------------------------------------- */
     --container-max: 1200px;
+    /* Larguras de leitura das páginas que não usam o container cheio. */
+    --container-narrow: 640px;  /* Perfil */
+    --container-reading: 780px; /* Chat */
+
+    /* Altura da barra de navegação inferior do mobile (ver MobileTabBar).
+       O espaço reservado para ela vive só em AppLayout.css. */
+    --tabbar-height: 56px;
+
+    /* Recortes seguros do aparelho (notch, barra de gestos do iPhone).
+       Só retornam valor diferente de 0 porque o <meta name="viewport">
+       do index.html usa `viewport-fit=cover`. */
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left: env(safe-area-inset-left, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
 
     --duration-fast: 0.12s;
     --duration-base: 0.15s;
@@ -225,6 +264,72 @@ body {
     flex-direction: column;
 }
 
+/* ── Base responsiva ───────────────────────────────────────────────────── */
+
+/* Impede o Safari de reescalar o texto sozinho ao girar o aparelho. */
+html {
+    -webkit-text-size-adjust: 100%;
+}
+
+/* Rede de segurança: mídia nunca é mais larga que o container que a contém. */
+img, svg, video, canvas {
+    max-width: 100%;
+    height: auto;
+}
+
+/* Faixa que rola na horizontal em vez de empurrar a página inteira.
+   O `min-width: 0` é o essencial: sem ele um filho flex nunca encolhe abaixo
+   da largura do próprio conteúdo (`min-width: auto` é o padrão) e o estouro
+   vaza para o body. Substitui as três cópias literais deste idioma que
+   existiam em Header.css, DashboardPage.css e SegmentedControl.css. */
+.scroll-strip {
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+
+    .scroll-strip::-webkit-scrollbar {
+        display: none;
+    }
+
+    .scroll-strip > * {
+        flex-shrink: 0;
+    }
+
+@media (max-width: 767.98px) {
+    /* Piso de 16px em campos de formulário. Abaixo disso o Safari do iOS dá
+       zoom ao focar o campo e desalinha o layout inteiro.
+
+       O `!important` é deliberado e é o único do arquivo. Media query não
+       soma especificidade, então um seletor de elemento perderia para
+       qualquer regra de classe — e todos os campos problemáticos do app são
+       de classe (`.gastos-account-select` em 13px, `.filter-group input` em
+       14px, e `.category-select` que já usa `!important` por conta própria).
+       Aqui 16px é restrição rígida de usabilidade, não preferência de estilo.
+
+       O `max()` preserva campos que já sejam maiores que 16px. */
+    input, select, textarea {
+        font-size: max(16px, 1em) !important;
+    }
+}
+
+/* Alvos de toque de 44px, só onde existe toque — no desktop o ponteiro é
+   preciso e engordar os controles só desperdiçaria espaço. Caixas de seleção
+   ficam de fora: esticá-las deixaria o quadradinho desalinhado do rótulo. */
+@media (pointer: coarse) {
+    button,
+    a,
+    [role="button"],
+    [role="tab"],
+    select,
+    textarea,
+    input:not([type="checkbox"]):not([type="radio"]) {
+        min-height: 44px;
+    }
+}
+
 /* ── Acessibilidade ────────────────────────────────────────────────────── */
 
 /* Esconde visualmente mas mantém acessível a leitores de tela. */
@@ -242,9 +347,30 @@ body {
 
 /* Indicador de foco por teclado — nenhum elemento interativo tinha um até aqui. */
 :focus-visible {
-    outline: 2px solid #3b82f6;
+    outline: 2px solid var(--color-primary);
     outline-offset: 2px;
 }
+
+/* Atalho para pular a navegação. Invisível até receber foco pelo teclado.
+   No mobile a barra de navegação fica por último na ordem de foco (convenção
+   de iOS e Android), então este link é a única forma rápida de chegar ao
+   conteúdo sem atravessar a página inteira. */
+.skip-link {
+    position: absolute;
+    left: var(--space-8);
+    top: calc(-100% - var(--space-16));
+    z-index: var(--z-toast);
+    padding: var(--space-6) var(--space-10);
+    background: var(--color-surface);
+    color: var(--color-primary-strong);
+    font-weight: var(--weight-semibold);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+}
+
+    .skip-link:focus {
+        top: calc(var(--safe-top) + var(--space-8));
+    }
 
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {

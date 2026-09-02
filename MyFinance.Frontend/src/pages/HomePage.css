@@ -7,7 +7,7 @@
 
 .homepage-content {
     width: 100%;
-    max-width: 1200px; /* Largura máxima do conteíºdo */
+    max-width: var(--container-max);
     margin: 0 auto; /* Centraliza */
     padding: var(--space-16);
     box-sizing: border-box;
