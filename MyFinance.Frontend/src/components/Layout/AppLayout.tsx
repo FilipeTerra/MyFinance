@@ -1,5 +1,6 @@
 import { Outlet } from 'react-router-dom';
 import { Header } from './Header';
+import { MobileTabBar } from './MobileTabBar';
 import './AppLayout.css';
 
 /**
@@ -21,6 +22,7 @@ export function AppLayout() {
             </a>
             <Header />
             <Outlet />
+            <MobileTabBar />
         </div>
     );
 }

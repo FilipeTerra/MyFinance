@@ -1,0 +1,82 @@
+/* Menu "Mais" da navegação mobile — ver MobileMoreSheet.tsx */
+
+.msheet-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-overlay);
+    background: var(--color-overlay);
+    display: flex;
+    /* flex-end: a folha sobe do rodapé, junto do dedo que abriu o menu. */
+    align-items: flex-end;
+    animation: msheetSurgir var(--duration-slow) var(--ease-out);
+}
+
+.msheet {
+    width: 100%;
+    background: var(--color-surface);
+    border-radius: var(--radius-3xl) var(--radius-3xl) 0 0;
+    box-shadow: var(--shadow-2xl);
+    padding: var(--space-6) var(--space-8)
+             calc(var(--space-8) + var(--safe-bottom));
+    animation: msheetSubir var(--duration-slower) var(--ease-out);
+}
+
+/* Alça: sinaliza que isto é uma folha vinda de baixo, não um diálogo central. */
+.msheet-alca {
+    width: 36px;
+    height: 4px;
+    margin: 0 auto var(--space-10);
+    border-radius: var(--radius-full);
+    background: var(--color-border-strong);
+}
+
+.msheet-saudacao {
+    margin: 0 0 var(--space-6);
+    padding: 0 var(--space-6);
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+}
+
+.msheet-lista {
+    display: flex;
+    flex-direction: column;
+}
+
+.msheet-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-8);
+    width: 100%;
+    padding: var(--space-8) var(--space-6);
+    border: none;
+    border-radius: var(--radius-lg);
+    background: none;
+    font-family: inherit;
+    font-size: var(--text-md);
+    font-weight: var(--weight-medium);
+    color: var(--color-text-body);
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+    .msheet-item:active {
+        background: var(--color-surface-muted);
+    }
+
+.msheet-item--sair {
+    color: var(--color-danger);
+}
+
+@keyframes msheetSurgir {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* O deslizar de baixo é o gesto que faz a folha parecer nativa. O reset global
+   de `prefers-reduced-motion` em index.css já reduz isto a um aparecer seco
+   para quem pediu menos movimento. */
+@keyframes msheetSubir {
+    from { transform: translateY(100%); }
+    to { transform: none; }
+}

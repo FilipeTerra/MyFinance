@@ -140,6 +140,15 @@ export function useDialogBehavior({
         };
         mq?.addEventListener('change', onMudancaLargura);
 
+        // O listener acima só cobre a *travessia* do breakpoint. Se o diálogo
+        // abrir já acima dele — estado restaurado, abertura por código — nenhum
+        // evento chega e ele ficaria preso aberto, com a rolagem do fundo
+        // travada. Conferir o valor atual fecha essa brecha sem depender de
+        // evento nenhum.
+        if (mq?.matches) {
+            onFecharRef.current();
+        }
+
         return () => {
             document.removeEventListener('keydown', onKeyDown, true);
             mq?.removeEventListener('change', onMudancaLargura);

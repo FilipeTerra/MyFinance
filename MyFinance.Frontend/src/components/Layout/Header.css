@@ -74,29 +74,19 @@
     }
 
 /* ── Responsive ────────────────────────────────────────────────────────── */
-@media (max-width: 640px) {
+
+/* No celular quem navega é a MobileTabBar, fixa no rodapé. Antes daqui havia
+   uma tentativa de salvar o header no mobile fazendo a nav rolar na horizontal:
+   numa tela de 375px, logo + "Olá, {nome}" + Sair consumiam quase toda a
+   largura e sobrava uma tira estreita rolável com os quatro links — que era
+   preciso descobrir que rolava. A barra inferior resolve o mesmo problema
+   colocando os destinos na zona do polegar.
+
+   `display: none` (e não desmontar via JS) também tira o header da árvore de
+   acessibilidade e da ordem de tabulação, então nunca há duas navegações
+   principais ao mesmo tempo para um leitor de tela. */
+@media (max-width: 767.98px) {
     .app-header {
-        padding: var(--space-6) var(--space-8);
-    }
-
-    .header-logo,
-    .header-user {
-        flex-shrink: 0;
-    }
-
-    .header-nav {
-        gap: var(--space-8);
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        /* Sem isto, a nav nunca encolhe abaixo da largura do seu conteúdo
-           (min-width:auto é o padrão) e empurra a página para rolagem
-           horizontal em vez de rolar internamente. */
-        min-width: 0;
-        flex-shrink: 1;
-    }
-
-    .header-link {
-        white-space: nowrap;
-        flex-shrink: 0;
+        display: none;
     }
 }

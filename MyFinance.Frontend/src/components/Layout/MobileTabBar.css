@@ -1,0 +1,101 @@
+/* Barra de navegação inferior do celular — ver MobileTabBar.tsx */
+
+.mtab-bar {
+    display: none; /* padrão é desktop; a media query abaixo liga no celular */
+    position: fixed;
+    inset: auto 0 0 0;
+    /* --z-sticky (100) e não --z-overlay (1000): overlays de modal precisam
+       cobrir a barra, inclusive o menu "Mais". */
+    z-index: var(--z-sticky);
+    background: var(--color-surface);
+    border-top: 1px solid var(--color-border);
+    box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.04);
+    /* A altura engloba a safe area e o padding empurra o conteúdo para cima:
+       os ícones ficam na faixa de 56px e a barra de gestos do iPhone fica na
+       tira pintada abaixo. O `padding-bottom` do .app-shell usa exatamente o
+       mesmo cálculo, então os dois nunca discordam. */
+    height: calc(var(--tabbar-height) + var(--safe-bottom));
+    padding-bottom: var(--safe-bottom);
+}
+
+@media (max-width: 767.98px) {
+    .mtab-bar {
+        display: block;
+    }
+}
+
+.mtab-list {
+    display: flex;
+    height: var(--tabbar-height);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.mtab-item {
+    display: flex;
+    flex: 1 1 0;
+}
+
+.mtab-link {
+    position: relative;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    padding: 0 var(--space-2);
+    border: none;
+    background: none;
+    font-family: inherit;
+    font-size: var(--text-2xs);
+    font-weight: var(--weight-medium);
+    line-height: 1;
+    color: var(--color-text-secondary);
+    text-decoration: none;
+    text-align: center;
+    cursor: pointer;
+    transition: color var(--duration-base) var(--ease-out);
+}
+
+/* Trilho do item ativo. É o mesmo vocabulário do header, que sublinha o link
+   ativo — aqui a barra está embaixo, então o traço fica na borda voltada para
+   o conteúdo. O estado ativo nunca é só cor: muda também o peso do rótulo e a
+   espessura do traço do ícone. */
+.mtab-link::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 0;
+    height: 3px;
+    transform: translateX(-50%);
+    border-radius: 0 0 var(--radius-full) var(--radius-full);
+    background: var(--color-primary);
+    transition: width var(--duration-slow) var(--ease-out);
+}
+
+.mtab-link--ativo {
+    color: var(--color-primary);
+    font-weight: var(--weight-semibold);
+}
+
+    .mtab-link--ativo::before {
+        width: 28px;
+    }
+
+    .mtab-link--ativo .mtab-icone svg {
+        stroke-width: 2.1;
+    }
+
+.mtab-icone {
+    display: flex;
+}
+
+.mtab-rotulo {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
