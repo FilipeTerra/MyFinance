@@ -353,7 +353,10 @@
 
 /* ── Responsivo ────────────────────────────────────────────── */
 
-@media (max-width: 900px) {
+/* Escada 4 → 3 → 2 → 1, alinhada aos breakpoints do app (eram 900px e 600px,
+   valores próprios deste arquivo). */
+
+@media (max-width: 1024px) {
     .filter-grid {
         grid-template-columns: repeat(3, 1fr);
     }
@@ -363,9 +366,10 @@
     }
 }
 
-@media (max-width: 600px) {
+@media (max-width: 767.98px) {
     .filter-grid {
         grid-template-columns: 1fr 1fr;
+        padding: var(--space-6) var(--space-8) 0;
     }
 
     .filter-group.date-range {
@@ -379,5 +383,25 @@
 
     .date-sep {
         text-align: center;
+    }
+}
+
+/* Em 375px, duas colunas deixam cada campo com ~150px — apertado para um
+   seletor de categoria, e o intervalo de datas já aninha dois campos dentro
+   de uma célula. Abaixo de 480px vira coluna única. */
+@media (max-width: 480px) {
+    .filter-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* Sem este reset, o `span 2` herdado do degrau anterior criaria uma
+       segunda coluna implícita e o grid voltaria a ter duas faixas — só que
+       desiguais, dimensionadas pelo conteúdo. */
+    .filter-group.date-range {
+        grid-column: auto;
+    }
+
+    .filter-actions > * {
+        width: 100%;
     }
 }

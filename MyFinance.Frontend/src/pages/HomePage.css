@@ -16,14 +16,6 @@
     box-sizing: border-box;
 }
 
-/* Os 2rem de cada lado comem 17% de uma tela de 375px, e ainda somam com o
-   padding do cartão de transação — sobravam 287px de 375 para o conteúdo. */
-@media (max-width: 767.98px) {
-    .homepage-content {
-        padding: var(--space-10) var(--space-6) var(--space-16);
-    }
-}
-
     .homepage-content h2 {
         margin-top: 0;
         color: var(--slate-800);
@@ -55,4 +47,43 @@
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: var(--space-12);
     margin-bottom: var(--space-20);
+}
+
+
+/* Os 2rem de cada lado comem 17% de uma tela de 375px, e ainda somam com o
+   padding do cartão de transação — sobravam 287px de 375 para o conteúdo. */
+@media (max-width: 767.98px) {
+    .homepage-content {
+        padding: var(--space-10) var(--space-6) var(--space-16);
+    }
+
+    /* As três ações não cabem lado a lado em 375px. Duas colunas com a
+       terceira ocupando a faixa inteira, e não três botões empilhados: gasta
+       ~96px de altura em vez de ~150px, mantendo tudo acima da dobra.
+
+       A grade segue a ordem do DOM (esquerda→direita, cima→baixo), sem
+       `order` nem posicionamento explícito — assim a ordem visual continua
+       igual à ordem de foco. */
+    .homepage-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--space-5);
+    }
+
+        .homepage-actions > button {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .homepage-actions > button:last-child {
+            grid-column: 1 / -1;
+        }
+
+    /* `auto-fill` com piso de 300px já cairia para uma coluna sozinho, mas
+       entre 300 e 332px sobra uma faixa onde o cartão encosta nas bordas. */
+    .accounts-grid {
+        grid-template-columns: 1fr;
+        gap: var(--space-8);
+        margin-bottom: var(--space-14);
+    }
 }
