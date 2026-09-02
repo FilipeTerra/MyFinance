@@ -195,6 +195,27 @@
     margin: 0 var(--space-6);
 }
 
+/* Medido com um valor de 7 dígitos ("R$ 1.500.000,00"): em 113px por coluna
+   ele não estoura a página — o grid absorve — mas quebra em duas linhas
+   espremido contra o rótulo "Meta". Empilhar dá a largura inteira do cartão
+   para cada valor, em vez de dividi-la ao meio. */
+@media (max-width: 480px) {
+    .goal-stats-row {
+        grid-template-columns: 1fr;
+        gap: var(--space-6);
+    }
+
+    .goal-stat--align-end {
+        align-items: flex-start;
+    }
+
+    .goal-stat-divider {
+        width: 100%;
+        height: 1px;
+        margin: 0;
+    }
+}
+
 /* ── Insight ───────────────────────────────────────────────────────────── */
 .goal-insight {
     display: flex;

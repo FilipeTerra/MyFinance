@@ -127,7 +127,7 @@ export function DashboardPage() {
                 </div>
 
                 {/* ── Segmented tabs ─────────────────────────────────────────── */}
-                <div className="dashboard-tabs" role="tablist" aria-label="Seções do painel">
+                <div className="dashboard-tabs scroll-strip" role="tablist" aria-label="Seções do painel">
                     <button
                         role="tab"
                         aria-selected={activeTab === 'metas'}
@@ -135,7 +135,7 @@ export function DashboardPage() {
                         onClick={() => setActiveTab('metas')}
                     >
                         <span className="dashboard-tab-icon" aria-hidden="true">🎯</span>
-                        Metas
+                        <span className="dashboard-tab-label">Metas</span>
                         {goals.length > 0 && <span className="dashboard-tab-count">{goals.length}</span>}
                     </button>
                     <button
@@ -145,7 +145,7 @@ export function DashboardPage() {
                         onClick={() => setActiveTab('investimentos')}
                     >
                         <span className="dashboard-tab-icon" aria-hidden="true">📈</span>
-                        Investimentos
+                        <span className="dashboard-tab-label">Investimentos</span>
                         {investimentos.length > 0 && <span className="dashboard-tab-count">{investimentos.length}</span>}
                     </button>
                     <button
@@ -155,7 +155,7 @@ export function DashboardPage() {
                         onClick={() => setActiveTab('calculadora')}
                     >
                         <span className="dashboard-tab-icon" aria-hidden="true">🧮</span>
-                        Calculadora
+                        <span className="dashboard-tab-label">Calculadora</span>
                     </button>
                     <button
                         role="tab"
@@ -164,7 +164,7 @@ export function DashboardPage() {
                         onClick={() => setActiveTab('gastos')}
                     >
                         <span className="dashboard-tab-icon" aria-hidden="true">💸</span>
-                        Gastos
+                        <span className="dashboard-tab-label">Gastos</span>
                     </button>
                 </div>
 

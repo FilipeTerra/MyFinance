@@ -88,6 +88,10 @@
 
 .dashboard-tab-icon { font-size: var(--text-md); line-height: 1; }
 
+/* Some no degrau compacto (ver @media 480px) — no resto das larguras é o
+   próprio texto entre o ícone e o badge. */
+.dashboard-tab-label { display: contents; }
+
 .dashboard-tab-count {
     display: inline-flex;
     align-items: center;
@@ -270,7 +274,7 @@
 }
 
 /* ── Responsive ────────────────────────────────────────────────────────── */
-@media (max-width: 640px) {
+@media (max-width: 767.98px) {
     .dashboard-content {
         padding: var(--space-10) var(--space-8) var(--space-16);
     }
@@ -284,16 +288,12 @@
         justify-content: center;
     }
 
+    /* .scroll-strip (index.css) substitui o bloco que existia aqui antes —
+       min-width:0 + overflow-x:auto + filhos flex-shrink:0, o mesmo idioma
+       que também vivia, copiado à mão, em Header.css e SegmentedControl.css. */
     .dashboard-tabs {
         display: flex;
         flex-wrap: nowrap;
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        /* Sem isto, o grupo de abas nunca encolhe abaixo da largura do seu
-           conteúdo (min-width:auto é o padrão) e empurra a página para
-           rolagem horizontal em vez de rolar internamente. */
-        min-width: 0;
-        max-width: 100%;
     }
 
     .dashboard-tab {
@@ -301,10 +301,15 @@
         justify-content: center;
     }
 
+    /* Cinco linhas empilhadas (total/concluídas/em andamento/atrasadas/
+       acumulado) é rolagem demais para uma barra de resumo. Grade 2×3: a
+       quinta estatística ('acumulado', marcada --right) ocupa sozinha a linha
+       de baixo, span 2, no lugar de ficar empurrada para a direita por
+       margin-left:auto — que só fazia sentido na barra horizontal. */
     .dashboard-summary {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: var(--space-6);
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--space-8) var(--space-6);
         padding: var(--space-8);
     }
 
@@ -323,8 +328,34 @@
         margin-left: 0;
     }
 
+    .summary-stat--right {
+        grid-column: 1 / -1;
+    }
+
     .goals-grid,
     .goals-skeleton-grid {
         grid-template-columns: 1fr;
+    }
+}
+
+/* Compacto: quatro abas com emoji + rótulo + badge não cabem numa tira de
+   ~340px sem rolar. O rótulo por extenso some, e volta só na aba ativa —
+   assim quem toca ainda vê em qual seção está, sem precisar decorar ícones. */
+@media (max-width: 480px) {
+    .dashboard-tab-label {
+        display: none;
+    }
+
+    .dashboard-tab--active .dashboard-tab-label {
+        display: contents;
+    }
+
+    .dashboard-tab {
+        padding: var(--space-4) var(--space-6);
+        gap: var(--space-2);
+    }
+
+    .dashboard-tab-icon {
+        font-size: var(--text-lg);
     }
 }

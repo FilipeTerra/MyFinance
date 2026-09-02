@@ -146,6 +146,22 @@
     letter-spacing: -0.02em;
 }
 
+/* Medido com valores de 6 dígitos lado a lado num cartão de 288px: os dois
+   quebravam em várias linhas dentro de ~115px cada, chegando a 67px de altura
+   no valor atual (o triplo do normal). Empilhar dá a largura inteira do
+   cartão para cada valor, em vez de dividi-la ao meio. */
+@media (max-width: 480px) {
+    .inv-value-columns {
+        flex-direction: column;
+        gap: var(--space-6);
+    }
+
+    .inv-value-col--current {
+        align-items: flex-start;
+        text-align: left;
+    }
+}
+
 .inv-trend {
     display: inline-flex;
     align-items: center;
