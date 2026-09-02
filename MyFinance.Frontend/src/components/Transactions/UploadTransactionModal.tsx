@@ -7,7 +7,9 @@ import { ReviewImportModal } from './ReviewImportModal';
 import type { AccountResponseDto } from '../../types/AccountResponseDto';
 import type { CategoryResponseDto } from '../../types/CategoryResponseDto';
 import type { AiTransactionResponseDto, SaveBatchTransactionRequestDto } from '../../types/AiIntegration';
+import { Modal } from '../Shared/ui/Modal';
 import './TransactionModal.css';
+import './UploadTransactionModal.css';
 
 interface UploadTransactionModalProps {
     isOpen: boolean;
@@ -131,14 +133,8 @@ export function UploadTransactionModal({
     }
 
     return (
-        <div className="modal-overlay">
-            <div className="modal-content" style={{ maxWidth: '450px' }}>
-                <div className="modal-header">
-                    <h2>Importar Extrato</h2>
-                    <button className="close-button" onClick={onClose} disabled={isLoading}>&times;</button>
-                </div>
-                
-                <form onSubmit={handleSubmit} className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '20px', paddingTop: '10px' }}>
+        <Modal onFechar={onClose} titulo="Importar Extrato" tamanho="md">
+                <form onSubmit={handleSubmit} className="upload-form">
                     
                     <div className="form-group">
                         <AccountSelectField 
@@ -197,20 +193,14 @@ export function UploadTransactionModal({
                         </div>
                     </div>
 
-                    <div className="modal-footer" style={{ borderTop: 'none', padding: '10px 0 0 0', backgroundColor: 'transparent' }}>
+                    <div className="upload-acoes">
                         <button type="button" className="btn-secondary" onClick={onClose} disabled={isLoading}>
                             Cancelar
                         </button>
-                        <button 
-                            type="submit" 
-                            className="btn-primary" 
+                        <button
+                            type="submit"
+                            className="btn-primary upload-btn-enviar"
                             disabled={isLoading || !accountId || !file}
-                            style={{ 
-                                display: 'flex', 
-                                alignItems: 'center', 
-                                gap: '6px',
-                                opacity: (!accountId || !file) ? 0.5 : 1
-                            }}
                         >
                             {isLoading ? (
                                 <>
@@ -224,7 +214,6 @@ export function UploadTransactionModal({
                         </button>
                     </div>
                 </form>
-            </div>
-        </div>
+        </Modal>
     );
 }

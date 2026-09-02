@@ -1,0 +1,37 @@
+/* Miolo do modal de importar extrato.
+   Este arquivo existe porque o componente não tinha CSS próprio: usava
+   `.modal-body`/`.modal-footer` que na verdade moram em ReviewImportModal.css,
+   e corrigia o resultado com `style` inline em cima. Com o painel vindo de
+   Shared/ui/Modal, as regras inline brigariam com a base — então viraram
+   classes de verdade. */
+
+.upload-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-10);
+}
+
+.upload-acoes {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-6);
+    padding-top: var(--space-5);
+}
+
+.upload-btn-enviar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+}
+
+    .upload-btn-enviar:disabled {
+        opacity: 0.5;
+    }
+
+/* As ações ficam dentro do <form> (o submit precisa continuar associado a
+   ele), então não passam pelo `rodape` do Modal e precisam esticar sozinhas. */
+@media (max-width: 767.98px) {
+    .upload-acoes > * {
+        flex: 1;
+    }
+}

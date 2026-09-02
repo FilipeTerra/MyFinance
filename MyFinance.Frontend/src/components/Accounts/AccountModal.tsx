@@ -1,3 +1,4 @@
+import { Modal } from '../Shared/ui/Modal';
 import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -124,9 +125,11 @@ export function AccountModal({ isOpen, onClose, onSuccess, accountToEdit }: Acco
     if (!isOpen) return null;
 
     return (
-        <div className="modal-overlay">
-            <div className="modal-content">
-                <h2>{isEditing ? 'Editar Conta' : 'Nova Conta'}</h2>
+        <Modal
+            onFechar={onClose}
+            titulo={isEditing ? 'Editar Conta' : 'Nova Conta'}
+            tamanho="md"
+        >
                 
                 {error && <div className="modal-error-message">{error}</div>}
 
@@ -177,7 +180,6 @@ export function AccountModal({ isOpen, onClose, onSuccess, accountToEdit }: Acco
                         </button>
                     </div>
                 </form>
-            </div>
-        </div>
+        </Modal>
     );
 }

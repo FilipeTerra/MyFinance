@@ -1,4 +1,5 @@
-﻿import './TransactionModal.css';
+import { Modal } from '../Shared/ui/Modal';
+import './TransactionModal.css';
 import React, { useEffect } from 'react';
 import type { AccountResponseDto } from '../../types/AccountResponseDto';
 import type { CategoryDto } from '../Categories/CategorySelectField';
@@ -178,9 +179,11 @@ export function TransactionModal({
     const buttonText = isLoading ? 'Salvando...' : (isEditing ? 'Salvar Alterações' : 'Salvar Transação');
 
     return (
-        <div className="modal-overlay">
-            <div className="modal-content">
-                <h2>{modalTitle}</h2>
+        <Modal
+            onFechar={onClose}
+            titulo={modalTitle}
+            tamanho="md"
+        >
                 {apiError && <div className="modal-error-message">{apiError}</div>}
 
                 <form onSubmit={handleSubmit(onSubmit, (errors) => console.log("Erros:", errors))}>
@@ -276,7 +279,6 @@ export function TransactionModal({
                         </button>
                     </div>
                 </form>
-            </div>
-        </div>
+        </Modal>
     );
 }
