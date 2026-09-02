@@ -7,3 +7,5 @@ export { Colapsavel } from './Colapsavel';
 export { EstadoVazio } from './EstadoVazio';
 export { Skeleton } from './Skeleton';
 export { Alerta } from './Alerta';
+export { Modal } from './Modal';
+export type { ModalProps, TamanhoModal } from './Modal';

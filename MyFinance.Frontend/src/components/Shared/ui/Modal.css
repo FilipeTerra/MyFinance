@@ -1,0 +1,164 @@
+/* Base compartilhada dos modais — ver Modal.tsx */
+
+.ui-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-modal);
+    background: var(--color-overlay);
+    display: flex;
+    justify-content: center;
+    /* `flex-start`, e NÃO `center`. Centralizar um filho mais alto que o
+       container rolável empurra o topo dele para *antes* da origem de rolagem,
+       e não existe deslocamento negativo para onde rolar — o começo do modal
+       fica inalcançável. Era exatamente esse o bug dos cinco dialetos antigos,
+       e só acrescentar `overflow-y` não o resolveria.
+       A centralização real vem do `margin: auto` do painel: em container flex,
+       margem automática centraliza quando há folga e colapsa para zero quando
+       não há. */
+    align-items: flex-start;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: var(--space-8);
+    animation: uiModalSurgir var(--duration-slow) var(--ease-out);
+}
+
+.ui-modal {
+    margin: auto;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-height: calc(100dvh - var(--space-16));
+    background: var(--color-surface);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-2xl);
+    animation: uiModalCrescer var(--duration-slow) var(--ease-out);
+}
+
+.ui-modal--sm { max-width: 400px; }
+.ui-modal--md { max-width: 480px; }
+.ui-modal--lg { max-width: 560px; }
+.ui-modal--xl { max-width: 960px; }
+
+.ui-modal-cabecalho {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-8);
+    flex-shrink: 0;
+    padding: var(--space-12) var(--space-16);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.ui-modal-titulo {
+    margin: 0;
+    font-size: var(--text-lg);
+    font-weight: var(--weight-semibold);
+    color: var(--color-text);
+}
+
+.ui-modal-fechar {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    min-height: 32px;
+    padding: 0;
+    border: none;
+    border-radius: var(--radius-md);
+    background: none;
+    font-size: var(--text-xl);
+    line-height: 1;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: background var(--duration-base) var(--ease-out),
+                color var(--duration-base) var(--ease-out);
+}
+
+    .ui-modal-fechar:hover {
+        background: var(--color-surface-muted);
+        color: var(--color-text);
+    }
+
+.ui-modal-corpo {
+    padding: var(--space-12) var(--space-16) var(--space-16);
+}
+
+.ui-modal-rodape {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-8);
+    flex-shrink: 0;
+    padding: var(--space-12) var(--space-16);
+    border-top: 1px solid var(--color-border);
+}
+
+/* Cabeçalho e rodapé fixos, corpo rolando por dentro. */
+.ui-modal--corpo-rolavel {
+    max-height: min(85dvh, calc(100dvh - var(--space-16)));
+}
+
+    .ui-modal--corpo-rolavel .ui-modal-corpo {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+    }
+
+
+/* ═══════════════════════════════════════════════════════════════
+   Celular — o modal vira folha de baixo
+════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 767.98px) {
+    .ui-modal-overlay {
+        padding: 0;
+        align-items: flex-end;
+    }
+
+    .ui-modal {
+        margin: 0;
+        max-width: none; /* anula sm/md/lg/xl */
+        max-height: 90dvh;
+        border-radius: var(--radius-3xl) var(--radius-3xl) 0 0;
+        /* A safe area vai só aqui, nunca também no rodapé: aplicar nos dois é
+           o erro mais comum deste padrão e dobra o espaço embaixo. */
+        padding-bottom: var(--safe-bottom);
+        animation: uiModalSubir var(--duration-slower) var(--ease-out);
+    }
+
+    /* Em folha o corpo sempre rola por dentro, para o rodapé de ações não
+       sumir abaixo da dobra num formulário longo. */
+    .ui-modal-corpo {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+    }
+
+    /* Ações de largura total: alvo de toque maior e ordem previsível. */
+    .ui-modal-rodape {
+        gap: var(--space-6);
+    }
+
+        .ui-modal-rodape > * {
+            flex: 1;
+        }
+}
+
+@keyframes uiModalSurgir {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes uiModalCrescer {
+    from { opacity: 0; transform: scale(0.97); }
+    to { opacity: 1; transform: none; }
+}
+
+/* O reset global de prefers-reduced-motion em index.css já reduz isto a um
+   aparecer seco para quem pediu menos movimento. */
+@keyframes uiModalSubir {
+    from { transform: translateY(100%); }
+    to { transform: none; }
+}

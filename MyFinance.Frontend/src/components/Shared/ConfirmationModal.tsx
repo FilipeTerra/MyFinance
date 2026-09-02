@@ -1,3 +1,4 @@
+import { Modal } from './ui/Modal';
 import './ConfirmationModal.css';
 
 interface ConfirmationModalProps {
@@ -24,8 +25,23 @@ export function ConfirmationModal({
     if (!isOpen) return null;
 
     return (
-        <div className="conf-modal-overlay">
-            <div className="conf-modal-content">
+        <Modal
+            onFechar={onClose}
+            titulo={title}
+            tamanho="sm"
+            semCabecalho
+            className="conf-modal-content"
+            rodape={
+                <>
+                    <button onClick={onClose} className="conf-modal-btn conf-btn-cancel">
+                        {cancelText}
+                    </button>
+                    <button onClick={onConfirm} className="conf-modal-btn conf-btn-confirm">
+                        {confirmText}
+                    </button>
+                </>
+            }
+        >
                 <div className="conf-modal-body">
                     {/* Ícone de Alerta/Lixeira */}
                     <div className="conf-modal-icon-wrapper">
@@ -37,16 +53,6 @@ export function ConfirmationModal({
                     <h3 className="conf-modal-title">{title}</h3>
                     <p className="conf-modal-description">{description}</p>
                 </div>
-
-                <div className="conf-modal-actions">
-                    <button onClick={onClose} className="conf-modal-btn conf-btn-cancel">
-                        {cancelText}
-                    </button>
-                    <button onClick={onConfirm} className="conf-modal-btn conf-btn-confirm">
-                        {confirmText}
-                    </button>
-                </div>
-            </div>
-        </div>
+        </Modal>
     );
 }

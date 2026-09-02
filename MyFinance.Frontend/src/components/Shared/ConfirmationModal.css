@@ -1,26 +1,16 @@
 /* --- CONFIRMATION MODAL (Estilo Filament) --- */
 
-.conf-modal-overlay {
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background-color: var(--color-overlay);
-    backdrop-filter: blur(4px);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: var(--z-modal); /* Mesmo token dos demais modais — antes usava 9999 isolado, hoje alinhado com AccountModal/TransactionModal (1000/var(--z-overlay)). */
-    animation: confFadeIn 0.2s ease-out;
-}
+/* O overlay e o painel agora vêm de Shared/ui/Modal — este arquivo cuida só do
+   miolo (ícone, textos, botões). `.conf-modal-content` sobrou apenas como
+   gancho de escopo, passado ao Modal via `className`. */
 
-.conf-modal-content {
-    background-color: white;
-    width: 100%;
-    max-width: 28rem;
-    border-radius: var(--radius-xl);
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-    overflow: hidden;
-    animation: confScaleIn 0.2s ease-out;
-    padding: var(--space-12);
+/* As duas ações ficam lado a lado, de larguras iguais, e não encostadas à
+   direita como no rodapé padrão. No celular o próprio Modal já estica os
+   filhos do rodapé, então esta regra só precisa valer no desktop. */
+.conf-modal-content .ui-modal-rodape {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-6);
 }
 
 .conf-modal-body {
@@ -61,12 +51,6 @@
 }
 
 /* Botões */
-.conf-modal-actions {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: var(--space-6);
-}
-
 .conf-modal-btn {
     display: inline-flex;
     justify-content: center;
@@ -94,7 +78,3 @@
     box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
 }
 .conf-btn-confirm:hover { background-color: var(--red-700); }
-
-/* Animações */
-@keyframes confFadeIn { from { opacity: 0; } to { opacity: 1; } }
-@keyframes confScaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
