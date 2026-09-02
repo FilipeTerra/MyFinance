@@ -454,3 +454,41 @@
     font-weight: 600;
     color: #6366f1;
 }
+
+
+/* ═══════════════════════════════════════════════════════════════
+   Celular — só o chat
+   Abaixo de 768px a coluna de sugestões sai inteira e a conversa
+   ocupa a tela toda.
+════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 767.98px) {
+    /* As sugestões custam 30% da largura numa tela onde a conversa já é
+       apertada, e o mesmo pedido pode ser digitado. `display: none` também
+       tira os quatro botões da ordem de tabulação e do leitor de tela. */
+    .quick-prompts-sidebar {
+        display: none;
+    }
+
+    /* Sem isto, o `flex: 0 0 70%` continuaria valendo e 30% da tela ficaria
+       vazia no lugar da barra removida. */
+    .chat-area {
+        flex: 1 1 auto;
+        min-width: 0;
+        padding: 0;
+    }
+
+    /* De borda a borda: os 28px de respiro e os cantos arredondados existiam
+       para destacar o painel dentro da faixa de 70%. Ocupando a tela inteira,
+       eles só roubariam largura da conversa. */
+    .chat-panel {
+        max-width: none;
+        border-radius: 0;
+        box-shadow: none;
+    }
+
+    /* 75% deixa uma margem morta larga demais numa tela de 375px. */
+    .bubble {
+        max-width: 88%;
+    }
+}
