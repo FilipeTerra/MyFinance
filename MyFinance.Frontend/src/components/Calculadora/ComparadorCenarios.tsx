@@ -26,6 +26,9 @@ import { useResultadoFoco } from '../../hooks/useResultadoFoco';
 import { useErrosFormulario } from '../../hooks/useErrosFormulario';
 import { CORES_CATEGORIA, yAxisProps, formatCurrencyCompacta } from '../Shared/charts/chartTheme';
 import { useIsMobile } from '../../hooks/useIsMobile';
+// .tabela/.tabela-wrap/.tabela-badge etc — não confiar em outro componente
+// carregar isto incidentalmente.
+import '../Shared/ui/Tabela.css';
 import './ComparadorCenarios.css';
 
 /** Paleta categórica validada (ordem fixa — nunca reatribuída por rank), a mesma usada em Gastos. */
@@ -147,6 +150,47 @@ export function ComparadorCenarios({ base, onBaseChange }: ComparadorCenariosPro
             atual.resultado.valorFinalLiquido > arr[melhor].resultado.valorFinalLiquido ? i : melhor, 0)
         : -1;
 
+    /**
+     * Fonte única das métricas comparadas — consumida pela tabela (desktop,
+     * uma coluna por cenário) e pelos cartões (celular, um cartão por
+     * cenário). Sem isto, a tabela virar cartões abaixo de 768px exigiria
+     * copiar cada fórmula duas vezes, com risco real de as duas cópias
+     * divergirem numa correção futura.
+     */
+    const linhasComparacao: {
+        chave: string;
+        rotulo: string;
+        valor: (r: ResultadoCenario) => string;
+        tom?: 'red';
+        destaque?: boolean;
+    }[] = resultados
+        ? [
+            { chave: 'taxa', rotulo: 'Taxa efetiva (a.a.)', valor: r => `${r.resultado.taxaJurosAnualUtilizada.toFixed(2)}%` },
+            { chave: 'aportado', rotulo: 'Total aportado', valor: r => formatCurrency(r.resultado.totalAportado) },
+            {
+                chave: 'tributos',
+                rotulo: 'Total de tributos',
+                valor: r => `-${formatCurrency(r.resultado.valorIof + r.resultado.valorComeCotasRetido + r.resultado.valorImpostoRenda)}`,
+                tom: 'red',
+            },
+            {
+                chave: 'rentLiquida',
+                rotulo: 'Rentabilidade líquida',
+                valor: r => `${(((r.resultado.valorFinalLiquido - r.resultado.totalAportado) / r.resultado.totalAportado) * 100).toFixed(2)}%`,
+            },
+            ...(resultados.some(r => r.resultado.rentabilidadeRealAnualPercentual != null)
+                ? [{
+                    chave: 'rentReal',
+                    rotulo: 'Rentabilidade real (a.a.)',
+                    valor: (r: ResultadoCenario) => r.resultado.rentabilidadeRealAnualPercentual != null
+                        ? `${r.resultado.rentabilidadeRealAnualPercentual.toFixed(2)}%`
+                        : '—',
+                }]
+                : []),
+            { chave: 'valorFinal', rotulo: 'Valor final líquido', valor: r => formatCurrency(r.resultado.valorFinalLiquido), destaque: true },
+        ]
+        : [];
+
     return (
         <div className="proj-container">
             <form className="proj-form" onSubmit={handleSubmit}>
@@ -214,72 +258,79 @@ export function ComparadorCenarios({ base, onBaseChange }: ComparadorCenariosPro
 
             {resultados && (
                 <ResultadoSecao resultadoRef={resultadoRef}>
-                    <div className="cmp-tabela-wrap">
-                        <table className="cmp-tabela">
+                    {/* Desktop: tabela com uma coluna por cenário — comparar lado a lado é o
+                        ponto desta tela, e cabe bem em telas largas. */}
+                    <div className="tabela-wrap">
+                        <table className="tabela tabela--numerica">
                             <thead>
                                 <tr>
                                     <th>Cenário</th>
                                     {resultados.map((r, i) => (
                                         <th key={r.cenario.id}>
-                                            <span className="cmp-th-dot" style={{ background: CORES_CENARIO[i] }} aria-hidden="true" />
+                                            <span className="tabela-th-dot" style={{ background: CORES_CENARIO[i] }} aria-hidden="true" />
                                             {TIPO_ATIVO_CALCULADORA_META[r.cenario.tipoAtivo].label}
-                                            {i === melhorIndice && <span className="cmp-badge-melhor">melhor</span>}
+                                            {i === melhorIndice && <span className="tabela-badge">melhor</span>}
                                         </th>
                                     ))}
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr>
-                                    <td>Taxa efetiva (a.a.)</td>
-                                    {resultados.map(r => (
-                                        <td key={r.cenario.id}>{r.resultado.taxaJurosAnualUtilizada.toFixed(2)}%</td>
-                                    ))}
-                                </tr>
-                                <tr>
-                                    <td>Total aportado</td>
-                                    {resultados.map(r => (
-                                        <td key={r.cenario.id}>{formatCurrency(r.resultado.totalAportado)}</td>
-                                    ))}
-                                </tr>
-                                <tr>
-                                    <td>Total de tributos</td>
-                                    {resultados.map(r => (
-                                        <td key={r.cenario.id} className="cmp-td-red">
-                                            -{formatCurrency(r.resultado.valorIof + r.resultado.valorComeCotasRetido + r.resultado.valorImpostoRenda)}
-                                        </td>
-                                    ))}
-                                </tr>
-                                <tr>
-                                    <td>Rentabilidade líquida</td>
-                                    {resultados.map(r => (
-                                        <td key={r.cenario.id}>
-                                            {(((r.resultado.valorFinalLiquido - r.resultado.totalAportado) / r.resultado.totalAportado) * 100).toFixed(2)}%
-                                        </td>
-                                    ))}
-                                </tr>
-                                {resultados.some(r => r.resultado.rentabilidadeRealAnualPercentual != null) && (
-                                    <tr>
-                                        <td>Rentabilidade real (a.a.)</td>
-                                        {resultados.map(r => (
-                                            <td key={r.cenario.id}>
-                                                {r.resultado.rentabilidadeRealAnualPercentual != null
-                                                    ? `${r.resultado.rentabilidadeRealAnualPercentual.toFixed(2)}%`
-                                                    : '—'}
+                                {linhasComparacao.map(linha => (
+                                    <tr key={linha.chave} className={linha.destaque ? 'cmp-row-highlight' : undefined}>
+                                        <td>{linha.rotulo}</td>
+                                        {resultados.map((r, i) => (
+                                            <td
+                                                key={r.cenario.id}
+                                                className={
+                                                    linha.destaque && i === melhorIndice
+                                                        ? 'cmp-td-melhor'
+                                                        : linha.tom === 'red' ? 'destaque-negativo' : undefined
+                                                }
+                                            >
+                                                {linha.valor(r)}
                                             </td>
                                         ))}
                                     </tr>
-                                )}
-                                <tr className="cmp-row-highlight">
-                                    <td>Valor final líquido</td>
-                                    {resultados.map((r, i) => (
-                                        <td key={r.cenario.id} className={i === melhorIndice ? 'cmp-td-melhor' : undefined}>
-                                            {formatCurrency(r.resultado.valorFinalLiquido)}
-                                        </td>
-                                    ))}
-                                </tr>
+                                ))}
                             </tbody>
                         </table>
                     </div>
+
+                    {/* Celular: um cartão por cenário. A tabela acima é transposta —
+                        coluna vira cartão, linha vira rótulo dentro dele — não dá para
+                        chegar aqui só com CSS a partir do <table>; os cartões usam a
+                        mesma `linhasComparacao` para não duplicar nenhuma fórmula. */}
+                    <ul className="cmp-cartoes">
+                        {resultados.map((r, i) => (
+                            <li
+                                key={r.cenario.id}
+                                className={`cmp-cartao${i === melhorIndice ? ' cmp-cartao--melhor' : ''}`}
+                            >
+                                <div className="cmp-cartao-cabecalho">
+                                    <span className="tabela-th-dot" style={{ background: CORES_CENARIO[i] }} aria-hidden="true" />
+                                    <span className="cmp-cartao-titulo">{TIPO_ATIVO_CALCULADORA_META[r.cenario.tipoAtivo].label}</span>
+                                    {i === melhorIndice && <span className="tabela-badge">melhor</span>}
+                                </div>
+                                <dl className="cmp-cartao-lista">
+                                    {linhasComparacao.map(linha => (
+                                        <div
+                                            key={linha.chave}
+                                            className={`cmp-cartao-linha${linha.destaque ? ' cmp-cartao-linha--destaque' : ''}`}
+                                        >
+                                            <dt>{linha.rotulo}</dt>
+                                            <dd className={
+                                                linha.destaque && i === melhorIndice
+                                                    ? 'cmp-td-melhor'
+                                                    : linha.tom === 'red' ? 'destaque-negativo' : undefined
+                                            }>
+                                                {linha.valor(r)}
+                                            </dd>
+                                        </div>
+                                    ))}
+                                </dl>
+                            </li>
+                        ))}
+                    </ul>
 
                     <div className="proj-chart">
                         <ResponsiveContainer width="100%" height={ehMobile ? 260 : 320}>

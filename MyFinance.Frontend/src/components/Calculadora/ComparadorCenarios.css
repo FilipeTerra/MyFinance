@@ -98,71 +98,15 @@
 }
 
 /* ── Tabela de comparação ──────────────────────────────────────────────── */
-.cmp-tabela-wrap {
-    background: var(--white);
-    border: 1px solid var(--slate-200);
-    border-radius: var(--radius-xl);
-    padding: var(--space-10) var(--space-12);
-    box-shadow: var(--shadow-sm);
-    overflow-x: auto;
-}
-
-.cmp-tabela {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: var(--text-base);
-}
-
-.cmp-tabela th,
-.cmp-tabela td {
-    padding: var(--space-5) var(--space-7);
-    text-align: right;
-    white-space: nowrap;
-    font-variant-numeric: tabular-nums;
-}
-
-.cmp-tabela th:first-child,
-.cmp-tabela td:first-child {
-    text-align: left;
-    color: var(--slate-500);
-    font-weight: 500;
-    white-space: normal;
-}
-
-.cmp-tabela thead th {
-    border-bottom: 2px solid var(--slate-200);
-    color: var(--slate-800);
-    font-weight: 700;
-}
-
-.cmp-th-dot {
-    display: inline-block;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    margin-right: var(--space-3);
-}
-
-.cmp-badge-melhor {
-    display: inline-block;
-    margin-left: var(--space-3);
-    padding: var(--space-1) var(--space-4);
-    background: var(--green-100);
-    color: var(--green-700);
-    border-radius: var(--radius-full);
-    font-size: var(--text-2xs);
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-}
-
-.cmp-tabela tbody tr {
-    border-bottom: 1px solid var(--slate-100);
-}
-
-.cmp-td-red {
-    color: var(--red-500);
-}
+/* O wrapper, a tabela base, o ponto colorido do cabeçalho, o badge "melhor" e
+   a cor de tributo negativo agora vêm de Shared/ui/Tabela.css
+   (.tabela-wrap/.tabela/.tabela--numerica/.tabela-th-dot/.tabela-badge/
+   .destaque-negativo) — eram idênticos, byte a byte, aos mesmos estilos em
+   CalculadoraFinanciamento.css. Ficam aqui só os dois destaques que não têm
+   equivalente no arquivo compartilhado: `.cmp-row-highlight` marca a linha
+   de resumo final (não é "vencedor", é "total"), e `.cmp-td-melhor` marca
+   uma CÉLULA específica — porque aqui quem compete são as colunas, não as
+   linhas, o oposto do padrão linha-vencedora de `.tabela-row--destaque`. */
 
 .cmp-row-highlight td {
     font-weight: 800;
@@ -176,12 +120,119 @@
     color: var(--green-700) !important;
 }
 
+/* ── Cartões (celular) ────────────────────────────────────────────────────
+   A mesma comparação da tabela, uma coluna por vez, virada de lado: cada
+   cartão é um cenário, e dentro dele cada linha é uma métrica. Escondido no
+   desktop — só a tabela ou só os cartões aparecem, nunca os dois. */
+.cmp-cartoes {
+    display: none;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    flex-direction: column;
+    gap: var(--space-8);
+}
+
+.cmp-cartao {
+    background: var(--white);
+    border: 1px solid var(--slate-200);
+    border-radius: var(--radius-xl);
+    padding: var(--space-8) var(--space-10);
+    box-shadow: var(--shadow-sm);
+}
+
+.cmp-cartao--melhor {
+    border-color: var(--green-200);
+    box-shadow: 0 0 0 1px var(--green-200), var(--shadow-sm);
+}
+
+.cmp-cartao-cabecalho {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding-bottom: var(--space-6);
+    margin-bottom: var(--space-6);
+    border-bottom: 2px solid var(--slate-200);
+    font-weight: 700;
+    color: var(--slate-800);
+}
+
+.cmp-cartao-titulo {
+    flex: 1;
+    min-width: 0;
+}
+
+.cmp-cartao-lista {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+}
+
+.cmp-cartao-linha {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-8);
+    border-bottom: 1px solid var(--slate-100);
+    padding-bottom: var(--space-5);
+}
+
+    .cmp-cartao-linha:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+    }
+
+    .cmp-cartao-linha dt {
+        color: var(--slate-500);
+        font-weight: 500;
+    }
+
+    .cmp-cartao-linha dd {
+        margin: 0;
+        font-variant-numeric: tabular-nums;
+        text-align: right;
+        color: var(--slate-800);
+    }
+
+    /* Achado ao vivo: `.destaque-negativo` sozinho (0,1,0) perde para a regra
+       acima (0,1,1) — o "dd" no seletor conta como especificidade de tipo, e
+       isso bastava para o vermelho nunca aparecer, independente da ordem no
+       arquivo. Precisa de mais uma classe no seletor para vencer de verdade,
+       não só de !important. */
+    .cmp-cartao-linha dd.destaque-negativo {
+        color: var(--color-danger);
+    }
+
+.cmp-cartao-linha--destaque {
+    padding-top: var(--space-2);
+    border-top: 2px solid var(--slate-200);
+}
+
+    .cmp-cartao-linha--destaque dt,
+    .cmp-cartao-linha--destaque dd {
+        font-weight: 800;
+        font-size: var(--text-md);
+        color: var(--slate-800);
+    }
+
 /* Faltava por completo — o wrapper da tabela mantinha o padding cheio em
    telas estreitas, comendo espaço útil sem nenhuma pista de que há mais
    colunas para o lado. */
-@media (max-width: 640px) {
-    .cmp-tabela-wrap {
-        padding: var(--space-8);
+@media (max-width: 767.98px) {
+    /* `:not(--scroll)`, mesmo este arquivo não tendo essa variante: CSS é
+       global, e um `.tabela-wrap { display:none }` liso aqui também bateria
+       na tabela de cronograma de CalculadoraFinanciamento.css (que TEM as
+       duas classes e precisa continuar visível — é a exceção combinada).
+       Achado ao vivo: sem este guard, a tabela de cronograma sumia inteira,
+       cartões e tudo, porque as duas folhas de estilo carregam juntas na
+       mesma página. */
+    .tabela-wrap:not(.tabela-wrap--scroll) {
+        display: none;
+    }
+
+    .cmp-cartoes {
+        display: flex;
     }
 
     .cmp-cenarios-grid {

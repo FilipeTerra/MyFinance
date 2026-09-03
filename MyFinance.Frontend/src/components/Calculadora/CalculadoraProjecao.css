@@ -349,7 +349,7 @@
     box-shadow: var(--shadow-sm);
 }
 
-@media (max-width: 640px) {
+@media (max-width: 767.98px) {
     .proj-form-row {
         grid-template-columns: 1fr;
     }

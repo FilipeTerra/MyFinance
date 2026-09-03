@@ -43,10 +43,18 @@ export const tooltipMoedaFormatter = (value: unknown, name: string): [string, st
 ];
 
 /**
- * Versão compacta de `formatCurrency` para o eixo Y no celular ("R$ 1,2 mil"
- * em vez de "R$ 1.200,00") — mesmo com `width: 44`, o valor completo não cabe
+ * Versão compacta de `formatCurrency` para o eixo Y no celular ("R$180mil" em
+ * vez de "R$ 180.000,00") — mesmo com `width: 44`, o valor completo não cabe
  * sem quebrar. Só para rótulo de eixo; o tooltip continua com o valor exato
  * via `tooltipMoedaFormatter`.
+ *
+ * Sem espaços internos, de propósito: o `<Text>` interno do Recharts mede a
+ * largura e quebra o rótulo em várias linhas em CADA espaço que não coube —
+ * confirmado ao vivo (`ResultadoProjecaoDetalhado`, dados reais da API):
+ * "R$ 45 mil" virava duas linhas e "R$ 180 mil" virava três, cada tick do
+ * eixo com uma altura diferente. Sem espaço, o rótulo é uma palavra só e o
+ * Recharts não tem onde quebrar — sempre uma linha, mesmo que ultrapasse
+ * ligeiramente os 44px (ele deixa a palavra vazar, não corta o texto).
  */
 export const formatCurrencyCompacta = (value: number): string => {
     const absoluto = Math.abs(value);
@@ -55,7 +63,7 @@ export const formatCurrencyCompacta = (value: number): string => {
     const compactar = (divisor: number, sufixo: string): string => {
         const numero = absoluto / divisor;
         const texto = numero % 1 === 0 ? numero.toFixed(0) : numero.toFixed(1).replace('.', ',');
-        return `${sinal}R$ ${texto} ${sufixo}`;
+        return `${sinal}R$${texto}${sufixo}`;
     };
 
     if (absoluto >= 1_000_000) return compactar(1_000_000, 'mi');

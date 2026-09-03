@@ -67,6 +67,21 @@ function exportarCronogramaCsv(resultado: FinanciamentoResponseDto) {
     URL.revokeObjectURL(url);
 }
 
+/**
+ * Fonte única dos campos do comparativo Price x SAC — consumida pela tabela
+ * (desktop, uma linha por sistema) e pelos cartões (celular, um cartão por
+ * sistema). Mesmo raciocínio do `linhasComparacao` de `ComparadorCenarios`:
+ * evita reescrever os cinco campos duas vezes e correr o risco de as duas
+ * versões divergirem numa correção futura.
+ */
+const camposComparativoFinanciamento: { chave: string; rotulo: string; valor: (r: ResultadoFinanciamentoDto) => string }[] = [
+    { chave: 'parcela1', rotulo: '1ª parcela', valor: r => formatCurrency(r.primeiraParcela) },
+    { chave: 'parcelaUltima', rotulo: 'Última parcela', valor: r => formatCurrency(r.ultimaParcela) },
+    { chave: 'totalPago', rotulo: 'Total pago', valor: r => formatCurrency(r.totalPago) },
+    { chave: 'totalJuros', rotulo: 'Total de juros', valor: r => formatCurrency(r.totalJuros) },
+    { chave: 'custoEfetivo', rotulo: 'Custo efetivo', valor: r => `${r.custoEfetivoTotalPercentual.toFixed(2)}%` },
+];
+
 export function CalculadoraFinanciamento() {
     const ehMobile = useIsMobile();
     const [valorFinanciado, setValorFinanciado] = useState('');
@@ -296,38 +311,48 @@ export function CalculadoraFinanciamento() {
                         O sistema <strong>{resultado.sistemaMaisBarato}</strong> sai {formatCurrency(resultado.diferencaTotalJuros)} mais barato no total.
                     </p>
 
-                    <div className="fin-tabela-wrap">
-                        <table className="fin-tabela fin-tabela--comparativo">
+                    {/* Desktop: tabela — só 2 linhas (Price, SAC), cabe sem apertar. */}
+                    <div className="tabela-wrap">
+                        <table className="tabela tabela--numerica fin-tabela--comparativo">
                             <thead>
                                 <tr>
                                     <th>Sistema</th>
-                                    <th>1ª parcela</th>
-                                    <th>Última parcela</th>
-                                    <th>Total pago</th>
-                                    <th>Total de juros</th>
-                                    <th>Custo efetivo</th>
+                                    {camposComparativoFinanciamento.map(c => <th key={c.chave}>{c.rotulo}</th>)}
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr className={resultado.sistemaMaisBarato === 'Price' ? 'fin-row-melhor' : undefined}>
-                                    <td>Price</td>
-                                    <td>{formatCurrency(resultado.price.primeiraParcela)}</td>
-                                    <td>{formatCurrency(resultado.price.ultimaParcela)}</td>
-                                    <td>{formatCurrency(resultado.price.totalPago)}</td>
-                                    <td>{formatCurrency(resultado.price.totalJuros)}</td>
-                                    <td>{resultado.price.custoEfetivoTotalPercentual.toFixed(2)}%</td>
-                                </tr>
-                                <tr className={resultado.sistemaMaisBarato === 'SAC' ? 'fin-row-melhor' : undefined}>
-                                    <td>SAC</td>
-                                    <td>{formatCurrency(resultado.sac.primeiraParcela)}</td>
-                                    <td>{formatCurrency(resultado.sac.ultimaParcela)}</td>
-                                    <td>{formatCurrency(resultado.sac.totalPago)}</td>
-                                    <td>{formatCurrency(resultado.sac.totalJuros)}</td>
-                                    <td>{resultado.sac.custoEfetivoTotalPercentual.toFixed(2)}%</td>
-                                </tr>
+                                {([['Price', resultado.price], ['SAC', resultado.sac]] as const).map(([nome, dados]) => (
+                                    <tr key={nome} className={resultado.sistemaMaisBarato === nome ? 'tabela-row--destaque' : undefined}>
+                                        <td>{nome}</td>
+                                        {camposComparativoFinanciamento.map(c => <td key={c.chave}>{c.valor(dados)}</td>)}
+                                    </tr>
+                                ))}
                             </tbody>
                         </table>
                     </div>
+
+                    {/* Celular: um cartão por sistema, mesma fonte de campos da tabela. */}
+                    <ul className="fin-cartoes">
+                        {([['Price', resultado.price], ['SAC', resultado.sac]] as const).map(([nome, dados]) => (
+                            <li
+                                key={nome}
+                                className={`fin-cartao${resultado.sistemaMaisBarato === nome ? ' fin-cartao--melhor' : ''}`}
+                            >
+                                <div className="fin-cartao-cabecalho">
+                                    <span className="fin-cartao-titulo">{nome}</span>
+                                    {resultado.sistemaMaisBarato === nome && <span className="tabela-badge">mais barato</span>}
+                                </div>
+                                <dl className="fin-cartao-lista">
+                                    {camposComparativoFinanciamento.map(c => (
+                                        <div key={c.chave} className="fin-cartao-linha">
+                                            <dt>{c.rotulo}</dt>
+                                            <dd>{c.valor(dados)}</dd>
+                                        </div>
+                                    ))}
+                                </dl>
+                            </li>
+                        ))}
+                    </ul>
 
                     <div className="proj-chart">
                         <ResponsiveContainer width="100%" height={ehMobile ? 220 : 280}>
@@ -362,8 +387,8 @@ export function CalculadoraFinanciamento() {
                     </div>
 
                     {parcelasExibidas && (
-                        <div className="fin-tabela-wrap fin-tabela-wrap--scroll">
-                            <table className="fin-tabela">
+                        <div className="tabela-wrap tabela-wrap--scroll">
+                            <table className="tabela tabela--numerica">
                                 <thead>
                                     <tr>
                                         <th>Nº</th>
