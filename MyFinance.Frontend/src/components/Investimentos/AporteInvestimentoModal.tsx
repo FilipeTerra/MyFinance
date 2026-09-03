@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import ReactDOM from 'react-dom';
+import { Modal } from '../Shared/ui/Modal';
 import {
     investimentoService,
     accountService,
@@ -102,13 +102,12 @@ export function AporteInvestimentoModal({ investimentoId, investimentoNome, onCl
         }
     };
 
-    return ReactDOM.createPortal(
-        <div className="inv-overlay" onClick={onClose}>
-            <div className="inv-modal" onClick={e => e.stopPropagation()}>
-                <div className="inv-modal-header">
-                    <h2 className="inv-modal-title">Aportar mais</h2>
-                    <button className="inv-modal-close" onClick={onClose} aria-label="Fechar">×</button>
-                </div>
+    return (
+        <Modal
+            onFechar={onClose}
+            titulo="Aportar mais"
+            tamanho="md"
+        >
 
                 <div className="inv-edit-context">
                     <span className="inv-edit-context-name">{investimentoNome}</span>
@@ -166,8 +165,6 @@ export function AporteInvestimentoModal({ investimentoId, investimentoNome, onCl
                         </div>
                     </form>
                 )}
-            </div>
-        </div>,
-        document.body
+        </Modal>
     );
 }

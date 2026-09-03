@@ -1,0 +1,137 @@
+.seg-control {
+    display: inline-flex;
+    gap: var(--space-3);
+}
+
+.seg-control--full {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.seg-control--rolavel {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+    /* Sem isto, um item flex nunca encolhe abaixo do tamanho do seu conteúdo
+       (min-width:auto é o padrão) — o grupo empurraria o contêiner pai para
+       fora da tela em vez de rolar internamente. */
+    min-width: 0;
+    max-width: 100%;
+}
+
+.seg-control--rolavel .seg-control-btn {
+    scroll-snap-align: start;
+    flex-shrink: 0;
+}
+
+.seg-control-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.seg-control-btn-icon {
+    font-size: var(--text-md);
+    line-height: 1;
+}
+
+/* ── variante pill: chips de formulário ──────────────────────────────── */
+.seg-control--pill .seg-control-btn {
+    padding: var(--space-5) var(--space-8);
+    background: var(--color-surface-subtle);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-full);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: border-color var(--duration-base), color var(--duration-base), background var(--duration-base);
+    white-space: nowrap;
+}
+
+.seg-control--pill .seg-control-btn:hover:not(:disabled) {
+    border-color: var(--color-border-strong);
+}
+
+.seg-control--pill .seg-control-btn--active {
+    background: var(--color-primary-tint);
+    border-color: var(--color-primary);
+    color: var(--color-primary-strong);
+}
+
+.seg-control--pill.seg-control--sm .seg-control-btn {
+    padding: var(--space-3) var(--space-6);
+    font-size: var(--text-xs);
+}
+
+/* ── variante segmented: trilho cinza, pill branca ativa (abas do dashboard) ── */
+.seg-control--segmented {
+    display: inline-flex;
+    gap: var(--space-2);
+    background: var(--color-border);
+    padding: var(--space-3);
+    border-radius: var(--radius-xl);
+}
+
+.seg-control--segmented .seg-control-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-4);
+    padding: var(--space-5) var(--space-10);
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-lg);
+    font-size: var(--text-base);
+    font-weight: var(--weight-semibold);
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: background var(--duration-slow), color var(--duration-slow), box-shadow var(--duration-slow);
+}
+
+.seg-control--segmented .seg-control-btn:hover:not(.seg-control-btn--active):not(:disabled) {
+    color: var(--color-text-body);
+}
+
+.seg-control--segmented .seg-control-btn--active {
+    background: var(--color-surface);
+    color: var(--color-text);
+    box-shadow: var(--shadow-raised);
+}
+
+/* ── variante tabs: navegação com sublinhado (modos da calculadora) ──── */
+.seg-control--tabs {
+    display: flex;
+    gap: var(--space-2);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.seg-control--tabs.seg-control--rolavel {
+    flex-wrap: nowrap;
+}
+
+.seg-control--tabs .seg-control-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-6) var(--space-8);
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    font-size: var(--text-base);
+    font-weight: var(--weight-semibold);
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: color var(--duration-base), border-color var(--duration-base);
+}
+
+.seg-control--tabs .seg-control-btn:hover:not(.seg-control-btn--active):not(:disabled) {
+    color: var(--color-text-body);
+}
+
+.seg-control--tabs .seg-control-btn--active {
+    color: var(--color-primary);
+    border-bottom-color: var(--color-primary);
+}

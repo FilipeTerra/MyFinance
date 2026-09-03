@@ -1,0 +1,153 @@
+/* Estilos dos campos compartilhados da Calculadora (campos/Campo*.tsx). */
+
+.campo-form-group {
+    margin-bottom: var(--space-10);
+}
+
+.campo-form-group label {
+    display: block;
+    margin-bottom: var(--space-4);
+    font-size: var(--text-base);
+    font-weight: var(--weight-medium);
+    color: var(--color-text-secondary);
+}
+
+.campo-obrigatorio {
+    color: var(--color-danger);
+}
+
+.campo-form-group input,
+.campo-form-group select {
+    width: 100%;
+    padding: var(--space-6) var(--space-6);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-sm);
+    background-color: var(--color-surface-subtle);
+    color: var(--color-text-body);
+    font-size: var(--text-md);
+    font-family: inherit;
+    box-sizing: border-box;
+}
+
+.campo-form-group input:focus,
+.campo-form-group select:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: var(--focus-ring);
+}
+
+.campo-input--erro {
+    border-color: var(--color-danger-border-strong) !important;
+}
+
+.campo-input--erro:focus {
+    box-shadow: var(--focus-ring-danger) !important;
+}
+
+.campo-prazo-row {
+    display: flex;
+    gap: var(--space-6);
+}
+
+.campo-prazo-row input {
+    max-width: 120px;
+}
+
+.campo-taxa-manual-input {
+    margin-top: var(--space-5);
+    width: 100%;
+    padding: var(--space-6) var(--space-6);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-sm);
+    background-color: var(--color-surface-subtle);
+    color: var(--color-text-body);
+    font-size: var(--text-md);
+    font-family: inherit;
+    box-sizing: border-box;
+}
+
+.campo-taxa-manual-input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: var(--focus-ring);
+}
+
+.campo-hint {
+    font-size: var(--text-sm);
+    margin: var(--space-4) 0 0;
+    color: var(--color-text-muted);
+}
+
+.campo-erro {
+    display: block;
+    color: var(--color-danger);
+    font-size: var(--text-sm);
+    margin-top: var(--space-3);
+}
+
+.campo-erro--geral {
+    margin-bottom: var(--space-6);
+}
+
+.campo-btn-submit {
+    width: 100%;
+    padding: var(--space-6) var(--space-10);
+    border: none;
+    border-radius: var(--radius-md);
+    background: var(--color-primary);
+    color: var(--white);
+    font-size: var(--text-lg);
+    font-weight: var(--weight-bold);
+    cursor: pointer;
+    transition: background var(--duration-base), opacity var(--duration-base);
+}
+
+.campo-btn-submit:hover:not(:disabled) {
+    background: var(--color-primary-hover);
+}
+
+.campo-btn-submit:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.campo-btn-submit--secundaria {
+    background: var(--color-surface);
+    color: var(--color-primary);
+    border: 1px solid var(--color-primary);
+}
+
+.campo-btn-submit--secundaria:hover:not(:disabled) {
+    background: var(--color-primary-tint-soft);
+}
+
+/* ── Resultado ─────────────────────────────────────────────────────────── */
+/* Superfície com destaque na borda superior — antes o resultado usava a
+   mesma receita de card do formulário, separado só por um espaço. */
+.calc-resultado-secao {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-12);
+    background: var(--color-primary-tint-soft);
+    border: 1px solid var(--color-primary-tint);
+    border-top: 3px solid var(--color-primary);
+    border-radius: var(--radius-xl);
+    padding: var(--space-12);
+}
+
+.calc-resultado-secao:focus-visible {
+    outline: none;
+}
+
+.calc-resultado-titulo {
+    margin: 0;
+    font-size: var(--text-lg);
+    font-weight: var(--weight-bold);
+    color: var(--color-text);
+}
+
+.calc-resultado-eco {
+    margin: calc(-1 * var(--space-8)) 0 0;
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+}

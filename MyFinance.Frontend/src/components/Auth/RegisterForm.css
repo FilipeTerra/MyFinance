@@ -3,14 +3,14 @@
     width: 100%;
     display: flex;
     flex-direction: column;
-    gap: 1.2rem; /* Espaçamento ligeiramente menor entre os campos */
+    gap: var(--space-10); /* Espaçamento ligeiramente menor entre os campos */
 }
 
     .register-form h2 {
         margin-top: 0;
-        margin-bottom: 0.8rem; /* Espaço abaixo do tí­tulo */
-        color: #334155;
-        font-size: 1.75rem;
+        margin-bottom: var(--space-6); /* Espaço abaixo do tí­tulo */
+        color: var(--slate-700);
+        font-size: var(--text-2xl);
         font-weight: 600;
         text-align: center;
     }
@@ -23,51 +23,51 @@
 
         .register-form .form-group label {
             display: block;
-            margin-bottom: 0.5rem;
-            color: #64748b;
+            margin-bottom: var(--space-4);
+            color: var(--slate-500);
             font-weight: 500;
-            font-size: 0.9rem;
+            font-size: var(--text-base);
         }
 
         .register-form .form-group input {
             width: 100%;
-            padding: 0.85rem 1rem;
-            border: 1px solid #cbd5e1;
-            border-radius: 8px;
-            background-color: #f8fafc;
-            color: #334155;
-            font-size: 1rem;
+            padding: var(--space-7) var(--space-8);
+            border: 1px solid var(--slate-300);
+            border-radius: var(--radius-md);
+            background-color: var(--slate-50);
+            color: var(--slate-700);
+            font-size: var(--text-md);
             box-sizing: border-box;
             transition: border-color 0.2s ease, box-shadow 0.2s ease;
         }
 
             .register-form .form-group input:focus {
                 outline: none;
-                border-color: #3b82f6;
+                border-color: var(--blue-500);
                 box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
             }
 
             .register-form .form-group input::placeholder {
-                color: #94a3b8;
+                color: var(--slate-500);
             }
 
     /* Botão de Cadastro */
     .register-form .register-button {
         width: 100%;
-        padding: 0.9rem;
-        margin-top: 0.8rem; /* Espaço acima do botão */
+        padding: var(--space-7);
+        margin-top: var(--space-6); /* Espaço acima do botão */
         border: none;
-        border-radius: 8px;
-        background-color: #10b981; /* Verde como cor primária para cadastro */
+        border-radius: var(--radius-md);
+        background-color: var(--green-500); /* Verde como cor primária para cadastro */
         color: white;
-        font-size: 1.05rem;
+        font-size: var(--text-md);
         font-weight: 600;
         cursor: pointer;
         transition: background-color 0.2s ease, transform 0.1s ease;
     }
 
         .register-form .register-button:hover {
-            background-color: #059669; /* Verde mais escuro */
+            background-color: var(--green-600); /* Verde mais escuro */
         }
 
         .register-form .register-button:active {
@@ -76,38 +76,38 @@
 
     /* Mensagem de Erro (reutilizando estilo do login) */
     .register-form .error-message {
-        color: #ef4444;
-        background-color: #fee2e2;
-        padding: 0.8rem;
-        border-radius: 6px;
-        border: 1px solid #fca5a5;
+        color: var(--red-500);
+        background-color: var(--red-100);
+        padding: var(--space-6);
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--red-300);
         margin-top: -0.5rem;
         margin-bottom: -0.2rem; /* Ajuste fino */
-        font-size: 0.9rem;
+        font-size: var(--text-base);
         text-align: center;
     }
 
     /* Links abaixo */
     .register-form .register-links {
-        margin-top: 1rem; /* Espaço acima dos links */
-        font-size: 0.9rem;
-        color: #64748b;
+        margin-top: var(--space-8); /* Espaço acima dos links */
+        font-size: var(--text-base);
+        color: var(--slate-500);
         text-align: center;
     }
 
         .register-form .register-links p {
-            margin: 0.6rem 0;
+            margin: var(--space-5) 0;
         }
 
         .register-form .register-links a {
-            color: #3b82f6; /* Link azul padrão */
+            color: var(--blue-500); /* Link azul padrão */
             text-decoration: none;
             font-weight: 500;
         }
 
             .register-form .register-links a:hover {
                 text-decoration: underline;
-                color: #2563eb;
+                color: var(--blue-600);
             }
 
 

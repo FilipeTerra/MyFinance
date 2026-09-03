@@ -1,0 +1,58 @@
+.fluxo-top-expenses-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+}
+
+.fluxo-top-expense-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-8);
+}
+
+.fluxo-top-expense-info {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    min-width: 0;
+}
+
+.fluxo-top-expense-desc {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+    color: var(--color-text-body);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.fluxo-top-expense-meta {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.fluxo-top-expense-valor {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-bold);
+    color: var(--color-danger);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* Faltava por completo — a linha de meta (categoria · conta · data) estourava em telas estreitas. */
+@media (max-width: 640px) {
+    .fluxo-top-expense-item {
+        gap: var(--space-4);
+    }
+
+    .fluxo-top-expense-info {
+        overflow: hidden;
+    }
+}

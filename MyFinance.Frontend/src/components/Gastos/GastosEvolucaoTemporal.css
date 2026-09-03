@@ -1,63 +1,48 @@
-.evolucao-header {
+.evolucao-conteudo {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    flex-wrap: wrap;
-    margin-bottom: 1rem;
-}
-
-.evolucao-header .gastos-card-title {
-    margin-bottom: 0;
+    flex-direction: column;
 }
 
 .evolucao-chips {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5rem;
-    margin-bottom: 1rem;
+    gap: var(--space-4);
+    margin-bottom: var(--space-8);
 }
 
 .evolucao-chip {
     display: inline-flex;
     align-items: center;
-    gap: 0.4rem;
-    padding: 0.4rem 0.85rem;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 999px;
-    font-size: 0.78rem;
-    font-weight: 600;
-    color: #64748b;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-6);
+    background: var(--color-surface-subtle);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-full);
+    font-size: var(--text-xs);
+    font-weight: var(--weight-semibold);
+    color: var(--color-text-secondary);
     cursor: pointer;
-    transition: border-color 0.15s, color 0.15s, opacity 0.15s;
+    transition: border-color var(--duration-base), color var(--duration-base), opacity var(--duration-base);
 }
 
 .evolucao-chip:hover:not(:disabled) {
-    border-color: #cbd5e1;
+    border-color: var(--color-border-strong);
 }
 
 .evolucao-chip--active {
-    color: #1e293b;
-    background: #ffffff;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    color: var(--color-text);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-xs);
 }
 
 .evolucao-chip:disabled {
-    opacity: 0.45;
+    opacity: 0.5;
     cursor: not-allowed;
 }
 
 .evolucao-chip-dot {
     width: 8px;
     height: 8px;
-    border-radius: 999px;
+    border-radius: var(--radius-full);
     flex-shrink: 0;
-}
-
-@media (max-width: 640px) {
-    .evolucao-header {
-        flex-direction: column;
-        align-items: flex-start;
-    }
 }

@@ -2,53 +2,56 @@
 .profile-container {
     display: flex;
     flex-direction: column;
-    min-height: 100vh;
-    background-color: #f1f5f9;
+    /* Era `min-height: 100vh` de quando esta div continha o header. Com o
+       header no AppLayout (que já é da altura da viewport), 100vh aqui somaria
+       a altura do header ao documento e criaria rolagem fantasma. */
+    flex: 1 0 auto;
+    background-color: var(--slate-100);
 }
 
 .profile-content {
     width: 100%;
-    max-width: 640px;
+    max-width: var(--container-narrow);
     margin: 0 auto;
-    padding: 2rem 2rem 3rem;
+    padding: var(--space-16) var(--space-16) var(--space-24);
     box-sizing: border-box;
 }
 
 /* ── Page header ───────────────────────────────────────────────────────── */
 .profile-page-header {
-    margin-bottom: 1.5rem;
+    margin-bottom: var(--space-12);
 }
 
 .profile-title {
-    margin: 0 0 0.2rem;
-    font-size: 1.75rem;
+    margin: 0 0 var(--space-2);
+    font-size: var(--text-2xl);
     font-weight: 800;
-    color: #1e293b;
+    color: var(--slate-800);
     letter-spacing: -0.02em;
 }
 
 .profile-subtitle {
     margin: 0;
-    font-size: 0.875rem;
-    color: #94a3b8;
+    font-size: var(--text-base);
+    color: var(--slate-500);
     font-weight: 400;
 }
 
 /* ── Card base (compartilhado entre identidade e formulário) ─────────────── */
 .profile-card {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 16px;
-    padding: 1.5rem 1.75rem;
-    margin-bottom: 1.5rem;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+    background: var(--white);
+    border: 1px solid var(--slate-200);
+    border-radius: var(--radius-2xl);
+    padding: var(--space-12) var(--space-14);
+    margin-bottom: var(--space-12);
+    box-shadow: var(--shadow-md);
 }
 
 /* ── Identidade (somente leitura) ──────────────────────────────────────── */
 .profile-identity {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: var(--space-8);
 }
 
 .profile-avatar {
@@ -56,8 +59,8 @@
     width: 56px;
     height: 56px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-    color: #ffffff;
+    background: linear-gradient(135deg, var(--blue-500) 0%, var(--blue-600) 100%);
+    color: var(--white);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -70,62 +73,62 @@
 .profile-identity-info {
     display: flex;
     flex-direction: column;
-    gap: 0.2rem;
+    gap: var(--space-2);
     min-width: 0;
 }
 
 .profile-name {
-    font-size: 1.05rem;
+    font-size: var(--text-md);
     font-weight: 700;
-    color: #1e293b;
+    color: var(--slate-800);
 }
 
 .profile-email {
-    font-size: 0.85rem;
-    color: #94a3b8;
+    font-size: var(--text-base);
+    color: var(--slate-500);
 }
 
 /* ── Card de renda mensal ──────────────────────────────────────────────── */
 .profile-card-header {
     display: flex;
     align-items: flex-start;
-    gap: 0.75rem;
-    margin-bottom: 1.25rem;
+    gap: var(--space-6);
+    margin-bottom: var(--space-10);
 }
 
 .profile-card-icon {
     flex-shrink: 0;
     width: 40px;
     height: 40px;
-    border-radius: 10px;
-    background: #eff6ff;
+    border-radius: var(--radius-lg);
+    background: var(--blue-50);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.15rem;
+    font-size: var(--text-lg);
 }
 
 .profile-card-title {
-    margin: 0 0 0.2rem;
-    font-size: 1rem;
+    margin: 0 0 var(--space-2);
+    font-size: var(--text-md);
     font-weight: 700;
-    color: #1e293b;
+    color: var(--slate-800);
 }
 
 .profile-card-desc {
     margin: 0;
-    font-size: 0.8rem;
-    color: #94a3b8;
+    font-size: var(--text-sm);
+    color: var(--slate-500);
     line-height: 1.5;
 }
 
 /* ── Form group ────────────────────────────────────────────────────────── */
 .profile-form-group label {
     display: block;
-    margin-bottom: 0.45rem;
-    font-size: 0.875rem;
+    margin-bottom: var(--space-4);
+    font-size: var(--text-base);
     font-weight: 500;
-    color: #64748b;
+    color: var(--slate-500);
 }
 
 .profile-input-wrapper {
@@ -137,20 +140,20 @@
 .profile-input-prefix {
     position: absolute;
     left: 0.8rem;
-    font-size: 0.9rem;
+    font-size: var(--text-base);
     font-weight: 600;
-    color: #94a3b8;
+    color: var(--slate-500);
     pointer-events: none;
 }
 
 .profile-input-wrapper input {
     width: 100%;
-    padding: 0.7rem 2.25rem 0.7rem 2.5rem;
-    border: 1px solid #cbd5e1;
-    border-radius: 8px;
-    background-color: #f8fafc;
-    color: #1e293b;
-    font-size: 1rem;
+    padding: var(--space-6) 2.25rem var(--space-6) var(--space-20);
+    border: 1px solid var(--slate-300);
+    border-radius: var(--radius-md);
+    background-color: var(--slate-50);
+    color: var(--slate-800);
+    font-size: var(--text-md);
     font-weight: 600;
     box-sizing: border-box;
     transition: border-color 0.15s, box-shadow 0.15s;
@@ -158,8 +161,8 @@
 
 .profile-input-wrapper input:focus {
     outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    border-color: var(--blue-500);
+    box-shadow: var(--focus-ring);
 }
 
 .profile-input-wrapper input:disabled {
@@ -175,66 +178,66 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #e2e8f0;
-    color: #64748b;
+    background: var(--slate-200);
+    color: var(--slate-500);
     border: none;
     border-radius: 50%;
-    font-size: 1rem;
+    font-size: var(--text-md);
     line-height: 1;
     cursor: pointer;
     transition: background 0.15s;
 }
-.profile-input-clear:hover:not(:disabled) { background: #cbd5e1; color: #1e293b; }
+.profile-input-clear:hover:not(:disabled) { background: var(--slate-300); color: var(--slate-800); }
 .profile-input-clear:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* ── Feedback ──────────────────────────────────────────────────────────── */
 .profile-message {
-    margin: 1rem 0 0;
-    padding: 0.7rem 0.9rem;
-    border-radius: 8px;
-    font-size: 0.85rem;
+    margin: var(--space-8) 0 0;
+    padding: var(--space-6) var(--space-7);
+    border-radius: var(--radius-md);
+    font-size: var(--text-base);
     font-weight: 500;
 }
 
 .profile-message--success {
-    background: #f0fdf4;
-    color: #15803d;
-    border: 1px solid #bbf7d0;
+    background: var(--green-50);
+    color: var(--green-700);
+    border: 1px solid var(--green-200);
 }
 
 .profile-message--error {
-    background: #fef2f2;
-    color: #b91c1c;
-    border: 1px solid #fecaca;
+    background: var(--red-50);
+    color: var(--red-700);
+    border: 1px solid var(--red-200);
 }
 
 /* ── Ações ─────────────────────────────────────────────────────────────── */
 .profile-actions {
     display: flex;
     justify-content: flex-end;
-    margin-top: 1.5rem;
+    margin-top: var(--space-12);
 }
 
 .profile-save-btn {
-    padding: 0.65rem 1.4rem;
-    background: #3b82f6;
-    color: #ffffff;
+    padding: var(--space-5) 1.4rem;
+    background: var(--blue-500);
+    color: var(--white);
     border: none;
-    border-radius: 10px;
-    font-size: 0.9rem;
+    border-radius: var(--radius-lg);
+    font-size: var(--text-base);
     font-weight: 600;
     cursor: pointer;
-    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.28);
+    box-shadow: var(--shadow-primary);
     transition: background 0.15s, transform 0.1s, box-shadow 0.15s, opacity 0.15s;
 }
 .profile-save-btn:hover:not(:disabled) {
-    background: #2563eb;
+    background: var(--blue-600);
     transform: translateY(-1px);
-    box-shadow: 0 4px 14px rgba(59, 130, 246, 0.36);
+    box-shadow: var(--shadow-primary-lg);
 }
 .profile-save-btn:active:not(:disabled) { transform: translateY(0); }
 .profile-save-btn:disabled {
-    background: #cbd5e1;
+    background: var(--slate-300);
     box-shadow: none;
     cursor: not-allowed;
 }
@@ -243,12 +246,12 @@
 .profile-skeleton-stack {
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
+    gap: var(--space-12);
 }
 
 .profile-skeleton {
-    border-radius: 16px;
-    background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+    border-radius: var(--radius-2xl);
+    background: linear-gradient(90deg, var(--slate-200) 25%, var(--slate-100) 50%, var(--slate-200) 75%);
     background-size: 200% 100%;
     animation: profile-skeleton-shimmer 1.4s infinite;
 }
@@ -261,10 +264,10 @@
 /* ── Responsivo ────────────────────────────────────────────────────────── */
 @media (max-width: 640px) {
     .profile-content {
-        padding: 1.25rem 1rem 2rem;
+        padding: var(--space-10) var(--space-8) var(--space-16);
     }
 
     .profile-card {
-        padding: 1.25rem;
+        padding: var(--space-10);
     }
 }

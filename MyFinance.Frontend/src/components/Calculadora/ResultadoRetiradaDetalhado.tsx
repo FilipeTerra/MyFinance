@@ -11,18 +11,11 @@ import {
 } from 'recharts';
 import type { RetiradaResponseDto } from '../../types/Retirada';
 import { formatCurrency } from './calculadoraUtils';
+import { formatPrazo } from './calculadoraValidacao';
 
 interface ResultadoRetiradaDetalhadoProps {
     resultado: RetiradaResponseDto;
 }
-
-const formatPrazo = (meses: number): string => {
-    const anos = Math.floor(meses / 12);
-    const restoMeses = meses % 12;
-    if (anos === 0) return `${meses} ${meses === 1 ? 'mês' : 'meses'}`;
-    if (restoMeses === 0) return `${anos} ${anos === 1 ? 'ano' : 'anos'}`;
-    return `${anos} ${anos === 1 ? 'ano' : 'anos'} e ${restoMeses} ${restoMeses === 1 ? 'mês' : 'meses'}`;
-};
 
 export function ResultadoRetiradaDetalhado({ resultado }: ResultadoRetiradaDetalhadoProps) {
     const totalImposto = resultado.evolucao.reduce((soma, m) => soma + m.valorImposto, 0);

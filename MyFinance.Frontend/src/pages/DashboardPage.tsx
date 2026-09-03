@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Header } from '../components/Layout/Header';
 import { FinancialGoalCard } from '../components/FinancialGoals/FinancialGoalCard';
 import { InvestimentoCard } from '../components/Investimentos/InvestimentoCard';
 import { InvestimentoModal } from '../components/Investimentos/InvestimentoModal';
@@ -17,7 +16,7 @@ type DashboardTab = 'metas' | 'investimentos' | 'calculadora' | 'gastos';
 const TAB_SUBTITLES: Record<DashboardTab, string> = {
     metas: 'Acompanhe a evolução dos seus objetivos financeiros',
     investimentos: 'Gerencie sua carteira e acompanhe a rentabilidade dos seus ativos',
-    calculadora: 'Simule quanto você pode acumular investindo a longo prazo',
+    calculadora: 'Simuladores para planejar seus investimentos e financiamentos',
     gastos: 'Entenda para onde seu dinheiro está indo',
 };
 
@@ -113,9 +112,8 @@ export function DashboardPage() {
 
     return (
         <div className="dashboard-container">
-            <Header />
 
-            <main className="dashboard-content">
+            <main className="dashboard-content" id="conteudo-principal">
                 <div className="dashboard-page-header">
                     <div>
                         <h2 className="dashboard-title">Meu Painel Financeiro</h2>
@@ -129,7 +127,7 @@ export function DashboardPage() {
                 </div>
 
                 {/* ── Segmented tabs ─────────────────────────────────────────── */}
-                <div className="dashboard-tabs" role="tablist" aria-label="Seções do painel">
+                <div className="dashboard-tabs scroll-strip" role="tablist" aria-label="Seções do painel">
                     <button
                         role="tab"
                         aria-selected={activeTab === 'metas'}
@@ -137,7 +135,7 @@ export function DashboardPage() {
                         onClick={() => setActiveTab('metas')}
                     >
                         <span className="dashboard-tab-icon" aria-hidden="true">🎯</span>
-                        Metas
+                        <span className="dashboard-tab-label">Metas</span>
                         {goals.length > 0 && <span className="dashboard-tab-count">{goals.length}</span>}
                     </button>
                     <button
@@ -147,7 +145,7 @@ export function DashboardPage() {
                         onClick={() => setActiveTab('investimentos')}
                     >
                         <span className="dashboard-tab-icon" aria-hidden="true">📈</span>
-                        Investimentos
+                        <span className="dashboard-tab-label">Investimentos</span>
                         {investimentos.length > 0 && <span className="dashboard-tab-count">{investimentos.length}</span>}
                     </button>
                     <button
@@ -157,7 +155,7 @@ export function DashboardPage() {
                         onClick={() => setActiveTab('calculadora')}
                     >
                         <span className="dashboard-tab-icon" aria-hidden="true">🧮</span>
-                        Calculadora
+                        <span className="dashboard-tab-label">Calculadora</span>
                     </button>
                     <button
                         role="tab"
@@ -166,7 +164,7 @@ export function DashboardPage() {
                         onClick={() => setActiveTab('gastos')}
                     >
                         <span className="dashboard-tab-icon" aria-hidden="true">💸</span>
-                        Gastos
+                        <span className="dashboard-tab-label">Gastos</span>
                     </button>
                 </div>
 

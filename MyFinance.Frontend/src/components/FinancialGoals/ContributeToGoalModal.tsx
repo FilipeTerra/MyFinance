@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import ReactDOM from 'react-dom';
+import { Modal } from '../Shared/ui/Modal';
 import { accountService, categoryService, transactionService, AxiosError, type ApiErrorResponse } from '../../services/Api';
 import type { AccountResponseDto } from '../../types/AccountResponseDto';
 import { AccountSelectField } from '../Accounts/AccountSelectField';
@@ -107,13 +107,12 @@ export function ContributeToGoalModal({ goalId, onClose, onSuccess }: Contribute
 
     // Portal garante que o modal é renderizado em document.body,
     // escapando de qualquer stacking context criado por transform no card pai.
-    return ReactDOM.createPortal(
-        <div className="contribute-overlay" onClick={onClose}>
-            <div className="contribute-modal" onClick={e => e.stopPropagation()}>
-                <div className="contribute-modal-header">
-                    <h2 className="contribute-modal-title">Realizar Aporte</h2>
-                    <button className="contribute-modal-close" onClick={onClose} aria-label="Fechar">×</button>
-                </div>
+    return (
+        <Modal
+            onFechar={onClose}
+            titulo="Realizar Aporte"
+            tamanho="md"
+        >
 
                 {isLoadingData ? (
                     <p style={{ color: '#64748b', margin: '0.5rem 0' }}>Carregando...</p>
@@ -176,8 +175,6 @@ export function ContributeToGoalModal({ goalId, onClose, onSuccess }: Contribute
                         </div>
                     </form>
                 )}
-            </div>
-        </div>,
-        document.body
+        </Modal>
     );
 }

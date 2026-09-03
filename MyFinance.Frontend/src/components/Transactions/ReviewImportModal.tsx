@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import type { AiTransactionResponseDto, SaveBatchTransactionRequestDto } from '../../types/AiIntegration';
 import type { CategoryResponseDto } from '../../types/CategoryResponseDto';
+import { Modal } from '../Shared/ui/Modal';
 import './ReviewImportModal.css';
 
 // 1. CORREÇÃO: Removemos os 'any' e voltamos a usar as interfaces corretas
@@ -107,14 +108,25 @@ export const ReviewImportModal: React.FC<ReviewImportModalProps> = ({
     if (!isOpen) return null;
 
     return (
-        <div className="modal-overlay">
-            <div className="modal-content review-modal-content">
-                <div className="modal-header">
-                    <h2>✨ Revisão Inteligente</h2>
-                    <button className="close-button" onClick={onClose}>&times;</button>
-                </div>
-                
-                <div className="modal-body">
+        <Modal
+            onFechar={onClose}
+            titulo="✨ Revisão Inteligente"
+            tamanho="xl"
+            corpoRolavel
+            className="review-modal-content"
+            rodape={
+                <>
+                    <button onClick={onClose} className="btn-secondary">Cancelar</button>
+                    <button
+                        onClick={handleConfirm}
+                        className="btn-primary"
+                        disabled={!canSubmit}
+                    >
+                        Confirmar e Salvar ({editableTransactions.length})
+                    </button>
+                </>
+            }
+        >
                     <p className="modal-subtitle">
                         Revise as classificações sugeridas pela IA. Você pode aceitar, escolher uma categoria existente ou digitar um novo nome.
                     </p>
@@ -197,19 +209,6 @@ export const ReviewImportModal: React.FC<ReviewImportModalProps> = ({
                             </tbody>
                         </table>
                     </div>
-                </div>
-
-                <div className="modal-footer">
-                    <button onClick={onClose} className="btn-secondary">Cancelar</button>
-                    <button 
-                        onClick={handleConfirm} 
-                        className="btn-primary"
-                        disabled={!canSubmit}
-                    >
-                        Confirmar e Salvar ({editableTransactions.length})
-                    </button>
-                </div>
-            </div>
-        </div>
+        </Modal>
     );
 };

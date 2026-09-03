@@ -1,151 +1,35 @@
 .gastos-container {
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
+    gap: var(--space-12);
 }
 
-/* ── Filtros ───────────────────────────────────────────────────────────── */
-.gastos-filters {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    flex-wrap: wrap;
-}
-
-.gastos-custom-range {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.gastos-custom-range input[type="date"] {
-    padding: 0.5rem 0.7rem;
-    border: 1px solid #cbd5e1;
-    border-radius: 8px;
-    background-color: #f8fafc;
-    color: #334155;
-    font-size: 0.85rem;
-}
-
-.gastos-custom-range-sep {
-    color: #94a3b8;
-}
-
-.gastos-account-select {
-    padding: 0.55rem 0.8rem;
-    border: 1px solid #cbd5e1;
-    border-radius: 8px;
-    background-color: #f8fafc;
-    color: #334155;
-    font-size: 0.85rem;
-    margin-left: auto;
-}
-
-/* ── Toggle group (mesma anatomia de .proj-toggle-group, com classe própria
-   para a seção não depender do CSS da Calculadora) ───────────────────────── */
-.gastos-toggle-group {
-    display: inline-flex;
-    gap: 0.4rem;
-    flex-wrap: wrap;
-}
-
-.gastos-toggle-btn {
-    padding: 0.55rem 1rem;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 999px;
-    font-size: 0.82rem;
-    font-weight: 600;
-    color: #64748b;
-    cursor: pointer;
-    transition: border-color 0.15s, color 0.15s, background 0.15s;
-    white-space: nowrap;
-}
-
-.gastos-toggle-btn:hover:not(:disabled) {
-    border-color: #cbd5e1;
-}
-
-.gastos-toggle-btn--active {
-    background: #dbeafe;
-    border-color: #3b82f6;
-    color: #1d4ed8;
-}
-
-.gastos-toggle-btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
-/* ── Cartão compartilhado por todos os gráficos da seção ──────────────────── */
-.gastos-card {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 1.5rem;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
-}
-
+/* ── Título compartilhado pelos 3 cards da seção ──────────────────────── */
 .gastos-card-title {
-    margin: 0 0 1.25rem;
-    font-size: 1rem;
-    font-weight: 700;
-    color: #1e293b;
-}
-
-.gastos-card-empty {
-    margin: 0;
-    padding: 2rem 0;
-    text-align: center;
-    color: #94a3b8;
-    font-size: 0.875rem;
+    margin: 0 0 var(--space-10);
+    font-size: var(--text-md);
+    font-weight: var(--weight-bold);
+    color: var(--color-text);
 }
 
 /* ── Layout dos blocos ─────────────────────────────────────────────────── */
 .gastos-content {
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
-    transition: opacity 0.15s;
+    gap: var(--space-12);
+    transition: opacity var(--duration-base);
 }
 
-/* Refetch (troca de período/conta) segura o render anterior em opacidade reduzida
-   em vez de mostrar skeleton de novo — evita o "flash" no filtro. */
+/* Refetch (troca de período/conta) ou erro com dado anterior ainda na tela:
+   segura o render anterior em opacidade reduzida em vez de sumir com tudo. */
 .gastos-content--loading {
     opacity: 0.55;
     pointer-events: none;
 }
 
-.gastos-grid {
-    display: grid;
-    grid-template-columns: 1.1fr 1fr;
-    gap: 1.5rem;
-    align-items: stretch;
-}
-
 /* ── Responsivo ────────────────────────────────────────────────────────── */
-@media (max-width: 900px) {
-    .gastos-grid {
-        grid-template-columns: 1fr;
-    }
-}
-
 @media (max-width: 640px) {
-    .gastos-filters {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    .gastos-account-select {
-        margin-left: 0;
-    }
-
-    .gastos-toggle-group {
-        display: flex;
-    }
-
-    .gastos-toggle-btn {
-        flex: 1;
-        text-align: center;
+    .gastos-container {
+        gap: var(--space-10);
     }
 }

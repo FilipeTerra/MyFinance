@@ -1,7 +1,29 @@
+.categoria-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-8);
+    margin-bottom: var(--space-10);
+}
+
+.categoria-header .gastos-card-title {
+    margin-bottom: 0;
+}
+
+.categoria-header-total {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+    color: var(--color-text-muted);
+    white-space: nowrap;
+}
+
 .categoria-layout {
     display: flex;
-    gap: 1.5rem;
-    align-items: center;
+    gap: var(--space-12);
+    /* Antes era "center", o que deixava o card com centenas de px de vazio
+       quando pareado com um card mais alto — agora o layout é sempre de
+       largura total, mas o alinhamento pelo topo evita esticar o donut. */
+    align-items: flex-start;
 }
 
 .categoria-donut {
@@ -21,45 +43,43 @@
 }
 
 .categoria-donut-total-value {
-    font-size: 1.05rem;
-    font-weight: 800;
-    color: #1e293b;
-    letter-spacing: -0.02em;
+    font-size: var(--text-xl);
+    font-weight: var(--weight-extrabold);
+    color: var(--color-text);
+    letter-spacing: var(--tracking-tight);
 }
 
 .categoria-donut-total-label {
-    font-size: 0.68rem;
-    font-weight: 600;
+    font-size: var(--text-2xs);
+    font-weight: var(--weight-semibold);
     text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: #94a3b8;
+    letter-spacing: var(--tracking-wide);
+    color: var(--color-text-faint);
 }
 
 .categoria-ranking {
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 0.85rem;
+    gap: var(--space-6);
     margin: 0;
     padding: 0;
     list-style: none;
-    max-height: 280px;
-    overflow-y: auto;
     min-width: 0;
 }
 
 .categoria-ranking-item {
     display: flex;
-    gap: 0.65rem;
+    gap: var(--space-5);
     align-items: flex-start;
 }
 
 .categoria-ranking-dot {
     width: 10px;
     height: 10px;
-    border-radius: 999px;
+    border-radius: var(--radius-full);
     flex-shrink: 0;
-    margin-top: 0.3rem;
+    margin-top: var(--space-2);
 }
 
 .categoria-ranking-info {
@@ -70,43 +90,82 @@
 .categoria-ranking-row {
     display: flex;
     justify-content: space-between;
-    gap: 0.5rem;
+    gap: var(--space-4);
 }
 
 .categoria-ranking-name {
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: #334155;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+    color: var(--color-text-body);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
 .categoria-ranking-value {
-    font-size: 0.85rem;
-    font-weight: 700;
-    color: #1e293b;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-bold);
+    color: var(--color-text);
     white-space: nowrap;
 }
 
 .categoria-ranking-bar-track {
-    margin-top: 0.3rem;
+    margin-top: var(--space-2);
     height: 5px;
-    border-radius: 999px;
-    background: #f1f5f9;
+    border-radius: var(--radius-full);
+    background: var(--color-surface-muted);
     overflow: hidden;
 }
 
 .categoria-ranking-bar-fill {
     height: 100%;
-    border-radius: 999px;
+    border-radius: var(--radius-full);
 }
 
 .categoria-ranking-meta {
     display: block;
-    margin-top: 0.25rem;
-    font-size: 0.72rem;
-    color: #94a3b8;
+    margin-top: var(--space-2);
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+}
+
+/* ── Outras categorias (recolhido) ────────────────────────────────────── */
+.categoria-outras-lista {
+    margin: var(--space-6) 0 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+.categoria-outras-item {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-6);
+    padding: var(--space-3) 0;
+    font-size: var(--text-sm);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.categoria-outras-item:last-child {
+    border-bottom: none;
+}
+
+.categoria-outras-nome {
+    color: var(--color-text-body);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.categoria-outras-valor {
+    color: var(--color-text);
+    font-weight: var(--weight-semibold);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
 }
 
 @media (max-width: 640px) {

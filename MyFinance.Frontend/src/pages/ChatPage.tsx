@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import './ChatPage.css';
 import { sendMessage, SessionExpiredError } from '../services/AiApi';
-import { Header } from '../components/Layout/Header';
 
 interface Message {
     id: string;
@@ -105,9 +104,8 @@ export function ChatPage() {
 
     return (
         <div className="chat-page">
-            <Header />
 
-            <div className="chat-content">
+            <main className="chat-content" id="conteudo-principal">
 
                 {/* ── 70 % — Área do Chat ─────────────────────────── */}
                 <div className="chat-area">
@@ -198,7 +196,7 @@ export function ChatPage() {
                     </div>
                 </aside>
 
-            </div>
+            </main>
         </div>
     );
 }

@@ -2,15 +2,18 @@
 .dashboard-container {
     display: flex;
     flex-direction: column;
-    min-height: 100vh;
-    background-color: #f1f5f9;
+    /* Era `min-height: 100vh` de quando esta div continha o header. Com o
+       header no AppLayout (que já é da altura da viewport), 100vh aqui somaria
+       a altura do header ao documento e criaria rolagem fantasma. */
+    flex: 1 0 auto;
+    background-color: var(--slate-100);
 }
 
 .dashboard-content {
     width: 100%;
-    max-width: 1200px;
+    max-width: var(--container-max);
     margin: 0 auto;
-    padding: 2rem 2rem 3rem;
+    padding: var(--space-16) var(--space-16) var(--space-24);
     box-sizing: border-box;
 }
 
@@ -19,71 +22,75 @@
     display: flex;
     align-items: flex-end;
     justify-content: space-between;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
+    gap: var(--space-8);
+    margin-bottom: var(--space-12);
 }
 
 /* ── Primary action button ─────────────────────────────────────────────── */
 .dashboard-primary-btn {
     display: inline-flex;
     align-items: center;
-    gap: 0.4rem;
-    padding: 0.65rem 1.2rem;
-    background: #3b82f6;
-    color: #ffffff;
+    gap: var(--space-3);
+    padding: var(--space-5) var(--space-10);
+    background: var(--blue-500);
+    color: var(--white);
     border: none;
-    border-radius: 10px;
-    font-size: 0.9rem;
+    border-radius: var(--radius-lg);
+    font-size: var(--text-base);
     font-weight: 600;
     cursor: pointer;
     white-space: nowrap;
-    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.28);
+    box-shadow: var(--shadow-primary);
     transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
 }
 .dashboard-primary-btn:hover {
-    background: #2563eb;
+    background: var(--blue-600);
     transform: translateY(-1px);
-    box-shadow: 0 4px 14px rgba(59, 130, 246, 0.36);
+    box-shadow: var(--shadow-primary-lg);
 }
 .dashboard-primary-btn:active { transform: translateY(0); }
-.dashboard-primary-btn span { font-size: 1.05rem; line-height: 1; }
+.dashboard-primary-btn span { font-size: var(--text-md); line-height: 1; }
 
 /* ── Segmented tabs ────────────────────────────────────────────────────── */
 .dashboard-tabs {
     display: inline-flex;
-    gap: 0.25rem;
-    background: #e2e8f0;
-    padding: 0.3rem;
-    border-radius: 12px;
-    margin-bottom: 2rem;
+    gap: var(--space-2);
+    background: var(--slate-200);
+    padding: var(--space-2);
+    border-radius: var(--radius-xl);
+    margin-bottom: var(--space-16);
 }
 
 .dashboard-tab {
     display: inline-flex;
     align-items: center;
-    gap: 0.45rem;
-    padding: 0.55rem 1.1rem;
+    gap: var(--space-4);
+    padding: var(--space-4) 1.1rem;
     background: transparent;
     border: none;
     border-radius: 9px;
-    font-size: 0.9rem;
+    font-size: var(--text-base);
     font-weight: 600;
-    color: #64748b;
+    color: var(--slate-500);
     cursor: pointer;
     transition: background 0.18s, color 0.18s, box-shadow 0.18s;
 }
 
 .dashboard-tab:hover:not(.dashboard-tab--active) {
-    color: #475569;
+    color: var(--slate-600);
 }
 
 .dashboard-tab--active {
-    background: #ffffff;
-    color: #1e293b;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+    background: var(--white);
+    color: var(--slate-800);
+    box-shadow: var(--shadow-raised);
 }
 
-.dashboard-tab-icon { font-size: 1rem; line-height: 1; }
+.dashboard-tab-icon { font-size: var(--text-md); line-height: 1; }
+
+/* Some no degrau compacto (ver @media 480px) — no resto das larguras é o
+   próprio texto entre o ícone e o badge. */
+.dashboard-tab-label { display: contents; }
 
 .dashboard-tab-count {
     display: inline-flex;
@@ -91,35 +98,35 @@
     justify-content: center;
     min-width: 1.3rem;
     height: 1.3rem;
-    padding: 0 0.35rem;
-    background: #f1f5f9;
-    color: #64748b;
-    font-size: 0.72rem;
+    padding: 0 var(--space-3);
+    background: var(--slate-100);
+    color: var(--slate-500);
+    font-size: var(--text-xs);
     font-weight: 700;
-    border-radius: 999px;
+    border-radius: var(--radius-full);
 }
 
 .dashboard-tab--active .dashboard-tab-count {
-    background: #dbeafe;
-    color: #1d4ed8;
+    background: var(--blue-100);
+    color: var(--blue-700);
 }
 
 .dashboard-empty-btn {
-    margin-top: 1.5rem;
+    margin-top: var(--space-12);
 }
 
 .dashboard-title {
-    margin: 0 0 0.2rem;
-    font-size: 1.75rem;
+    margin: 0 0 var(--space-2);
+    font-size: var(--text-2xl);
     font-weight: 800;
-    color: #1e293b;
+    color: var(--slate-800);
     letter-spacing: -0.02em;
 }
 
 .dashboard-subtitle {
     margin: 0;
-    font-size: 0.875rem;
-    color: #94a3b8;
+    font-size: var(--text-base);
+    color: var(--slate-500);
     font-weight: 400;
 }
 
@@ -128,21 +135,21 @@
     display: flex;
     align-items: center;
     gap: 0;
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 1rem 1.5rem;
-    margin-bottom: 2rem;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+    background: var(--white);
+    border: 1px solid var(--slate-200);
+    border-radius: var(--radius-xl);
+    padding: var(--space-8) var(--space-12);
+    margin-bottom: var(--space-16);
+    box-shadow: var(--shadow-sm);
     flex-wrap: wrap;
-    gap: 0.5rem;
+    gap: var(--space-4);
 }
 
 .summary-stat {
     display: flex;
     flex-direction: column;
-    gap: 0.15rem;
-    padding: 0 1rem;
+    gap: var(--space-1);
+    padding: 0 var(--space-8);
 }
 
 .summary-stat--right {
@@ -152,31 +159,31 @@
 }
 
 .summary-stat-value {
-    font-size: 1.35rem;
+    font-size: var(--text-xl);
     font-weight: 800;
-    color: #1e293b;
+    color: var(--slate-800);
     letter-spacing: -0.02em;
     line-height: 1;
 }
 
-.summary-stat-value--green { color: #10b981; }
-.summary-stat-value--blue  { color: #3b82f6; }
-.summary-stat-value--amber { color: #f59e0b; }
-.summary-stat-value--red   { color: #ef4444; }
-.summary-stat-value--flat  { color: #64748b; }
+.summary-stat-value--green { color: var(--green-500); }
+.summary-stat-value--blue  { color: var(--blue-500); }
+.summary-stat-value--amber { color: var(--amber-500); }
+.summary-stat-value--red   { color: var(--red-500); }
+.summary-stat-value--flat  { color: var(--slate-500); }
 
 .summary-stat-label {
-    font-size: 0.7rem;
+    font-size: var(--text-2xs);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    color: #94a3b8;
+    color: var(--slate-500);
 }
 
 .summary-divider {
     width: 1px;
     height: 2rem;
-    background: #e2e8f0;
+    background: var(--slate-200);
     flex-shrink: 0;
 }
 
@@ -191,20 +198,20 @@
 .goals-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 1.5rem;
+    gap: var(--space-12);
 }
 
 /* ── Loading skeleton ──────────────────────────────────────────────────── */
 .goals-skeleton-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 1.5rem;
+    gap: var(--space-12);
 }
 
 .goal-skeleton {
     height: 260px;
-    border-radius: 16px;
-    background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+    border-radius: var(--radius-2xl);
+    background: linear-gradient(90deg, var(--slate-200) 25%, var(--slate-100) 50%, var(--slate-200) 75%);
     background-size: 200% 100%;
     animation: skeleton-shimmer 1.4s infinite;
 }
@@ -220,56 +227,56 @@
     flex-direction: column;
     align-items: center;
     text-align: center;
-    padding: 4rem 2rem;
-    background: #ffffff;
-    border: 1px dashed #cbd5e1;
-    border-radius: 16px;
+    padding: var(--space-32) var(--space-16);
+    background: var(--white);
+    border: 1px dashed var(--slate-300);
+    border-radius: var(--radius-2xl);
     max-width: 480px;
     margin: 0 auto;
 }
 
 .dashboard-empty-icon {
-    font-size: 2.5rem;
-    color: #cbd5e1;
-    margin-bottom: 1rem;
+    font-size: var(--text-3xl);
+    color: var(--slate-300);
+    margin-bottom: var(--space-8);
     line-height: 1;
 }
 
 .dashboard-empty-title {
-    margin: 0 0 0.75rem;
-    font-size: 1.1rem;
+    margin: 0 0 var(--space-6);
+    font-size: var(--text-lg);
     font-weight: 700;
-    color: #475569;
+    color: var(--slate-600);
 }
 
 .dashboard-empty-desc {
     margin: 0;
-    font-size: 0.875rem;
-    color: #94a3b8;
+    font-size: var(--text-base);
+    color: var(--slate-500);
     line-height: 1.7;
 }
 
 .dashboard-empty-desc strong {
-    color: #3b82f6;
+    color: var(--blue-500);
     font-weight: 600;
 }
 
 /* ── Error ─────────────────────────────────────────────────────────────── */
 .dashboard-error {
-    color: #ef4444;
-    background-color: #fee2e2;
-    padding: 1rem 1.25rem;
-    border-radius: 10px;
-    border: 1px solid #fca5a5;
-    margin-bottom: 1.5rem;
-    font-size: 0.9rem;
+    color: var(--red-500);
+    background-color: var(--red-100);
+    padding: var(--space-8) var(--space-10);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--red-300);
+    margin-bottom: var(--space-12);
+    font-size: var(--text-base);
     text-align: center;
 }
 
 /* ── Responsive ────────────────────────────────────────────────────────── */
-@media (max-width: 640px) {
+@media (max-width: 767.98px) {
     .dashboard-content {
-        padding: 1.25rem 1rem 2rem;
+        padding: var(--space-10) var(--space-8) var(--space-16);
     }
 
     .dashboard-page-header {
@@ -281,20 +288,29 @@
         justify-content: center;
     }
 
+    /* .scroll-strip (index.css) substitui o bloco que existia aqui antes —
+       min-width:0 + overflow-x:auto + filhos flex-shrink:0, o mesmo idioma
+       que também vivia, copiado à mão, em Header.css e SegmentedControl.css. */
     .dashboard-tabs {
         display: flex;
+        flex-wrap: nowrap;
     }
 
     .dashboard-tab {
-        flex: 1;
+        flex-shrink: 0;
         justify-content: center;
     }
 
+    /* Cinco linhas empilhadas (total/concluídas/em andamento/atrasadas/
+       acumulado) é rolagem demais para uma barra de resumo. Grade 2×3: a
+       quinta estatística ('acumulado', marcada --right) ocupa sozinha a linha
+       de baixo, span 2, no lugar de ficar empurrada para a direita por
+       margin-left:auto — que só fazia sentido na barra horizontal. */
     .dashboard-summary {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 0.75rem;
-        padding: 1rem;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--space-8) var(--space-6);
+        padding: var(--space-8);
     }
 
     .summary-divider {
@@ -312,8 +328,34 @@
         margin-left: 0;
     }
 
+    .summary-stat--right {
+        grid-column: 1 / -1;
+    }
+
     .goals-grid,
     .goals-skeleton-grid {
         grid-template-columns: 1fr;
+    }
+}
+
+/* Compacto: quatro abas com emoji + rótulo + badge não cabem numa tira de
+   ~340px sem rolar. O rótulo por extenso some, e volta só na aba ativa —
+   assim quem toca ainda vê em qual seção está, sem precisar decorar ícones. */
+@media (max-width: 480px) {
+    .dashboard-tab-label {
+        display: none;
+    }
+
+    .dashboard-tab--active .dashboard-tab-label {
+        display: contents;
+    }
+
+    .dashboard-tab {
+        padding: var(--space-4) var(--space-6);
+        gap: var(--space-2);
+    }
+
+    .dashboard-tab-icon {
+        font-size: var(--text-lg);
     }
 }

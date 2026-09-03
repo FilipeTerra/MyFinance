@@ -3,13 +3,15 @@ import { formatCurrency, formatSignedCurrency, formatSignedPercent } from './gas
 
 interface GastosKpiRowProps {
     overview: ExpenseOverviewResponseDto;
+    /** Nome do mês em curso (ex.: "agosto"), quando o período termina num mês ainda não fechado — a média mensal deixa de ser comparável com meses completos. */
+    nomeMesParcial?: string | null;
 }
 
 /**
  * Faixa de KPIs do topo da aba Gastos. Reaproveita as classes `.dashboard-summary` /
  * `.summary-stat` já usadas em Metas e Investimentos (DashboardPage.css) — nenhum CSS novo.
  */
-export function GastosKpiRow({ overview }: GastosKpiRowProps) {
+export function GastosKpiRow({ overview, nomeMesParcial }: GastosKpiRowProps) {
     const maiorCategoria = overview.categories[0];
     // Para gastos, uma variação negativa (gastou menos) é boa notícia — daí a cor invertida
     // em relação ao "resultado" de investimentos.
@@ -24,7 +26,9 @@ export function GastosKpiRow({ overview }: GastosKpiRowProps) {
             <div className="summary-divider" />
             <div className="summary-stat">
                 <span className="summary-stat-value">{formatCurrency(overview.monthlyAverage)}</span>
-                <span className="summary-stat-label">Média mensal</span>
+                <span className="summary-stat-label" title={nomeMesParcial ? `Inclui ${nomeMesParcial}, ainda em curso` : undefined}>
+                    Média mensal{nomeMesParcial ? '*' : ''}
+                </span>
             </div>
             <div className="summary-divider" />
             <div className="summary-stat">

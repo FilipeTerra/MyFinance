@@ -1,46 +1,58 @@
+.comparacao-conteudo {
+    display: flex;
+    flex-direction: column;
+}
+
 .comparacao-destaques {
     display: flex;
-    gap: 1rem;
-    margin-bottom: 1.25rem;
+    gap: var(--space-8);
+    margin-bottom: var(--space-10);
     flex-wrap: wrap;
 }
 
 .comparacao-destaque {
     flex: 1;
     min-width: 180px;
-    padding: 0.85rem 1rem;
-    border-radius: 10px;
-    border: 1px solid #e2e8f0;
-    background: #f8fafc;
+    padding: var(--space-6) var(--space-8);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-border);
+    background: var(--color-surface-subtle);
     display: flex;
     flex-direction: column;
-    gap: 0.15rem;
+    gap: var(--space-1);
 }
 
-.comparacao-destaque--alta { border-color: #fecaca; background: #fef2f2; }
-.comparacao-destaque--queda { border-color: #a7f3d0; background: #ecfdf5; }
+.comparacao-destaque--alta {
+    border-color: var(--color-danger-border);
+    background: var(--color-danger-tint-soft);
+}
+
+.comparacao-destaque--queda {
+    border-color: var(--color-success-border);
+    background: var(--color-success-tint);
+}
 
 .comparacao-destaque-label {
-    font-size: 0.68rem;
-    font-weight: 700;
+    font-size: var(--text-2xs);
+    font-weight: var(--weight-bold);
     text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: #94a3b8;
+    letter-spacing: var(--tracking-wide);
+    color: var(--color-text-faint);
 }
 
 .comparacao-destaque-nome {
-    font-size: 0.9rem;
-    font-weight: 700;
-    color: #1e293b;
+    font-size: var(--text-md);
+    font-weight: var(--weight-bold);
+    color: var(--color-text);
 }
 
 .comparacao-destaque-valor {
-    font-size: 0.82rem;
-    font-weight: 600;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
 }
 
-.comparacao-destaque-valor--alta { color: #ef4444; }
-.comparacao-destaque-valor--queda { color: #10b981; }
+.comparacao-destaque-valor--alta { color: var(--color-danger); }
+.comparacao-destaque-valor--queda { color: var(--color-success); }
 
 @media (max-width: 640px) {
     .comparacao-destaques {

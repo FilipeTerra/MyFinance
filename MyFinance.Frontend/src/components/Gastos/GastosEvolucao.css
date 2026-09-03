@@ -1,0 +1,19 @@
+.evolucao-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-8);
+    flex-wrap: wrap;
+    margin-bottom: var(--space-10);
+}
+
+.evolucao-header .gastos-card-title {
+    margin-bottom: 0;
+}
+
+@media (max-width: 640px) {
+    .evolucao-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}

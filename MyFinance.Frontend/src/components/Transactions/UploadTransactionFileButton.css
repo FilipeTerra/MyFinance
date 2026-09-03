@@ -6,23 +6,23 @@
     justify-content: center;
     gap: 8px; /* Espaço entre o ícone e o texto */
     padding: 10px 16px;
-    background-color: #f8fafc; /* Fundo cinza bem claro */
-    color: #334155; /* Texto cinza escuro/ardósia */
-    border: 1px solid #cbd5e1;
-    border-radius: 8px;
-    font-size: 0.95rem;
+    background-color: var(--slate-50); /* Fundo cinza bem claro */
+    color: var(--slate-700); /* Texto cinza escuro/ardósia */
+    border: 1px solid var(--slate-300);
+    border-radius: var(--radius-md);
+    font-size: var(--text-md);
     font-weight: 500;
     font-family: inherit;
     cursor: pointer;
     transition: all 0.2s ease-in-out;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); /* Sombra bem leve */
+    box-shadow: var(--shadow-xs); /* Sombra bem leve */
 }
 
 /* Efeito ao passar o mouse */
 .upload-transaction-file-button:hover {
-    background-color: #f1f5f9;
+    background-color: var(--slate-100);
     border-color: #3788eb;
-    color: #0f172a;
+    color: var(--slate-900);
     transform: translateY(-1px); /* Sobe um pixel suavemente */
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
@@ -30,26 +30,26 @@
 /* Efeito ao clicar */
 .upload-transaction-file-button:active {
     transform: translateY(0);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    box-shadow: var(--shadow-xs);
 }
 
 /* Estilo do ícone */
 .upload-icon {
     width: 18px;
     height: 18px;
-    color: #64748b;
+    color: var(--slate-500);
     transition: color 0.2s ease;
 }
 
 .upload-transaction-file-button:hover .upload-icon {
-    color: #2563eb; /* O ícone fica azul primário no hover */
+    color: var(--blue-600); /* O ícone fica azul primário no hover */
 }
 
 /* Estilo da pílula de IA (Um charme extra) */
 .ai-badge {
-    background-color: #dbeafe; /* Fundo azul bem claro */
-    color: #1d4ed8; /* Texto azul escuro */
-    font-size: 0.7rem;
+    background-color: var(--blue-100); /* Fundo azul bem claro */
+    color: var(--blue-700); /* Texto azul escuro */
+    font-size: var(--text-2xs);
     font-weight: 700;
     padding: 2px 6px;
     border-radius: 9999px;
@@ -61,5 +61,5 @@
 }
 
 .upload-transaction-file-button:hover .ai-badge {
-    background-color: #bfdbfe;
+    background-color: var(--blue-200);
 }

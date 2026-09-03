@@ -1,0 +1,64 @@
+.gastos-filtros {
+    position: sticky;
+    top: 0;
+    z-index: var(--z-sticky);
+    background: var(--color-bg-app);
+    padding-bottom: var(--space-4);
+}
+
+.gastos-filtros-linha {
+    display: flex;
+    align-items: center;
+    gap: var(--space-8);
+    flex-wrap: wrap;
+}
+
+.gastos-filtros-legenda {
+    margin: var(--space-4) 0 0;
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+}
+
+.gastos-filtros-aviso {
+    color: var(--color-warning-text);
+}
+
+.gastos-custom-range {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+}
+
+.gastos-custom-range input[type="date"] {
+    padding: var(--space-5) var(--space-6);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-md);
+    background-color: var(--color-surface-subtle);
+    color: var(--color-text-body);
+    font-size: var(--text-sm);
+}
+
+.gastos-custom-range-sep {
+    color: var(--color-text-faint);
+}
+
+.gastos-account-select {
+    padding: var(--space-5) var(--space-6);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-md);
+    background-color: var(--color-surface-subtle);
+    color: var(--color-text-body);
+    font-size: var(--text-sm);
+    margin-left: auto;
+}
+
+@media (max-width: 640px) {
+    .gastos-filtros-linha {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .gastos-account-select {
+        margin-left: 0;
+    }
+}

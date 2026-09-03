@@ -13,6 +13,7 @@ import { ChatPage } from "./pages/ChatPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { ProtectedRoute } from "./components/Auth/ProtectedRoute";
+import { AppLayout } from "./components/Layout/AppLayout";
 
 const rootElement = document.getElementById('root');
 if (!rootElement) throw new Error('Failed to find the root element');
@@ -29,13 +30,18 @@ root.render(
 
                 {/* Rotas Protegidas */}
                 <Route element={<ProtectedRoute />}> {/* <-- Envolve as rotas protegidas */}
-                    <Route path="/home" element={<HomePage />} />
-                    <Route path="/chat" element={<ChatPage />} />
-                    <Route path="/dashboard" element={<DashboardPage />} />
-                    <Route path="/profile" element={<ProfilePage />} />
-
-                    {/* Redireciona a raiz "/" para a home se estiver logado */}
+                    {/* Fora do AppLayout: é só um redirecionamento, não deve
+                        montar header e barra de navegação por um quadro. */}
                     <Route path="/" element={<Navigate to="/home" replace />} />
+
+                    {/* AppLayout desenha o header (desktop) e a barra de
+                        navegação inferior (celular) ao redor de cada página. */}
+                    <Route element={<AppLayout />}>
+                        <Route path="/home" element={<HomePage />} />
+                        <Route path="/chat" element={<ChatPage />} />
+                        <Route path="/dashboard" element={<DashboardPage />} />
+                        <Route path="/profile" element={<ProfilePage />} />
+                    </Route>
                 </Route>
 
                 {/* Rota Padrão (se nenhuma outra corresponder - opcional) */}

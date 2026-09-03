@@ -1,0 +1,89 @@
+/*
+ * Estilos compartilhados de tabela — substitui `.cmp-tabela*` e `.fin-tabela*`,
+ * que eram byte-a-byte idênticos entre si (~30 das 121 linhas de
+ * CalculadoraFinanciamento.css só replicavam ComparadorCenarios.css).
+ */
+.tabela-wrap {
+    overflow-x: auto;
+}
+
+.tabela-wrap--scroll {
+    max-height: 420px;
+    overflow-y: auto;
+}
+
+.tabela {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--text-sm);
+}
+
+.tabela th,
+.tabela td {
+    padding: var(--space-6) var(--space-8);
+    text-align: right;
+    white-space: nowrap;
+}
+
+.tabela--numerica td {
+    font-variant-numeric: tabular-nums;
+}
+
+.tabela th:first-child,
+.tabela td:first-child {
+    text-align: left;
+    color: var(--color-text-secondary);
+    font-weight: var(--weight-medium);
+    white-space: normal;
+}
+
+.tabela thead th {
+    border-bottom: 2px solid var(--color-border);
+    color: var(--color-text);
+    font-weight: var(--weight-bold);
+    position: sticky;
+    top: 0;
+    background: var(--color-surface);
+}
+
+.tabela tbody tr {
+    border-bottom: 1px solid var(--color-surface-muted);
+}
+
+.tabela-row--destaque {
+    background: var(--color-success-tint);
+}
+
+.tabela-row--destaque td:first-child {
+    color: var(--color-success-text);
+    font-weight: var(--weight-bold);
+}
+
+.tabela-th-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: var(--space-3);
+}
+
+.tabela-badge {
+    display: inline-block;
+    margin-left: var(--space-3);
+    padding: var(--space-1) var(--space-4);
+    background: var(--color-success-tint-strong);
+    color: var(--color-success-text);
+    border-radius: var(--radius-full);
+    font-size: var(--text-2xs);
+    font-weight: var(--weight-bold);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wide);
+}
+
+.destaque-positivo {
+    color: var(--color-success-text);
+}
+
+.destaque-negativo {
+    color: var(--color-danger);
+}

@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { profileService } from '../services/Api';
-import { Header } from '../components/Layout/Header';
 import './ProfilePage.css';
 
 /** Máscara monetária: converte dígitos digitados em "1.234,56" (mesmo padrão usado em toda a aplicação). */
@@ -72,9 +71,8 @@ export function ProfilePage() {
 
     return (
         <div className="profile-container">
-            <Header />
 
-            <main className="profile-content">
+            <main className="profile-content" id="conteudo-principal">
                 <div className="profile-page-header">
                     <h2 className="profile-title">Meu Perfil</h2>
                     <p className="profile-subtitle">Gerencie suas informações pessoais e financeiras</p>

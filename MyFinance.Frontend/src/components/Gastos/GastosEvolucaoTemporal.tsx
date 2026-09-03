@@ -1,68 +1,37 @@
-import { useMemo, useState } from 'react';
-import {
-    BarChart,
-    Bar,
-    LineChart,
-    Line,
-    XAxis,
-    YAxis,
-    CartesianGrid,
-    Tooltip,
-    Legend,
-    ResponsiveContainer,
-} from 'recharts';
+import { useState } from 'react';
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import type { ExpenseTimelineResponseDto } from '../../types/ExpenseAnalytics';
-import { corDaCategoria, formatCurrency, formatMesLabel, formatMesLabelCompleto, COR_OUTRAS } from './gastosUtils';
+import { formatCurrency, formatMesLabel, formatMesLabelCompleto } from './gastosUtils';
+import { corDaCategoria, type RankingCategorias } from './gastosSelectors';
+import { intervaloEixoX, COR_NEUTRA } from '../Shared/charts/chartTheme';
+import { ChartFigure } from '../Shared/charts/ChartFigure';
+import { EstadoVazio } from '../Shared/ui';
 import './GastosEvolucaoTemporal.css';
 
 interface GastosEvolucaoTemporalProps {
     timeline: ExpenseTimelineResponseDto;
-    coresCategorias: Map<string, string>;
+    /** Ranking único da aba (construído em AnaliseGastos) — antes este componente calculava seu próprio top-N a partir de uma fonte diferente do donut. */
+    ranking: RankingCategorias;
+    visao: 'composicao' | 'tendencia';
 }
 
-const MAX_CATEGORIAS_EMPILHADAS = 5;
 const MAX_LINHAS_SELECIONADAS = 4;
 
-interface CategoriaResumo {
+interface SerieDisponivel {
     categoryId: string;
     categoryName: string;
-    total: number;
 }
 
-/** Agrega o total de cada categoria em toda a janela, para decidir quais viram série própria. */
-function ranquearCategorias(months: ExpenseTimelineResponseDto['months']): CategoriaResumo[] {
-    const totais = new Map<string, CategoriaResumo>();
-    months.forEach(mes => {
-        mes.categories.forEach(cat => {
-            const atual = totais.get(cat.categoryId);
-            if (atual) atual.total += cat.total;
-            else totais.set(cat.categoryId, { categoryId: cat.categoryId, categoryName: cat.categoryName, total: cat.total });
-        });
-    });
-    return [...totais.values()].sort((a, b) => b.total - a.total);
-}
-
-/** Constrói uma linha por mês com uma coluna por categoria principal (+ "Outras" quando cabível). */
-function construirDadosMensais(
-    months: ExpenseTimelineResponseDto['months'],
-    principais: CategoriaResumo[],
-    temOutras: boolean,
-) {
+function construirDadosMensais(months: ExpenseTimelineResponseDto['months'], principais: SerieDisponivel[], temOutras: boolean) {
     return months.map(mes => {
-        const linha: Record<string, number | string> = {
-            label: mes.label,
-            mesCompleto: formatMesLabelCompleto(mes.label),
-        };
+        const linha: Record<string, number | string> = { label: mes.label, mesCompleto: formatMesLabelCompleto(mes.label) };
         principais.forEach(p => { linha[p.categoryId] = 0; });
         if (temOutras) linha.__outras__ = 0;
 
         let somaOutras = 0;
         mes.categories.forEach(cat => {
-            if (principais.some(p => p.categoryId === cat.categoryId)) {
-                linha[cat.categoryId] = cat.total;
-            } else {
-                somaOutras += cat.total;
-            }
+            if (principais.some(p => p.categoryId === cat.categoryId)) linha[cat.categoryId] = cat.total;
+            else somaOutras += cat.total;
         });
         if (temOutras) linha.__outras__ = somaOutras;
 
@@ -71,80 +40,52 @@ function construirDadosMensais(
 }
 
 /**
- * Evolução mensal dos gastos por categoria: barras empilhadas (composição do mês) com opção de
- * alternar para linhas isoladas por categoria (tendência individual, limitada a 4 séries — acima
- * disso linhas convergentes deixam de ser legíveis).
+ * Evolução mensal por categoria — barras empilhadas (composição de cada mês)
+ * ou linhas isoladas (tendência de até 4 categorias). O modo em si agora é
+ * escolhido pelo seletor de visão em `GastosEvolucao`; este componente só
+ * desenha o gráfico da visão ativa.
  */
-export function GastosEvolucaoTemporal({ timeline, coresCategorias }: GastosEvolucaoTemporalProps) {
-    const [modo, setModo] = useState<'empilhado' | 'linhas'>('empilhado');
+export function GastosEvolucaoTemporal({ timeline, ranking, visao }: GastosEvolucaoTemporalProps) {
+    const { principais, temOutras } = ranking;
+    const dados = construirDadosMensais(timeline.months, principais, temOutras);
 
-    const { principais, temOutras, dados } = useMemo(() => {
-        const ranking = ranquearCategorias(timeline.months);
-        const principaisCalc = ranking.slice(0, MAX_CATEGORIAS_EMPILHADAS);
-        const temOutrasCalc = ranking.length > MAX_CATEGORIAS_EMPILHADAS;
-        return {
-            principais: principaisCalc,
-            temOutras: temOutrasCalc,
-            dados: construirDadosMensais(timeline.months, principaisCalc, temOutrasCalc),
-        };
-    }, [timeline]);
-
-    const [categoriasSelecionadas, setCategoriasSelecionadas] = useState<string[]>(
-        () => principais.slice(0, 3).map(c => c.categoryId),
-    );
-
-    const seriesDisponiveis = temOutras
-        ? [...principais, { categoryId: '__outras__', categoryName: 'Outras', total: 0 }]
+    const seriesDisponiveis: SerieDisponivel[] = temOutras
+        ? [...principais, { categoryId: '__outras__', categoryName: 'Outras' }]
         : principais;
 
+    // Estado "bruto" do que o usuário clicou — pode ficar órfão quando o
+    // período/conta muda e algum ID selecionado deixa de existir. Em vez de
+    // sincronizar com um useEffect (que causaria um frame com o gráfico
+    // vazio), a seleção EFETIVA é sempre derivada na renderização: filtra
+    // pelos IDs disponíveis agora e, se sobrar nada, cai para os 3 primeiros.
+    const [selecaoBruta, setSelecaoBruta] = useState<string[] | null>(null);
+    const idsDisponiveis = new Set(seriesDisponiveis.map(s => s.categoryId));
+    const selecaoValida = (selecaoBruta ?? []).filter(id => idsDisponiveis.has(id));
+    const categoriasSelecionadas = selecaoValida.length > 0 ? selecaoValida : seriesDisponiveis.slice(0, 3).map(s => s.categoryId);
+
     const toggleCategoria = (categoryId: string) => {
-        setCategoriasSelecionadas(prev => {
-            if (prev.includes(categoryId)) return prev.filter(id => id !== categoryId);
-            if (prev.length >= MAX_LINHAS_SELECIONADAS) return prev;
-            return [...prev, categoryId];
+        setSelecaoBruta(prev => {
+            const atual = prev ?? categoriasSelecionadas;
+            if (atual.includes(categoryId)) return atual.filter(id => id !== categoryId);
+            if (atual.length >= MAX_LINHAS_SELECIONADAS) return atual;
+            return [...atual, categoryId];
         });
     };
 
-    const corDaSerie = (categoryId: string) => (categoryId === '__outras__' ? COR_OUTRAS : corDaCategoria(coresCategorias, categoryId));
+    const corDaSerie = (categoryId: string) => (categoryId === '__outras__' ? COR_NEUTRA : corDaCategoria(ranking, categoryId));
 
     if (timeline.months.every(mes => mes.totalExpenses === 0)) {
-        return (
-            <div className="gastos-card">
-                <h3 className="gastos-card-title">Evolução temporal por categoria</h3>
-                <p className="gastos-card-empty">Nenhuma despesa encontrada no período selecionado.</p>
-            </div>
-        );
+        return <EstadoVazio variante="inline" icone="📊" titulo="Nenhuma despesa encontrada no período" />;
     }
 
-    const xAxisInterval = Math.max(0, Math.ceil(dados.length / 10) - 1);
+    const xAxisInterval = intervaloEixoX(dados.length);
+    const seriesTabela = visao === 'composicao'
+        ? seriesDisponiveis
+        : seriesDisponiveis.filter(s => categoriasSelecionadas.includes(s.categoryId));
 
     return (
-        <div className="gastos-card">
-            <div className="evolucao-header">
-                <h3 className="gastos-card-title">Evolução temporal por categoria</h3>
-                <div className="gastos-toggle-group" role="radiogroup" aria-label="Modo de exibição">
-                    <button
-                        type="button"
-                        role="radio"
-                        aria-checked={modo === 'empilhado'}
-                        className={`gastos-toggle-btn${modo === 'empilhado' ? ' gastos-toggle-btn--active' : ''}`}
-                        onClick={() => setModo('empilhado')}
-                    >
-                        Empilhado
-                    </button>
-                    <button
-                        type="button"
-                        role="radio"
-                        aria-checked={modo === 'linhas'}
-                        className={`gastos-toggle-btn${modo === 'linhas' ? ' gastos-toggle-btn--active' : ''}`}
-                        onClick={() => setModo('linhas')}
-                    >
-                        Linhas por categoria
-                    </button>
-                </div>
-            </div>
-
-            {modo === 'linhas' && (
+        <div className="evolucao-conteudo">
+            {visao === 'tendencia' && (
                 <div className="evolucao-chips" role="group" aria-label="Categorias exibidas (máx. 4)">
                     {seriesDisponiveis.map(categoria => {
                         const selecionada = categoriasSelecionadas.includes(categoria.categoryId);
@@ -159,11 +100,7 @@ export function GastosEvolucaoTemporal({ timeline, coresCategorias }: GastosEvol
                                 disabled={noLimite}
                                 aria-pressed={selecionada}
                             >
-                                <span
-                                    className="evolucao-chip-dot"
-                                    style={{ background: corDaSerie(categoria.categoryId) }}
-                                    aria-hidden="true"
-                                />
+                                <span className="evolucao-chip-dot" style={{ background: corDaSerie(categoria.categoryId) }} aria-hidden="true" />
                                 {categoria.categoryName}
                             </button>
                         );
@@ -171,69 +108,84 @@ export function GastosEvolucaoTemporal({ timeline, coresCategorias }: GastosEvol
                 </div>
             )}
 
-            <ResponsiveContainer width="100%" height={300}>
-                {modo === 'empilhado' ? (
-                    <BarChart data={dados} margin={{ top: 8, right: 16, left: 8, bottom: 0 }} barCategoryGap="24%">
-                        <CartesianGrid stroke="#e2e8f0" vertical={false} />
-                        <XAxis dataKey="label" tickFormatter={formatMesLabel} interval={xAxisInterval} stroke="#94a3b8" fontSize={12} />
-                        <YAxis tickFormatter={(v: number) => formatCurrency(v)} width={90} stroke="#94a3b8" fontSize={12} />
-                        <Tooltip
-                            formatter={(value, name) => [formatCurrency(Number(value)), name]}
-                            labelFormatter={(_label, payload) => (payload?.[0]?.payload as { mesCompleto?: string })?.mesCompleto ?? ''}
-                        />
-                        <Legend />
-                        {principais.map((categoria, index) => (
-                            <Bar
-                                key={categoria.categoryId}
-                                dataKey={categoria.categoryId}
-                                name={categoria.categoryName}
-                                stackId="gastos"
-                                fill={corDaSerie(categoria.categoryId)}
-                                stroke="#ffffff"
-                                strokeWidth={2}
-                                maxBarSize={24}
-                                radius={!temOutras && index === principais.length - 1 ? [4, 4, 0, 0] : undefined}
+            <ChartFigure
+                titulo={visao === 'composicao' ? 'Composição mensal por categoria' : 'Tendência por categoria'}
+                descricao={visao === 'composicao'
+                    ? 'Barras empilhadas com o total de despesas de cada categoria, mês a mês'
+                    : 'Linhas de tendência das categorias selecionadas, mês a mês'}
+                altura={300}
+                dadosTabela={{
+                    colunas: ['Mês', ...seriesTabela.map(s => s.categoryName)],
+                    linhas: dados.map(d => [
+                        String(d.mesCompleto),
+                        ...seriesTabela.map(s => formatCurrency(Number(d[s.categoryId] ?? 0))),
+                    ]),
+                }}
+            >
+                <ResponsiveContainer width="100%" height={300}>
+                    {visao === 'composicao' ? (
+                        <BarChart data={dados} margin={{ top: 8, right: 16, left: 8, bottom: 0 }} barCategoryGap="24%">
+                            <CartesianGrid stroke="#e2e8f0" vertical={false} />
+                            <XAxis dataKey="label" tickFormatter={formatMesLabel} interval={xAxisInterval} stroke="#94a3b8" fontSize={12} tick={{ fill: '#64748b' }} />
+                            <YAxis tickFormatter={(v: number) => formatCurrency(v)} width={90} stroke="#94a3b8" fontSize={12} tick={{ fill: '#64748b' }} />
+                            <Tooltip
+                                formatter={(value, name) => [formatCurrency(Number(value)), name]}
+                                labelFormatter={(_label, payload) => (payload?.[0]?.payload as { mesCompleto?: string })?.mesCompleto ?? ''}
                             />
-                        ))}
-                        {temOutras && (
-                            <Bar
-                                dataKey="__outras__"
-                                name="Outras"
-                                stackId="gastos"
-                                fill={COR_OUTRAS}
-                                stroke="#ffffff"
-                                strokeWidth={2}
-                                maxBarSize={24}
-                                radius={[4, 4, 0, 0]}
-                            />
-                        )}
-                    </BarChart>
-                ) : (
-                    <LineChart data={dados} margin={{ top: 8, right: 16, left: 8, bottom: 0 }}>
-                        <CartesianGrid stroke="#e2e8f0" vertical={false} />
-                        <XAxis dataKey="label" tickFormatter={formatMesLabel} interval={xAxisInterval} stroke="#94a3b8" fontSize={12} />
-                        <YAxis tickFormatter={(v: number) => formatCurrency(v)} width={90} stroke="#94a3b8" fontSize={12} />
-                        <Tooltip
-                            formatter={(value, name) => [formatCurrency(Number(value)), name]}
-                            labelFormatter={(_label, payload) => (payload?.[0]?.payload as { mesCompleto?: string })?.mesCompleto ?? ''}
-                        />
-                        <Legend />
-                        {seriesDisponiveis
-                            .filter(categoria => categoriasSelecionadas.includes(categoria.categoryId))
-                            .map(categoria => (
-                                <Line
+                            <Legend />
+                            {principais.map((categoria, index) => (
+                                <Bar
                                     key={categoria.categoryId}
-                                    type="monotone"
                                     dataKey={categoria.categoryId}
                                     name={categoria.categoryName}
-                                    stroke={corDaSerie(categoria.categoryId)}
+                                    stackId="gastos"
+                                    fill={corDaSerie(categoria.categoryId)}
+                                    stroke="var(--color-surface)"
                                     strokeWidth={2}
-                                    dot={{ r: 4, strokeWidth: 2, stroke: '#ffffff' }}
+                                    maxBarSize={24}
+                                    radius={!temOutras && index === principais.length - 1 ? [4, 4, 0, 0] : undefined}
                                 />
                             ))}
-                    </LineChart>
-                )}
-            </ResponsiveContainer>
+                            {temOutras && (
+                                <Bar
+                                    dataKey="__outras__"
+                                    name="Outras"
+                                    stackId="gastos"
+                                    fill={COR_NEUTRA}
+                                    stroke="var(--color-surface)"
+                                    strokeWidth={2}
+                                    maxBarSize={24}
+                                    radius={[4, 4, 0, 0]}
+                                />
+                            )}
+                        </BarChart>
+                    ) : (
+                        <LineChart data={dados} margin={{ top: 8, right: 16, left: 8, bottom: 0 }}>
+                            <CartesianGrid stroke="#e2e8f0" vertical={false} />
+                            <XAxis dataKey="label" tickFormatter={formatMesLabel} interval={xAxisInterval} stroke="#94a3b8" fontSize={12} tick={{ fill: '#64748b' }} />
+                            <YAxis tickFormatter={(v: number) => formatCurrency(v)} width={90} stroke="#94a3b8" fontSize={12} tick={{ fill: '#64748b' }} />
+                            <Tooltip
+                                formatter={(value, name) => [formatCurrency(Number(value)), name]}
+                                labelFormatter={(_label, payload) => (payload?.[0]?.payload as { mesCompleto?: string })?.mesCompleto ?? ''}
+                            />
+                            <Legend />
+                            {seriesDisponiveis
+                                .filter(categoria => categoriasSelecionadas.includes(categoria.categoryId))
+                                .map(categoria => (
+                                    <Line
+                                        key={categoria.categoryId}
+                                        type="monotone"
+                                        dataKey={categoria.categoryId}
+                                        name={categoria.categoryName}
+                                        stroke={corDaSerie(categoria.categoryId)}
+                                        strokeWidth={2}
+                                        dot={{ r: 4, strokeWidth: 2, stroke: 'var(--color-surface)' }}
+                                    />
+                                ))}
+                        </LineChart>
+                    )}
+                </ResponsiveContainer>
+            </ChartFigure>
         </div>
     );
 }
