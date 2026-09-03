@@ -12,12 +12,15 @@ import {
 import type { RetiradaResponseDto } from '../../types/Retirada';
 import { formatCurrency } from './calculadoraUtils';
 import { formatPrazo } from './calculadoraValidacao';
+import { yAxisProps, formatCurrencyCompacta } from '../Shared/charts/chartTheme';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 interface ResultadoRetiradaDetalhadoProps {
     resultado: RetiradaResponseDto;
 }
 
 export function ResultadoRetiradaDetalhado({ resultado }: ResultadoRetiradaDetalhadoProps) {
+    const ehMobile = useIsMobile();
     const totalImposto = resultado.evolucao.reduce((soma, m) => soma + m.valorImposto, 0);
     const totalSaqueBruto = resultado.evolucao.reduce((soma, m) => soma + m.saqueBruto, 0);
     const aliquotaMedia = totalSaqueBruto > 0 ? (totalImposto / totalSaqueBruto) * 100 : 0;
@@ -71,7 +74,7 @@ export function ResultadoRetiradaDetalhado({ resultado }: ResultadoRetiradaDetal
             </div>
 
             <div className="proj-chart">
-                <ResponsiveContainer width="100%" height={320}>
+                <ResponsiveContainer width="100%" height={ehMobile ? 260 : 320}>
                     <ComposedChart data={resultado.evolucao} margin={{ top: 8, right: 16, left: 8, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                         <XAxis
@@ -82,10 +85,8 @@ export function ResultadoRetiradaDetalhado({ resultado }: ResultadoRetiradaDetal
                             fontSize={12}
                         />
                         <YAxis
-                            tickFormatter={(v: number) => formatCurrency(v)}
-                            width={90}
-                            stroke="#94a3b8"
-                            fontSize={12}
+                            tickFormatter={(v: number) => ehMobile ? formatCurrencyCompacta(v) : formatCurrency(v)}
+                            {...yAxisProps(ehMobile)}
                         />
                         <Tooltip
                             formatter={(value, name) => [formatCurrency(Number(value)), name]}

@@ -28,7 +28,7 @@
 }
 
 /* ── Responsivo ────────────────────────────────────────────────────────── */
-@media (max-width: 640px) {
+@media (max-width: 767.98px) {
     .gastos-container {
         gap: var(--space-10);
     }

@@ -47,7 +47,7 @@
 }
 
 /* Faltava por completo — a linha de meta (categoria · conta · data) estourava em telas estreitas. */
-@media (max-width: 640px) {
+@media (max-width: 767.98px) {
     .fluxo-top-expense-item {
         gap: var(--space-4);
     }

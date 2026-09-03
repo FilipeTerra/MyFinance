@@ -12,7 +12,18 @@ export const gridProps = { stroke: '#e2e8f0', vertical: false } as const;
 
 export const xAxisProps = { stroke: '#94a3b8', fontSize: 12, tick: { fill: '#64748b' } } as const;
 
-export const yAxisProps = { ...xAxisProps, width: 90 } as const;
+/**
+ * `width: 90` num eixo Y consome 24% de um viewport de 375px antes de existir
+ * área de plotagem — daí a versão compacta (44px), a única prop de gráfico que
+ * varia por largura de tela; ver `useIsMobile`. Nenhum gráfico do app ainda
+ * espalhava este objeto (cada um reescrevia `stroke`/`fontSize`/`tick` à mão
+ * inline) — vira função aqui, sem quebrar nada existente, para que os 8 pontos
+ * de uso possam consumi-la de uma vez.
+ */
+export const yAxisProps = (compacto: boolean) => ({
+    ...xAxisProps,
+    width: compacto ? 44 : 90,
+});
 
 export const BAR_RADIUS: [number, number, number, number] = [4, 4, 0, 0];
 
@@ -30,6 +41,27 @@ export const tooltipMoedaFormatter = (value: unknown, name: string): [string, st
     formatCurrency(Number(value)),
     name,
 ];
+
+/**
+ * Versão compacta de `formatCurrency` para o eixo Y no celular ("R$ 1,2 mil"
+ * em vez de "R$ 1.200,00") — mesmo com `width: 44`, o valor completo não cabe
+ * sem quebrar. Só para rótulo de eixo; o tooltip continua com o valor exato
+ * via `tooltipMoedaFormatter`.
+ */
+export const formatCurrencyCompacta = (value: number): string => {
+    const absoluto = Math.abs(value);
+    const sinal = value < 0 ? '-' : '';
+
+    const compactar = (divisor: number, sufixo: string): string => {
+        const numero = absoluto / divisor;
+        const texto = numero % 1 === 0 ? numero.toFixed(0) : numero.toFixed(1).replace('.', ',');
+        return `${sinal}R$ ${texto} ${sufixo}`;
+    };
+
+    if (absoluto >= 1_000_000) return compactar(1_000_000, 'mi');
+    if (absoluto >= 1_000) return compactar(1_000, 'mil');
+    return formatCurrency(value);
+};
 
 /**
  * Paleta categórica de identidade — mesma ordem validada (fixa, nunca reciclada) usada por

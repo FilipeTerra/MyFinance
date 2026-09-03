@@ -168,7 +168,7 @@
     font-variant-numeric: tabular-nums;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 767.98px) {
     .categoria-layout {
         flex-direction: column;
     }

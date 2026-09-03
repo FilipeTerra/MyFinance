@@ -12,6 +12,8 @@ import {
 import type { ProjecaoInvestimentoResponseDto } from '../../types/ProjecaoInvestimento';
 import { CategoriaTributariaAtivo } from '../../types/CategoriaTributariaAtivo';
 import { formatCurrency } from './calculadoraUtils';
+import { yAxisProps, formatCurrencyCompacta } from '../Shared/charts/chartTheme';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 interface ResultadoProjecaoDetalhadoProps {
     resultado: ProjecaoInvestimentoResponseDto;
@@ -26,6 +28,7 @@ interface ResultadoProjecaoDetalhadoProps {
  * `ProjecaoInvestimentoResponseDto` a exibir da mesma forma.
  */
 export function ResultadoProjecaoDetalhado({ resultado, prazoMeses }: ResultadoProjecaoDetalhadoProps) {
+    const ehMobile = useIsMobile();
     const chartTickFormatter = (mes: number) =>
         prazoMeses > 24 ? `${Math.round(mes / 12)}a` : `${mes}m`;
 
@@ -139,7 +142,7 @@ export function ResultadoProjecaoDetalhado({ resultado, prazoMeses }: ResultadoP
             )}
 
             <div className="proj-chart">
-                <ResponsiveContainer width="100%" height={320}>
+                <ResponsiveContainer width="100%" height={ehMobile ? 260 : 320}>
                     <ComposedChart data={resultado.evolucao} margin={{ top: 8, right: 16, left: 8, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                         <XAxis
@@ -150,10 +153,8 @@ export function ResultadoProjecaoDetalhado({ resultado, prazoMeses }: ResultadoP
                             fontSize={12}
                         />
                         <YAxis
-                            tickFormatter={(v: number) => formatCurrency(v)}
-                            width={90}
-                            stroke="#94a3b8"
-                            fontSize={12}
+                            tickFormatter={(v: number) => ehMobile ? formatCurrencyCompacta(v) : formatCurrency(v)}
+                            {...yAxisProps(ehMobile)}
                         />
                         <Tooltip
                             formatter={(value, name) => [formatCurrency(Number(value)), name]}

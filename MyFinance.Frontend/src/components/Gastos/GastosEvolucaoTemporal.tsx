@@ -3,9 +3,10 @@ import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, L
 import type { ExpenseTimelineResponseDto } from '../../types/ExpenseAnalytics';
 import { formatCurrency, formatMesLabel, formatMesLabelCompleto } from './gastosUtils';
 import { corDaCategoria, type RankingCategorias } from './gastosSelectors';
-import { intervaloEixoX, COR_NEUTRA } from '../Shared/charts/chartTheme';
+import { intervaloEixoX, COR_NEUTRA, yAxisProps, formatCurrencyCompacta } from '../Shared/charts/chartTheme';
 import { ChartFigure } from '../Shared/charts/ChartFigure';
 import { EstadoVazio } from '../Shared/ui';
+import { useIsMobile } from '../../hooks/useIsMobile';
 import './GastosEvolucaoTemporal.css';
 
 interface GastosEvolucaoTemporalProps {
@@ -46,6 +47,9 @@ function construirDadosMensais(months: ExpenseTimelineResponseDto['months'], pri
  * desenha o gráfico da visão ativa.
  */
 export function GastosEvolucaoTemporal({ timeline, ranking, visao }: GastosEvolucaoTemporalProps) {
+    const ehMobile = useIsMobile();
+    const altura = ehMobile ? 240 : 300;
+
     const { principais, temOutras } = ranking;
     const dados = construirDadosMensais(timeline.months, principais, temOutras);
 
@@ -113,7 +117,7 @@ export function GastosEvolucaoTemporal({ timeline, ranking, visao }: GastosEvolu
                 descricao={visao === 'composicao'
                     ? 'Barras empilhadas com o total de despesas de cada categoria, mês a mês'
                     : 'Linhas de tendência das categorias selecionadas, mês a mês'}
-                altura={300}
+                altura={altura}
                 dadosTabela={{
                     colunas: ['Mês', ...seriesTabela.map(s => s.categoryName)],
                     linhas: dados.map(d => [
@@ -122,12 +126,12 @@ export function GastosEvolucaoTemporal({ timeline, ranking, visao }: GastosEvolu
                     ]),
                 }}
             >
-                <ResponsiveContainer width="100%" height={300}>
+                <ResponsiveContainer width="100%" height={altura}>
                     {visao === 'composicao' ? (
                         <BarChart data={dados} margin={{ top: 8, right: 16, left: 8, bottom: 0 }} barCategoryGap="24%">
                             <CartesianGrid stroke="#e2e8f0" vertical={false} />
                             <XAxis dataKey="label" tickFormatter={formatMesLabel} interval={xAxisInterval} stroke="#94a3b8" fontSize={12} tick={{ fill: '#64748b' }} />
-                            <YAxis tickFormatter={(v: number) => formatCurrency(v)} width={90} stroke="#94a3b8" fontSize={12} tick={{ fill: '#64748b' }} />
+                            <YAxis tickFormatter={(v: number) => ehMobile ? formatCurrencyCompacta(v) : formatCurrency(v)} {...yAxisProps(ehMobile)} />
                             <Tooltip
                                 formatter={(value, name) => [formatCurrency(Number(value)), name]}
                                 labelFormatter={(_label, payload) => (payload?.[0]?.payload as { mesCompleto?: string })?.mesCompleto ?? ''}
@@ -163,7 +167,7 @@ export function GastosEvolucaoTemporal({ timeline, ranking, visao }: GastosEvolu
                         <LineChart data={dados} margin={{ top: 8, right: 16, left: 8, bottom: 0 }}>
                             <CartesianGrid stroke="#e2e8f0" vertical={false} />
                             <XAxis dataKey="label" tickFormatter={formatMesLabel} interval={xAxisInterval} stroke="#94a3b8" fontSize={12} tick={{ fill: '#64748b' }} />
-                            <YAxis tickFormatter={(v: number) => formatCurrency(v)} width={90} stroke="#94a3b8" fontSize={12} tick={{ fill: '#64748b' }} />
+                            <YAxis tickFormatter={(v: number) => ehMobile ? formatCurrencyCompacta(v) : formatCurrency(v)} {...yAxisProps(ehMobile)} />
                             <Tooltip
                                 formatter={(value, name) => [formatCurrency(Number(value)), name]}
                                 labelFormatter={(_label, payload) => (payload?.[0]?.payload as { mesCompleto?: string })?.mesCompleto ?? ''}

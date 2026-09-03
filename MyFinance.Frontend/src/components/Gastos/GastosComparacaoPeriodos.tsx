@@ -1,9 +1,10 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell, LabelList, ReferenceLine, ResponsiveContainer } from 'recharts';
 import type { CategoryExpenseDto, ExpenseOverviewResponseDto } from '../../types/ExpenseAnalytics';
 import { formatCurrency, formatSignedCurrency, formatSignedPercent } from './gastosUtils';
-import { COR_ALTA, COR_QUEDA } from '../Shared/charts/chartTheme';
+import { COR_ALTA, COR_QUEDA, formatCurrencyCompacta } from '../Shared/charts/chartTheme';
 import { ChartFigure } from '../Shared/charts/ChartFigure';
 import { EstadoVazio } from '../Shared/ui';
+import { useIsMobile } from '../../hooks/useIsMobile';
 import './GastosComparacaoPeriodos.css';
 
 interface GastosComparacaoPeriodosProps {
@@ -41,7 +42,16 @@ function construirComparacao(atual: CategoryExpenseDto[], anterior: CategoryExpe
         .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
 }
 
-const rotuloDelta = (item: ComparacaoItem) => `${item.delta <= 0 ? '▼' : '▲'} ${formatSignedCurrency(item.delta)}`;
+/**
+ * `compacto=false` reproduz `formatSignedCurrency` termo a termo (mesmo sinal,
+ * mesma formatação) — só existe como função separada para poder trocar para
+ * `formatCurrencyCompacta` no celular sem duplicar a lógica de sinal.
+ */
+const rotuloDelta = (item: ComparacaoItem, compacto: boolean) => {
+    const valor = compacto ? formatCurrencyCompacta(Math.abs(item.delta)) : formatCurrency(Math.abs(item.delta));
+    const sinal = item.delta > 0 ? '+' : item.delta < 0 ? '-' : '';
+    return `${item.delta <= 0 ? '▼' : '▲'} ${sinal}${valor}`;
+};
 
 interface LabelContentProps {
     x?: number | string;
@@ -58,6 +68,7 @@ interface LabelContentProps {
  * informação não depende de distinguir vermelho de verde.
  */
 export function GastosComparacaoPeriodos({ overview }: GastosComparacaoPeriodosProps) {
+    const ehMobile = useIsMobile();
     const comparacao = construirComparacao(overview.categories, overview.previousCategories);
 
     if (comparacao.length === 0) {
@@ -102,11 +113,21 @@ export function GastosComparacaoPeriodos({ overview }: GastosComparacaoPeriodosP
                     linhas: itens.map(i => [i.categoryName, formatCurrency(i.atual), formatCurrency(i.anterior), `${formatSignedCurrency(i.delta)} (${formatSignedPercent(i.deltaPercent)})`]),
                 }}
             >
+                {/* Eixo Y é categórico (nome da categoria), não moeda — não usa o
+                    `yAxisProps(compacto)` do tema, calibrado para dígitos de valor.
+                    No desktop, margem esquerda 64 + largura do eixo 110 = 174px
+                    reservados antes de existir barra; em 375px isso já comeria
+                    metade da área de plotagem, e a margem direita de 64px (para
+                    o rótulo de variação customizado) dobraria o aperto. */}
                 <ResponsiveContainer width="100%" height={Math.max(180, itens.length * 42)}>
-                    <BarChart data={itens} layout="vertical" margin={{ top: 8, right: 64, left: 64, bottom: 0 }}>
+                    <BarChart
+                        data={itens}
+                        layout="vertical"
+                        margin={ehMobile ? { top: 8, right: 40, left: 8, bottom: 0 } : { top: 8, right: 64, left: 64, bottom: 0 }}
+                    >
                         <CartesianGrid stroke="#e2e8f0" horizontal={false} />
-                        <XAxis type="number" tickFormatter={(v: number) => formatCurrency(v)} stroke="#94a3b8" fontSize={12} tick={{ fill: '#64748b' }} />
-                        <YAxis type="category" dataKey="categoryName" width={110} stroke="#94a3b8" fontSize={12} tick={{ fill: '#64748b' }} />
+                        <XAxis type="number" tickFormatter={(v: number) => ehMobile ? formatCurrencyCompacta(v) : formatCurrency(v)} stroke="#94a3b8" fontSize={12} tick={{ fill: '#64748b' }} />
+                        <YAxis type="category" dataKey="categoryName" width={ehMobile ? 78 : 110} stroke="#94a3b8" fontSize={12} tick={{ fill: '#64748b' }} />
                         <ReferenceLine x={0} stroke="#cbd5e1" />
                         <Tooltip
                             formatter={(value, _name, entry) => {
@@ -127,7 +148,7 @@ export function GastosComparacaoPeriodos({ overview }: GastosComparacaoPeriodosP
                                     const y = Number(props.y ?? 0) + Number(props.height ?? 0) / 2;
                                     return (
                                         <text x={x} y={y} dy={4} fontSize={11} fill="#64748b" textAnchor={item.delta >= 0 ? 'start' : 'end'}>
-                                            {rotuloDelta(item)}
+                                            {rotuloDelta(item, ehMobile)}
                                         </text>
                                     );
                                 }}

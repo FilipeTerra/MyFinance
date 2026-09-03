@@ -1,9 +1,10 @@
 import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import type { ExpenseTimelineResponseDto } from '../../types/ExpenseAnalytics';
 import { formatCurrency, formatMesLabel, formatMesLabelCompleto } from './gastosUtils';
-import { intervaloEixoX, COR_RECEITA, COR_DESPESA, COR_SALDO } from '../Shared/charts/chartTheme';
+import { intervaloEixoX, COR_RECEITA, COR_DESPESA, COR_SALDO, yAxisProps, formatCurrencyCompacta } from '../Shared/charts/chartTheme';
 import { ChartFigure } from '../Shared/charts/ChartFigure';
 import { EstadoVazio } from '../Shared/ui';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 interface GastosFluxoMensalProps {
     timeline: ExpenseTimelineResponseDto;
@@ -16,6 +17,9 @@ interface GastosFluxoMensalProps {
  * dentro do card do seletor de visão em `GastosEvolucao`.
  */
 export function GastosFluxoMensal({ timeline }: GastosFluxoMensalProps) {
+    const ehMobile = useIsMobile();
+    const altura = ehMobile ? 220 : 280;
+
     const dados = timeline.months.map(mes => ({
         label: mes.label,
         mesCompleto: formatMesLabelCompleto(mes.label),
@@ -33,17 +37,17 @@ export function GastosFluxoMensal({ timeline }: GastosFluxoMensalProps) {
         <ChartFigure
             titulo="Fluxo mensal"
             descricao="Receitas, despesas e saldo por mês no período selecionado"
-            altura={280}
+            altura={altura}
             dadosTabela={{
                 colunas: ['Mês', 'Receitas', 'Despesas', 'Saldo'],
                 linhas: dados.map(d => [d.mesCompleto, formatCurrency(d.receita), formatCurrency(d.despesa), formatCurrency(d.saldo)]),
             }}
         >
-            <ResponsiveContainer width="100%" height={280}>
+            <ResponsiveContainer width="100%" height={altura}>
                 <ComposedChart data={dados} margin={{ top: 8, right: 16, left: 8, bottom: 0 }}>
                     <CartesianGrid stroke="#e2e8f0" vertical={false} />
                     <XAxis dataKey="label" tickFormatter={formatMesLabel} interval={intervaloEixoX(dados.length)} stroke="#94a3b8" fontSize={12} tick={{ fill: '#64748b' }} />
-                    <YAxis tickFormatter={(v: number) => formatCurrency(v)} width={90} stroke="#94a3b8" fontSize={12} tick={{ fill: '#64748b' }} />
+                    <YAxis tickFormatter={(v: number) => ehMobile ? formatCurrencyCompacta(v) : formatCurrency(v)} {...yAxisProps(ehMobile)} />
                     <Tooltip
                         formatter={(value, name) => [formatCurrency(Number(value)), name]}
                         labelFormatter={(_label, payload) => (payload?.[0]?.payload as { mesCompleto?: string })?.mesCompleto ?? ''}

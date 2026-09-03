@@ -22,6 +22,8 @@ import { ResultadoSecao } from './campos/ResultadoSecao';
 import { SegmentedControl, Colapsavel } from '../Shared/ui';
 import { useResultadoFoco } from '../../hooks/useResultadoFoco';
 import { useErrosFormulario } from '../../hooks/useErrosFormulario';
+import { yAxisProps, formatCurrencyCompacta } from '../Shared/charts/chartTheme';
+import { useIsMobile } from '../../hooks/useIsMobile';
 import './CalculadoraFinanciamento.css';
 
 type SistemaVisivel = 'price' | 'sac';
@@ -66,6 +68,7 @@ function exportarCronogramaCsv(resultado: FinanciamentoResponseDto) {
 }
 
 export function CalculadoraFinanciamento() {
+    const ehMobile = useIsMobile();
     const [valorFinanciado, setValorFinanciado] = useState('');
     const [periodicidade, setPeriodicidade] = useState<PeriodicidadeTaxa>('mensal');
     const [taxaValor, setTaxaValor] = useState('');
@@ -327,11 +330,11 @@ export function CalculadoraFinanciamento() {
                     </div>
 
                     <div className="proj-chart">
-                        <ResponsiveContainer width="100%" height={280}>
+                        <ResponsiveContainer width="100%" height={ehMobile ? 220 : 280}>
                             <ComposedChart data={dadosGrafico} margin={{ top: 8, right: 16, left: 8, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                                 <XAxis dataKey="numero" stroke="#94a3b8" fontSize={12} />
-                                <YAxis tickFormatter={(v: number) => formatCurrency(v)} width={90} stroke="#94a3b8" fontSize={12} />
+                                <YAxis tickFormatter={(v: number) => ehMobile ? formatCurrencyCompacta(v) : formatCurrency(v)} {...yAxisProps(ehMobile)} />
                                 <Tooltip
                                     formatter={(value, name) => [formatCurrency(Number(value)), name]}
                                     labelFormatter={(numero) => `Parcela ${numero}`}

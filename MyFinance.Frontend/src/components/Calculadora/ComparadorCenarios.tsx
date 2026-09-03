@@ -24,7 +24,8 @@ import { FormFooterCalculadora } from './campos/FormFooterCalculadora';
 import { ResultadoSecao } from './campos/ResultadoSecao';
 import { useResultadoFoco } from '../../hooks/useResultadoFoco';
 import { useErrosFormulario } from '../../hooks/useErrosFormulario';
-import { CORES_CATEGORIA } from '../Shared/charts/chartTheme';
+import { CORES_CATEGORIA, yAxisProps, formatCurrencyCompacta } from '../Shared/charts/chartTheme';
+import { useIsMobile } from '../../hooks/useIsMobile';
 import './ComparadorCenarios.css';
 
 /** Paleta categórica validada (ordem fixa — nunca reatribuída por rank), a mesma usada em Gastos. */
@@ -64,6 +65,7 @@ interface ComparadorCenariosProps {
 
 /** Compara até 4 cenários de investimento com o mesmo aporte/prazo — reaproveita aporteInicial/aporteMensal/prazo do "Cenário único" via props, para o usuário não redigitar os mesmos três campos. */
 export function ComparadorCenarios({ base, onBaseChange }: ComparadorCenariosProps) {
+    const ehMobile = useIsMobile();
     const [cenarios, setCenarios] = useState<CenarioConfig[]>(cenariosIniciais);
 
     const [isLoading, setIsLoading] = useState(false);
@@ -280,7 +282,7 @@ export function ComparadorCenarios({ base, onBaseChange }: ComparadorCenariosPro
                     </div>
 
                     <div className="proj-chart">
-                        <ResponsiveContainer width="100%" height={320}>
+                        <ResponsiveContainer width="100%" height={ehMobile ? 260 : 320}>
                             <ComposedChart data={chartData} margin={{ top: 8, right: 16, left: 8, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                                 <XAxis
@@ -291,10 +293,8 @@ export function ComparadorCenarios({ base, onBaseChange }: ComparadorCenariosPro
                                     fontSize={12}
                                 />
                                 <YAxis
-                                    tickFormatter={(v: number) => formatCurrency(v)}
-                                    width={90}
-                                    stroke="#94a3b8"
-                                    fontSize={12}
+                                    tickFormatter={(v: number) => ehMobile ? formatCurrencyCompacta(v) : formatCurrency(v)}
+                                    {...yAxisProps(ehMobile)}
                                 />
                                 <Tooltip
                                     formatter={(value, _name, item) => {
