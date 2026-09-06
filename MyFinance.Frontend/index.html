@@ -3,6 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/moneyman.svg" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
+    <!-- Sem service worker: o pedido era acessar pelo URL, não uso offline.
+         O manifesto já basta para o "Adicionar à tela de início" e para abrir
+         em tela cheia, sem cache de app nem sincronização em segundo plano. -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#3b82f6" />
     <!-- viewport-fit=cover é pré-requisito do safe-area: sem ele, todo
          env(safe-area-inset-*) retorna 0px no iPhone, silenciosamente. -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />

@@ -5,6 +5,7 @@ export function RegisterPage() {
     return (
         // Container da PíGINA para centralização
         <div className="register-page-container">
+            <h1 className="register-page-brand">FinAI</h1>
             {/* O Card que envolve o formulário */}
             <div className="register-page-card">
                 {/* Renderiza o componente do formulário aqui dentro */}

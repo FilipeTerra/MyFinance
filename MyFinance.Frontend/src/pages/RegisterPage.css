@@ -1,6 +1,10 @@
 /* Container da PíGINA - Usa Flexbox para centralizar */
 .register-page-container {
     display: flex; /* Ativa flexbox */
+    /* Sem isto, a marca (adicionada para bater com LoginPage — a
+       inconsistência era ela não ter o mesmo cabeçalho da tela irmã) ficaria
+       lado a lado com o card em vez de empilhada acima dele. */
+    flex-direction: column;
     justify-content: center; /* Centraliza horizontalmente */
     align-items: center; /* Centraliza verticalmente */
     width: 100%;
@@ -9,6 +13,15 @@
     box-sizing: border-box;
     background-color: var(--color-bg-app); /* Fundo cinza bem claro */
     flex-grow: 1; /* Permite que ele cresça para preencher o #root */
+}
+
+/* Marca exibida acima do card de cadastro — mesmo tratamento de LoginPage.css. */
+.register-page-brand {
+    color: #2263cc;
+    font-size: var(--text-4xl);
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    margin: 0 0 var(--space-12);
 }
 
 /* Card Externo da Página de Registro */
