@@ -3,7 +3,17 @@
 .app-shell {
     display: flex;
     flex-direction: column;
-    flex: 1;
+    /* `flex-basis: auto` (não o `0%` implícito de `flex: 1`) é essencial:
+       com basis 0%, o shell não tinha de onde puxar uma altura de conteúdo —
+       ficava travado exatamente em 100dvh mesmo com uma página de milhares
+       de pixels dentro, e o `padding-bottom` reservado para a tab bar virava
+       inatingível (o conteúdo real ultrapassava o shell por
+       `overflow: visible`, sem nunca revelar aquele respiro no fim do
+       scroll). Achado ao vivo rolando a Home até o fim: a paginação
+       terminava exatamente colada na tab bar, sem o respiro de 56px.
+       Com basis auto, o shell cresce a partir do conteúdo (como
+       `.homepage-container` já fazia) e só usa 100dvh como piso. */
+    flex: 1 0 auto;
     /* `dvh` e não `vh`: no celular, `100vh` é a viewport *grande*, que ignora
        a barra de endereço retrátil e empurra o rodapé para fora da tela. */
     min-height: 100dvh;

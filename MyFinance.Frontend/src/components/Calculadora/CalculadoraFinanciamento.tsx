@@ -376,6 +376,7 @@ export function CalculadoraFinanciamento() {
                             value={sistemaVisivel}
                             onChange={setSistemaVisivel}
                             ariaLabel="Sistema exibido no cronograma"
+                            rolavel
                             opcoes={[
                                 { valor: 'price', rotulo: 'Cronograma Price' },
                                 { valor: 'sac', rotulo: 'Cronograma SAC' },

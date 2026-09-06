@@ -343,6 +343,17 @@ img, svg, video, canvas {
     clip: rect(0, 0, 0, 0);
     white-space: nowrap;
     border: 0;
+    /* Sem efeito em elementos que não são tabela — protege de graça as
+       tabelas de dados que ChartFigure gera como alternativa textual dos
+       gráficos para leitor de tela. Achado ao vivo na aba Gastos: uma
+       <table class="sr-only"> com `table-layout: auto` (o padrão) ignora o
+       `width: 1px` quando o conteúdo não quebra linha — a tabela renderiza
+       na largura real dos dados (~400px), e mesmo escondida via
+       `overflow: hidden`, essa largura vaza para o viewport de *layout* do
+       celular, forçando o navegador a alargar a página inteira e dar
+       zoom-out nela. `table-layout: fixed` faz a largura declarada valer de
+       verdade, e o conteúdo que não coube fica só cortado por dentro. */
+    table-layout: fixed;
 }
 
 /* Indicador de foco por teclado — nenhum elemento interativo tinha um até aqui. */
