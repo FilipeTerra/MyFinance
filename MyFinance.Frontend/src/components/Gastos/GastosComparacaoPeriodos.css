@@ -54,7 +54,7 @@
 .comparacao-destaque-valor--alta { color: var(--color-danger); }
 .comparacao-destaque-valor--queda { color: var(--color-success); }
 
-@media (max-width: 640px) {
+@media (max-width: 767.98px) {
     .comparacao-destaques {
         flex-direction: column;
     }

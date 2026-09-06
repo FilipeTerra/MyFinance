@@ -1,63 +1,90 @@
-.fin-tabela-wrap {
-    background: var(--white);
-    border: 1px solid var(--slate-200);
-    border-radius: var(--radius-xl);
-    padding: var(--space-10) var(--space-12);
-    box-shadow: var(--shadow-sm);
-    overflow-x: auto;
-}
-
-.fin-tabela-wrap--scroll {
-    max-height: 420px;
-    overflow-y: auto;
-}
-
-.fin-tabela {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: var(--text-base);
-}
-
-.fin-tabela th,
-.fin-tabela td {
-    padding: var(--space-5) var(--space-7);
-    text-align: right;
-    white-space: nowrap;
-    font-variant-numeric: tabular-nums;
-}
-
-.fin-tabela th:first-child,
-.fin-tabela td:first-child {
-    text-align: left;
-    color: var(--slate-500);
-    font-weight: 500;
-}
-
-.fin-tabela thead th {
-    border-bottom: 2px solid var(--slate-200);
-    color: var(--slate-800);
-    font-weight: 700;
-    position: sticky;
-    top: 0;
-    background: var(--white);
-}
-
-.fin-tabela tbody tr {
-    border-bottom: 1px solid var(--slate-100);
-}
-
+/* O wrapper, a tabela base, a rolagem vertical com cabeçalho fixo e o
+   "linha vencedora com fundo verde" agora vêm de Shared/ui/Tabela.css
+   (.tabela-wrap/.tabela-wrap--scroll/.tabela/.tabela--numerica/
+   .tabela-row--destaque/.tabela-badge) — eram idênticos, byte a byte, aos
+   mesmos estilos em ComparadorCenarios.css (a própria Tabela.css já
+   documentava essa duplicação desde que foi criada). Fica aqui só o que não
+   tem equivalente: o primeiro-coluna em negrito da tabela comparativo
+   (Tabela.css usa peso médio e cor secundária por padrão — apropriado para
+   um rótulo de métrica, mas "Price"/"SAC" funcionam mais como cabeçalho de
+   linha do que rótulo, por isso o destaque). */
 .fin-tabela--comparativo td:first-child {
     font-weight: 700;
     color: var(--slate-800);
 }
 
-.fin-row-melhor {
-    background: var(--green-50);
+/* ── Cartões do comparativo Price x SAC (celular) ────────────────────────
+   Só 2 sistemas — Price e SAC — então "cartão por sistema" é natural aqui,
+   ao contrário do cronograma logo abaixo, que tem uma linha por parcela e
+   por isso continua tabela. Escondido no desktop: só a tabela ou só os
+   cartões aparecem. */
+.fin-cartoes {
+    display: none;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    flex-direction: column;
+    gap: var(--space-8);
 }
 
-.fin-row-melhor td:first-child {
-    color: var(--green-700);
+.fin-cartao {
+    background: var(--white);
+    border: 1px solid var(--slate-200);
+    border-radius: var(--radius-xl);
+    padding: var(--space-8) var(--space-10);
+    box-shadow: var(--shadow-sm);
 }
+
+.fin-cartao--melhor {
+    border-color: var(--green-200);
+    box-shadow: 0 0 0 1px var(--green-200), var(--shadow-sm);
+}
+
+.fin-cartao-cabecalho {
+    display: flex;
+    align-items: center;
+    padding-bottom: var(--space-6);
+    margin-bottom: var(--space-6);
+    border-bottom: 2px solid var(--slate-200);
+}
+
+.fin-cartao-titulo {
+    font-weight: 700;
+    color: var(--slate-800);
+}
+
+.fin-cartao-lista {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+}
+
+.fin-cartao-linha {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-8);
+    border-bottom: 1px solid var(--slate-100);
+    padding-bottom: var(--space-5);
+}
+
+    .fin-cartao-linha:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+    }
+
+    .fin-cartao-linha dt {
+        color: var(--slate-500);
+        font-weight: 500;
+    }
+
+    .fin-cartao-linha dd {
+        margin: 0;
+        font-variant-numeric: tabular-nums;
+        text-align: right;
+        color: var(--slate-800);
+    }
 
 .fin-cronograma-header {
     display: flex;
@@ -120,8 +147,49 @@
     font-size: var(--text-sm);
 }
 
-@media (max-width: 640px) {
-    .fin-tabela-wrap {
+@media (max-width: 767.98px) {
+    .tabela-wrap {
         padding: var(--space-8);
+    }
+
+    /* Comparativo Price x SAC (2 linhas) vira cartão — ver .fin-cartoes.
+       `:not(--scroll)` exclui de propósito a tabela de cronograma logo
+       abaixo, que é a exceção combinada: continua tabela porque ali a
+       comparação linha a linha entre as parcelas é o ponto da tela, e virar
+       cartão faria comparar a parcela 47 com a 48 exigir rolar a página
+       inteira duas vezes em vez de deslizar o dedo uma vez. */
+    .tabela-wrap:not(.tabela-wrap--scroll) {
+        display: none;
+    }
+
+    .fin-cartoes {
+        display: flex;
+    }
+
+    /* Cronograma: mantém tabela, ganha coluna "Nº" fixa à esquerda para não
+       perder a referência de qual parcela é qual ao rolar horizontalmente
+       pelas outras quatro colunas. Escopado a `.tabela-wrap--scroll` — a
+       tabela comparativo também usa `.tabela`, mas já está com
+       `display: none` acima, então não sofre estas regras à toa. */
+    .tabela-wrap--scroll .tabela th:first-child,
+    .tabela-wrap--scroll .tabela td:first-child {
+        position: sticky;
+        left: 0;
+        background: var(--white);
+        box-shadow: 2px 0 4px -2px rgba(0, 0, 0, 0.15);
+    }
+
+    /* z-index em regras próprias: o canto onde a linha 1 (fixa no topo, via
+       Tabela.css) e a coluna 1 (fixa à esquerda, regra acima) colam ao mesmo
+       tempo precisa do maior valor dos três — mais que o cabeçalho sozinho,
+       mais que a coluna sozinha — testado ao vivo rolando a tabela na
+       horizontal com dados reais da API, com scroll aplicado via JS e a
+       posição da célula conferida antes/depois. */
+    .tabela-wrap--scroll .tabela td:first-child {
+        z-index: 1;
+    }
+
+    .tabela-wrap--scroll .tabela th:first-child {
+        z-index: 3;
     }
 }

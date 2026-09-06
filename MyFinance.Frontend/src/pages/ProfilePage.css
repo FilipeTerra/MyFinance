@@ -262,7 +262,7 @@
 }
 
 /* ── Responsivo ────────────────────────────────────────────────────────── */
-@media (max-width: 640px) {
+@media (max-width: 767.98px) {
     .profile-content {
         padding: var(--space-10) var(--space-8) var(--space-16);
     }
