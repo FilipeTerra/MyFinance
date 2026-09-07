@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using MyFinance.Infrastructure;
 using MyFinance.Application.Interfaces.Services;
 using MyFinance.Application.Interfaces.Repositories;
@@ -30,7 +31,13 @@ var builder = WebApplication.CreateBuilder(args);
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseNpgsql(connectionString));
+    options.UseNpgsql(connectionString)
+           // `dotnet ef migrations has-pending-model-changes` confirma que não há
+           // mudança real de schema pendente — essa divergência vem só do Npgsql
+           // detectar a versão do Postgres em runtime (Neon) de forma diferente do
+           // design-time. A partir do EF Core 9 isso vira exceção em Migrate() por
+           // padrão; rebaixamos de volta a aviso para não travar o startup.
+           .ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning)));
 
 builder.Services.AddControllers();
 
