@@ -109,6 +109,16 @@ builder.Services.AddHostedService<StartupMarketSyncHostedService>();
 var app = builder.Build();
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
+// Aplica migrations pendentes a cada deploy/boot — o schema do banco (Neon)
+// fica sempre sincronizado com o código, sem passo manual de `dotnet ef database update`.
+// Idempotente: migrations já aplicadas são ignoradas. Se falhar, o app não sobe —
+// preferível a rodar silenciosamente contra um schema desatualizado.
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    dbContext.Database.Migrate();
+}
+
 app.UseSwagger();
 app.UseSwaggerUI();
 app.UseCors("AllowReactApp");
