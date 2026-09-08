@@ -22,6 +22,9 @@ public class TransactionsController : ControllerBase
     /// <summary>Teto do upload: uma fatura em PDF raramente passa de alguns MB.</summary>
     private const long MaxUploadBytes = 10 * 1024 * 1024;
 
+    /// <summary>Máximo de arquivos por importação em lote.</summary>
+    private const int MaxFiles = 5;
+
     private readonly ITransactionService _transactionService;
     private readonly IStatementImportService _statementImportService;
     private readonly ILogger<TransactionsController> _logger;
@@ -138,28 +141,41 @@ public class TransactionsController : ControllerBase
     }
 
     /// <summary>
-    /// Importa um extrato bancário ou fatura de cartão (CSV ou PDF).
+    /// Importa até 5 extratos bancários ou faturas de cartão (CSV ou PDF) de uma vez.
     ///
     /// A leitura é determinística: o agente de IA só entra se nenhum parser
     /// reconhecer o formato, ou para sugerir categoria ao que sobrou sem
     /// classificação. Com o agente fora do ar a importação continua funcionando.
+    /// Um arquivo com problema não impede os demais — a resposta traz o
+    /// resultado de cada um.
     /// </summary>
-    /// <param name="file">Arquivo do extrato (.csv, .txt ou .pdf)</param>
+    /// <param name="files">Arquivos do extrato, até 5 (.csv, .txt ou .pdf)</param>
     /// <param name="accountId">Conta em que as transações serão lançadas</param>
+    /// <param name="cancellationToken">Cancelamento da requisição, propagado à leitura em paralelo dos arquivos</param>
     /// <returns>As transações lidas, já com as categorias que foi possível resolver</returns>
     [HttpPost("upload")]
-    [RequestSizeLimit(MaxUploadBytes)]
-    public async Task<IActionResult> UploadExtrato(IFormFile file, [FromForm] Guid accountId)
+    [RequestSizeLimit(MaxFiles * MaxUploadBytes)]
+    public async Task<IActionResult> UploadExtrato(
+        List<IFormFile> files, [FromForm] Guid accountId, CancellationToken cancellationToken)
     {
-        if (file == null || file.Length == 0)
+        if (files == null || files.Count == 0)
             return BadRequest(new { message = "Nenhum arquivo enviado." });
 
-        if (file.Length > MaxUploadBytes)
-            return BadRequest(new { message = "Arquivo muito grande. O limite é de 10 MB." });
+        if (files.Count > MaxFiles)
+            return BadRequest(new { message = $"Envie no máximo {MaxFiles} arquivos por vez." });
 
-        var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
-        if (!AllowedExtensions.Contains(extension))
-            return BadRequest(new { message = "Formato não suportado. Envie um arquivo .csv, .txt ou .pdf." });
+        foreach (var file in files)
+        {
+            if (file.Length == 0)
+                return BadRequest(new { message = $"O arquivo '{file.FileName}' está vazio." });
+
+            if (file.Length > MaxUploadBytes)
+                return BadRequest(new { message = $"O arquivo '{file.FileName}' é muito grande. O limite é de 10 MB por arquivo." });
+
+            var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+            if (!AllowedExtensions.Contains(extension))
+                return BadRequest(new { message = $"Formato não suportado em '{file.FileName}'. Envie um arquivo .csv, .txt ou .pdf." });
+        }
 
         var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (!Guid.TryParse(userIdString, out Guid userId))
@@ -167,19 +183,26 @@ public class TransactionsController : ControllerBase
 
         try
         {
-            // O arquivo é lido inteiro em memória porque os parsers precisam
+            // Cada arquivo é lido inteiro em memória porque os parsers precisam
             // percorrê-lo mais de uma vez — identificar o formato e depois extrair.
-            using var buffer = new MemoryStream();
-            await file.CopyToAsync(buffer);
+            var statementFiles = new List<StatementFile>(files.Count);
+            foreach (var file in files)
+            {
+                using var buffer = new MemoryStream();
+                await file.CopyToAsync(buffer, cancellationToken);
+                statementFiles.Add(new StatementFile(file.FileName, file.ContentType, buffer.ToArray()));
+            }
 
-            var statementFile = new StatementFile(file.FileName, file.ContentType, buffer.ToArray());
-            var result = await _statementImportService.ImportAsync(statementFile, accountId, userId);
+            var result = await _statementImportService.ImportAsync(statementFiles, accountId, userId, cancellationToken);
 
             return result.Success ? Ok(result) : BadRequest(result);
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new { message = $"Falha ao importar o extrato: {ex.Message}" });
+            // O detalhe fica no log do servidor: mensagem de exceção exposta ao
+            // cliente vaza detalhe interno e não ajuda ninguém a corrigir nada.
+            _logger.LogError(ex, "Falha ao importar lote de {Total} arquivo(s).", files.Count);
+            return StatusCode(500, new { message = "Falha ao importar os extratos. Tente novamente." });
         }
     }
 

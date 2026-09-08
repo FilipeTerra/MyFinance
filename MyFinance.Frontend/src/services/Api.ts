@@ -159,9 +159,9 @@ const transactionService = {
     delete: (id: string) => {
         return apiClient.delete<void>(`/transactions/${id}`);
     },
-    uploadFile: async (file: File, accountId: string) => {
+    uploadFiles: async (files: File[], accountId: string) => {
         const formData = new FormData();
-        formData.append('file', file);
+        files.forEach(file => formData.append('files', file));
         formData.append('accountId', accountId);
 
         return apiClient.post<StatementImportResultDto>('/transactions/upload', formData, {

@@ -46,3 +46,61 @@
     color: var(--red-700);
     font-size: var(--text-sm);
 }
+
+/* Lista dos arquivos selecionados, com remoção individual — a seleção nativa
+   (multiple) não permite tirar um arquivo só sem reabrir o picker inteiro. */
+.upload-lista-arquivos {
+    list-style: none;
+    margin: var(--space-4) 0 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.upload-arquivo-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--slate-200);
+    border-radius: var(--radius-sm);
+    background-color: var(--white);
+    font-size: var(--text-sm);
+}
+
+.upload-arquivo-nome {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--slate-700);
+}
+
+.upload-arquivo-tamanho {
+    flex-shrink: 0;
+    color: var(--slate-500);
+    font-size: var(--text-xs);
+}
+
+.upload-arquivo-remover {
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: var(--radius-full);
+    background-color: var(--slate-100);
+    color: var(--slate-600);
+    font-size: 1rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+    .upload-arquivo-remover:hover {
+        background-color: var(--red-100);
+        color: var(--red-700);
+    }

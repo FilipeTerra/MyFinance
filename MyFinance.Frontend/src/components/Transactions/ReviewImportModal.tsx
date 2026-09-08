@@ -24,6 +24,7 @@ interface EditableTransaction extends SaveBatchTransactionRequestDto {
     // Só as linhas marcadas vão para o lote. Duplicatas chegam desmarcadas.
     selected: boolean;
     isDuplicate: boolean;
+    sourceFileName: string | null;
 }
 
 export const ReviewImportModal: React.FC<ReviewImportModalProps> = ({
@@ -45,6 +46,9 @@ export const ReviewImportModal: React.FC<ReviewImportModalProps> = ({
     const pendentes = selecionadas.filter(tx => !tx.isNewCategory && !tx.categoryId).length;
     const todasSelecionadas = editableTransactions.length > 0
         && selecionadas.length === editableTransactions.length;
+    // Com um arquivo só, a tela fica exatamente como sempre foi — o resumo por
+    // arquivo e o nome de origem em cada linha só aparecem quando fazem diferença.
+    const multiplosArquivos = importResult.files.length > 1;
 
     useEffect(() => {
         if (aiTransactions && aiTransactions.length > 0) {
@@ -61,7 +65,8 @@ export const ReviewImportModal: React.FC<ReviewImportModalProps> = ({
                     isCustomEditing: false,
                     customCategoryText: tx.isSuggestion && tx.suggestedCategoryName ? tx.suggestedCategoryName : '',
                     selected: !tx.isDuplicate,
-                    isDuplicate: tx.isDuplicate
+                    isDuplicate: tx.isDuplicate,
+                    sourceFileName: tx.sourceFileName
                 };
             });
             setEditableTransactions(initialData);
@@ -196,6 +201,19 @@ export const ReviewImportModal: React.FC<ReviewImportModalProps> = ({
                         categoria existente ou digitar um novo nome.
                     </p>
 
+                    {multiplosArquivos && (
+                        <ul className="review-arquivos-resumo">
+                            {importResult.files.map(arquivo => (
+                                <li key={arquivo.fileName}>
+                                    {arquivo.success ? '✅' : '⛔'} <strong>{arquivo.fileName}</strong>
+                                    {arquivo.success
+                                        ? ` — ${arquivo.transactionCount} transaç${arquivo.transactionCount === 1 ? 'ão' : 'ões'}`
+                                        : ` — ${arquivo.message ?? 'não foi possível ler'}`}
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+
                     {importResult.aiUnavailable && (
                         <p className="modal-aviso" role="status">
                             ⚠️ O agente de IA está indisponível. As transações foram lidas normalmente e
@@ -278,7 +296,12 @@ export const ReviewImportModal: React.FC<ReviewImportModalProps> = ({
                                                 </label>
                                             </td>
                                             <td role="cell" className="date-cell">{new Date(tx.date).toLocaleDateString('pt-BR')}</td>
-                                            <td role="cell" className="desc-cell" title={tx.description}>{tx.description}</td>
+                                            <td role="cell" className="desc-cell" title={tx.description}>
+                                                {tx.description}
+                                                {multiplosArquivos && tx.sourceFileName && (
+                                                    <span className="desc-cell-origem">{tx.sourceFileName}</span>
+                                                )}
+                                            </td>
                                             <td role="cell" className={tx.amount >= 0 ? 'amount-cell text-success' : 'amount-cell text-danger'}>
                                                 {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(tx.amount)}
                                             </td>
