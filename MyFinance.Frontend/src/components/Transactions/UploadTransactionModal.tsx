@@ -17,6 +17,8 @@ import { useFeedback } from '../../hooks/useFeedback';
 import './TransactionModal.css';
 import './UploadTransactionModal.css';
 
+const MAX_FILES = 5;
+
 interface UploadTransactionModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -25,15 +27,21 @@ interface UploadTransactionModalProps {
     onTransactionSaved: () => void;
 }
 
-export function UploadTransactionModal({ 
-    isOpen, 
+function formatarTamanho(bytes: number): string {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+export function UploadTransactionModal({
+    isOpen,
     onClose,
-    accounts, 
+    accounts,
     onAccountCreated,
     onTransactionSaved
 }: UploadTransactionModalProps) {
     const [accountId, setAccountId] = useState<string>('');
-    const [file, setFile] = useState<File | null>(null);
+    const [files, setFiles] = useState<File[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -60,10 +68,25 @@ export function UploadTransactionModal({
     if (!isOpen) return null;
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files.length > 0) {
-            setFile(e.target.files[0]);
-            setErrorMessage(null);
+        const selecionados = Array.from(e.target.files ?? []);
+        if (selecionados.length === 0) return;
+
+        // Rejeita a seleção inteira em vez de truncar em silêncio: um usuário que
+        // escolheu 6 arquivos esperando que todos entrassem não deveria descobrir
+        // só depois que 1 ficou de fora sem aviso.
+        if (selecionados.length > MAX_FILES) {
+            setErrorMessage(`Selecione no máximo ${MAX_FILES} arquivos por vez.`);
+            e.target.value = '';
+            return;
         }
+
+        setFiles(selecionados);
+        setErrorMessage(null);
+        e.target.value = '';
+    };
+
+    const handleRemoveFile = (index: number) => {
+        setFiles(prev => prev.filter((_, i) => i !== index));
     };
 
     const handleTriggerFile = () => {
@@ -74,23 +97,23 @@ export function UploadTransactionModal({
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!accountId || !file) return;
+        if (!accountId || files.length === 0) return;
 
         try {
             setIsLoading(true);
             setErrorMessage(null);
 
-            const response = await transactionService.uploadFile(file, accountId);
+            const response = await transactionService.uploadFiles(files, accountId);
             setImportResult(response.data);
             setIsReviewing(true);
         } catch (error) {
-            // A API responde 400 com o mesmo envelope quando não consegue ler o
-            // arquivo — a mensagem dela é mais útil que um texto genérico.
+            // A API responde 400 com o mesmo envelope quando não consegue ler
+            // nenhum arquivo — a mensagem dela é mais útil que um texto genérico.
             const apiMessage = (error as { response?: { data?: { message?: string } } })
                 ?.response?.data?.message;
 
-            console.error('Erro ao importar o extrato:', error);
-            setErrorMessage(apiMessage ?? 'Não foi possível ler o arquivo. Verifique o formato e tente novamente.');
+            console.error('Erro ao importar o(s) extrato(s):', error);
+            setErrorMessage(apiMessage ?? 'Não foi possível ler o(s) arquivo(s). Verifique o formato e tente novamente.');
         } finally {
             setIsLoading(false);
         }
@@ -99,7 +122,7 @@ export function UploadTransactionModal({
     const encerrarImportacao = () => {
         setIsReviewing(false);
         setImportResult(null);
-        setFile(null);
+        setFiles([]);
         setAccountId('');
         onClose();
         onTransactionSaved();
@@ -157,7 +180,7 @@ export function UploadTransactionModal({
                     onClose={() => {
                         setIsReviewing(false);
                         setImportResult(null);
-                        setFile(null);
+                        setFiles([]);
                         onClose();
                     }}
                     importResult={importResult}
@@ -169,16 +192,18 @@ export function UploadTransactionModal({
         );
     }
 
+    const rotuloEnviar = files.length > 1 ? `Enviar ${files.length} arquivos` : 'Enviar';
+
     return (
         <>
         <Modal onFechar={onClose} titulo="Importar Extrato" tamanho="md">
                 <form onSubmit={handleSubmit} className="upload-form">
-                    
+
                     <div className="form-group">
-                        <AccountSelectField 
+                        <AccountSelectField
                             accounts={accounts}
-                            selectedId={accountId} 
-                            onChange={(id) => setAccountId(id)} 
+                            selectedId={accountId}
+                            onChange={(id) => setAccountId(id)}
                             onAccountCreated={(newAccount) => {
                                 onAccountCreated(newAccount);
                                 setAccountId(newAccount.id);
@@ -187,16 +212,18 @@ export function UploadTransactionModal({
                     </div>
 
                     <div className="form-group">
-                        <label style={{ fontWeight: 600, color: '#334155' }}>Arquivo (CSV ou PDF)</label>
-                        
-                        <div 
+                        <label style={{ fontWeight: 600, color: '#334155' }}>
+                            Arquivos (CSV, TXT ou PDF — até {MAX_FILES})
+                        </label>
+
+                        <div
                             style={{
                                 border: '2px dashed #cbd5e1',
                                 borderRadius: '8px',
                                 padding: '24px',
                                 textAlign: 'center',
-                                backgroundColor: file ? '#f0fdf4' : '#f8fafc',
-                                borderColor: file ? '#86efac' : '#cbd5e1',
+                                backgroundColor: files.length > 0 ? '#f0fdf4' : '#f8fafc',
+                                borderColor: files.length > 0 ? '#86efac' : '#cbd5e1',
                                 cursor: 'pointer',
                                 transition: 'all 0.2s',
                                 display: 'flex',
@@ -207,28 +234,49 @@ export function UploadTransactionModal({
                             }}
                             onClick={handleTriggerFile}
                         >
-                            <input 
-                                type="file" 
+                            <input
+                                type="file"
                                 ref={fileInputRef}
-                                accept=".csv, application/pdf, .pdf"
+                                accept=".csv, .txt, application/pdf, .pdf"
                                 onChange={handleFileChange}
                                 style={{ display: 'none' }}
-                                required
+                                multiple
                             />
-                            
-                            {file ? (
+
+                            {files.length > 0 ? (
                                 <>
                                     <svg width="24" height="24" fill="none" stroke="#16a34a" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                    <span style={{ color: '#15803d', fontWeight: 500, fontSize: '0.9rem', wordBreak: 'break-all' }}>{file.name}</span>
-                                    <span style={{ fontSize: '0.75rem', color: '#16a34a' }}>Clique para alterar</span>
+                                    <span style={{ color: '#15803d', fontWeight: 500, fontSize: '0.9rem' }}>
+                                        {files.length === 1 ? '1 arquivo selecionado' : `${files.length} arquivos selecionados`}
+                                    </span>
+                                    <span style={{ fontSize: '0.75rem', color: '#16a34a' }}>Clique para escolher outros</span>
                                 </>
                             ) : (
                                 <>
                                     <svg width="28" height="28" fill="none" stroke="#64748b" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
-                                    <span style={{ color: '#475569', fontSize: '0.9rem' }}>Clique aqui para selecionar seu CSV ou PDF</span>
+                                    <span style={{ color: '#475569', fontSize: '0.9rem' }}>Clique aqui para selecionar seus arquivos</span>
                                 </>
                             )}
                         </div>
+
+                        {files.length > 0 && (
+                            <ul className="upload-lista-arquivos">
+                                {files.map((f, index) => (
+                                    <li key={`${f.name}-${index}`} className="upload-arquivo-item">
+                                        <span className="upload-arquivo-nome" title={f.name}>{f.name}</span>
+                                        <span className="upload-arquivo-tamanho">{formatarTamanho(f.size)}</span>
+                                        <button
+                                            type="button"
+                                            className="upload-arquivo-remover"
+                                            onClick={() => handleRemoveFile(index)}
+                                            aria-label={`Remover ${f.name}`}
+                                        >
+                                            ×
+                                        </button>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
                     </div>
 
                     {errorMessage && (
@@ -244,14 +292,14 @@ export function UploadTransactionModal({
                         <button
                             type="submit"
                             className="btn-primary upload-btn-enviar"
-                            disabled={isLoading || !accountId || !file}
+                            disabled={isLoading || !accountId || files.length === 0}
                         >
                             {isLoading ? (
                                 <>
-                                    <span className="spinner">⏳</span> Processando arquivo...
+                                    <span className="spinner">⏳</span> Processando arquivo(s)...
                                 </>
                             ) : (
-                                'Enviar'
+                                rotuloEnviar
                             )}
                         </button>
                     </div>

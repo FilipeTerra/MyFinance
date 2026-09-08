@@ -16,5 +16,12 @@ namespace MyFinance.Application.Dtos
         /// usuário decidir se é reimportação ou uma compra repetida de verdade.
         /// </summary>
         public bool IsDuplicate { get; set; }
+
+        /// <summary>
+        /// Arquivo de origem, quando a transação veio de uma importação em lote.
+        /// Sempre preenchido — a tela decide se mostra, com base em quantos
+        /// arquivos distintos vieram no resultado.
+        /// </summary>
+        public string? SourceFileName { get; set; }
     }
 }

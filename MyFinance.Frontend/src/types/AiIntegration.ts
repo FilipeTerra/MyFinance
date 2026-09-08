@@ -11,6 +11,19 @@ export interface AiTransactionResponseDto {
     // Um lançamento igual já existe na conta. A linha continua na lista, mas
     // chega desmarcada na revisão.
     isDuplicate: boolean;
+    // Arquivo de origem, quando a importação foi de vários arquivos de uma vez.
+    sourceFileName: string | null;
+}
+
+/** Resultado da leitura de um arquivo dentro de um lote de importação. */
+export interface FileImportSummaryDto {
+    fileName: string;
+    success: boolean;
+    // Motivo da falha. Preenchido só quando success é falso.
+    message: string | null;
+    parserUsed: string | null;
+    aiUsed: boolean;
+    transactionCount: number;
 }
 
 /**
@@ -23,7 +36,9 @@ export interface StatementImportResultDto {
     // Preenchido apenas quando success = false.
     message: string | null;
     transactions: AiTransactionResponseDto[];
-    // Nome do parser que leu o arquivo, ou "IA" quando veio do agente.
+    // Nome do parser que leu o arquivo, ou "IA" quando veio do agente. Só vem
+    // preenchido quando exatamente um arquivo teve sucesso — com vários, o
+    // detalhe por arquivo vive em `files`.
     parserUsed: string | null;
     aiUsed: boolean;
     // A IA foi consultada e não respondeu; a importação seguiu sem ela.
@@ -31,6 +46,8 @@ export interface StatementImportResultDto {
     // Quantas transações do arquivo já existem na conta.
     duplicateCount: number;
     warnings: string[];
+    // Resultado de cada arquivo do lote, sucesso ou falha.
+    files: FileImportSummaryDto[];
 }
 
 export interface SaveBatchTransactionRequestDto {
