@@ -15,6 +15,7 @@ namespace MyFinance.Infrastructure
       public DbSet<FinancialGoal> FinancialGoals { get; set; }
       public DbSet<Investimento> Investimentos { get; set; }
       public DbSet<CotacaoHistorico> CotacoesHistorico { get; set; }
+      public DbSet<CategoryRule> CategoryRules { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -123,6 +124,29 @@ namespace MyFinance.Infrastructure
                         entity.HasOne<Investimento>()
                                 .WithMany()
                                 .HasForeignKey(c => c.InvestimentoId)
+                                .OnDelete(DeleteBehavior.Cascade);
+                  });
+
+                  modelBuilder.Entity<CategoryRule>(entity =>
+                  {
+                        entity.ToTable("CategoryRules");
+                        entity.HasKey(r => r.Id);
+                        entity.Property(r => r.DescriptionKey).HasMaxLength(300).IsRequired();
+
+                        // Uma descrição aponta para uma única categoria por usuário:
+                        // reclassificar o mesmo lançamento atualiza a regra existente.
+                        entity.HasIndex(r => new { r.UserId, r.DescriptionKey }).IsUnique();
+
+                        entity.HasOne(r => r.User)
+                                .WithMany()
+                                .HasForeignKey(r => r.UserId)
+                                .OnDelete(DeleteBehavior.Cascade);
+
+                        // Apagar a categoria apaga a regra que apontava para ela —
+                        // uma regra órfã sugeriria uma categoria inexistente.
+                        entity.HasOne(r => r.Category)
+                                .WithMany()
+                                .HasForeignKey(r => r.CategoryId)
                                 .OnDelete(DeleteBehavior.Cascade);
                   });
             }

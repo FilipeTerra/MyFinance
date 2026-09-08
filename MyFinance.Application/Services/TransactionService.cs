@@ -1,8 +1,10 @@
 using MyFinance.Application.Dtos;
+using MyFinance.Application.Dtos.StatementImport;
 using MyFinance.Application.Interfaces.Repositories;
 using MyFinance.Application.Interfaces.Services;
 using MyFinance.Domain.Entities;
 using MyFinance.Domain.Enums;
+using MyFinance.Application.Services.StatementImport;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,13 +18,15 @@ public class TransactionService : ITransactionService
     private readonly IAccountRepository _accountRepository;
     private readonly ICategoryRepository _categoryRepository;
     private readonly IFinancialGoalRepository _financialGoalRepository;
+    private readonly ICategoryRuleRepository _categoryRuleRepository;
 
-    public TransactionService(ITransactionRepository transactionRepository, IAccountRepository accountRepository, ICategoryRepository categoryRepository, IFinancialGoalRepository financialGoalRepository)
+    public TransactionService(ITransactionRepository transactionRepository, IAccountRepository accountRepository, ICategoryRepository categoryRepository, IFinancialGoalRepository financialGoalRepository, ICategoryRuleRepository categoryRuleRepository)
     {
         _transactionRepository = transactionRepository;
         _accountRepository = accountRepository;
         _categoryRepository = categoryRepository;
         _financialGoalRepository = financialGoalRepository;
+        _categoryRuleRepository = categoryRuleRepository;
     }
 
     public async Task<ServiceResponse<TransactionResponseDto>> CreateTransactionAsync(CreateTransactionRequestDto dto, Guid userId)
@@ -253,6 +257,11 @@ public class TransactionService : ITransactionService
         var newlyCreatedCategories = new Dictionary<string, Guid>();
         var transactionsToSave = new List<Transaction>();
 
+        // O que o usuário confirma aqui vira memória para a próxima importação.
+        // A chave é a mesma normalização usada na leitura do extrato — se as duas
+        // divergirem, o aprendizado nunca é reencontrado.
+        var learnedRules = new Dictionary<string, Guid>(StringComparer.Ordinal);
+
         // Buscar e atualizar o saldo de cada conta uma única vez por AccountId
         var accountsById = new Dictionary<Guid, Account>();
 
@@ -315,9 +324,22 @@ public class TransactionService : ITransactionService
                 );
 
                 transactionsToSave.Add(transaction);
+
+                var descriptionKey = StatementTextNormalizer.Normalize(dto.Description);
+                if (descriptionKey.Length > 0)
+                {
+                    // Descrição repetida no lote: vale a última classificação escolhida.
+                    learnedRules[descriptionKey] = finalCategoryId;
+                }
             }
 
             await _transactionRepository.AddRangeAsync(transactionsToSave);
+
+            // Dentro da mesma transação de banco: ou o lote e o aprendizado entram
+            // juntos, ou nenhum dos dois entra.
+            await _categoryRuleRepository.UpsertRangeAsync(
+                userId,
+                learnedRules.Select(r => new CategoryRuleDraft(r.Key, r.Value)).ToList());
 
             foreach (var account in accountsById.Values)
             {

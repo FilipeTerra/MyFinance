@@ -1,12 +1,11 @@
 // src/components/Transactions/UploadTransactionModal.tsx
 import React, { useState, useRef, useEffect } from 'react';
 import { transactionService, categoryService } from '../../services/Api';
-import { learnFromBatch } from '../../services/AiApi';
 import { AccountSelectField } from '../Accounts/AccountSelectField';
 import { ReviewImportModal } from './ReviewImportModal';
 import type { AccountResponseDto } from '../../types/AccountResponseDto';
 import type { CategoryResponseDto } from '../../types/CategoryResponseDto';
-import type { AiTransactionResponseDto, SaveBatchTransactionRequestDto } from '../../types/AiIntegration';
+import type { StatementImportResultDto, SaveBatchTransactionRequestDto } from '../../types/AiIntegration';
 import { Modal } from '../Shared/ui/Modal';
 import './TransactionModal.css';
 import './UploadTransactionModal.css';
@@ -33,8 +32,9 @@ export function UploadTransactionModal({
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const [isReviewing, setIsReviewing] = useState(false);
-    const [aiTransactions, setAiTransactions] = useState<AiTransactionResponseDto[]>([]);
+    const [importResult, setImportResult] = useState<StatementImportResultDto | null>(null);
     const [categories, setCategories] = useState<CategoryResponseDto[]>([]);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
     useEffect(() => {
         if (isOpen) {
@@ -55,6 +55,7 @@ export function UploadTransactionModal({
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
             setFile(e.target.files[0]);
+            setErrorMessage(null);
         }
     };
 
@@ -70,12 +71,19 @@ export function UploadTransactionModal({
 
         try {
             setIsLoading(true);
+            setErrorMessage(null);
+
             const response = await transactionService.uploadFile(file, accountId);
-            setAiTransactions(response.data);
-            setIsReviewing(true);            
+            setImportResult(response.data);
+            setIsReviewing(true);
         } catch (error) {
-            console.error("Erro na IA:", error);
-            alert("Erro ao processar o arquivo com a IA.");
+            // A API responde 400 com o mesmo envelope quando não consegue ler o
+            // arquivo — a mensagem dela é mais útil que um texto genérico.
+            const apiMessage = (error as { response?: { data?: { message?: string } } })
+                ?.response?.data?.message;
+
+            console.error('Erro ao importar o extrato:', error);
+            setErrorMessage(apiMessage ?? 'Não foi possível ler o arquivo. Verifique o formato e tente novamente.');
         } finally {
             setIsLoading(false);
         }
@@ -84,25 +92,12 @@ export function UploadTransactionModal({
     const handleConfirmBatch = async (finalTransactions: SaveBatchTransactionRequestDto[]) => {
         setIsLoading(true);
         try {
+            // A API aprende as associações descrição → categoria dentro da mesma
+            // transação do lote, então não há um segundo passo de aprendizado aqui.
             await transactionService.saveBatchTransactions(finalTransactions);
 
-            // Salva no KB somente o que o usuário confirmou/corrigiu.
-            // categoryId → resolve o nome pela lista local; newCategoryName → usa direto.
-            const rules = finalTransactions
-                .map(t => {
-                    const categoryName = t.isNewCategory
-                        ? t.newCategoryName
-                        : categories.find(c => c.id === t.categoryId)?.name ?? null;
-                    return categoryName ? { description: t.description, categoryName } : null;
-                })
-                .filter((r): r is { description: string; categoryName: string } => r !== null);
-
-            if (rules.length > 0) {
-                await learnFromBatch(accountId, rules);
-            }
-
             setIsReviewing(false);
-            setAiTransactions([]);
+            setImportResult(null);
             setFile(null);
             setAccountId('');
             onClose();
@@ -115,17 +110,17 @@ export function UploadTransactionModal({
         }
     };
 
-    if (isReviewing) {
+    if (isReviewing && importResult) {
         return (
             <ReviewImportModal
                 isOpen={isReviewing}
                 onClose={() => {
                     setIsReviewing(false);
-                    setAiTransactions([]);
+                    setImportResult(null);
                     setFile(null);
                     onClose();
                 }}
-                aiTransactions={aiTransactions}
+                importResult={importResult}
                 categories={categories}
                 onConfirm={handleConfirmBatch}
             />
@@ -193,6 +188,12 @@ export function UploadTransactionModal({
                         </div>
                     </div>
 
+                    {errorMessage && (
+                        <div className="upload-erro" role="alert">
+                            {errorMessage}
+                        </div>
+                    )}
+
                     <div className="upload-acoes">
                         <button type="button" className="btn-secondary" onClick={onClose} disabled={isLoading}>
                             Cancelar
@@ -204,12 +205,10 @@ export function UploadTransactionModal({
                         >
                             {isLoading ? (
                                 <>
-                                    <span className="spinner">⏳</span> Processando IA...
+                                    <span className="spinner">⏳</span> Processando arquivo...
                                 </>
                             ) : (
-                                <>
-                                    Enviar <span className="ai-badge" style={{ backgroundColor: 'rgba(255,255,255,0.2)', color: 'white', border: 'none', marginLeft: '2px' }}>✨</span>
-                                </>
+                                'Enviar'
                             )}
                         </button>
                     </div>

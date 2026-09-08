@@ -1,6 +1,6 @@
 // src/components/Transactions/ReviewImportModal.tsx
 import React, { useState, useEffect } from 'react';
-import type { AiTransactionResponseDto, SaveBatchTransactionRequestDto } from '../../types/AiIntegration';
+import type { SaveBatchTransactionRequestDto, StatementImportResultDto } from '../../types/AiIntegration';
 import type { CategoryResponseDto } from '../../types/CategoryResponseDto';
 import { Modal } from '../Shared/ui/Modal';
 import './ReviewImportModal.css';
@@ -9,7 +9,7 @@ import './ReviewImportModal.css';
 interface ReviewImportModalProps {
     isOpen: boolean;
     onClose: () => void;
-    aiTransactions: AiTransactionResponseDto[]; 
+    importResult: StatementImportResultDto;
     categories: CategoryResponseDto[];
     onConfirm: (finalTransactions: SaveBatchTransactionRequestDto[]) => void;
 }
@@ -22,11 +22,13 @@ interface EditableTransaction extends SaveBatchTransactionRequestDto {
 export const ReviewImportModal: React.FC<ReviewImportModalProps> = ({
     isOpen,
     onClose,
-    aiTransactions,
+    importResult,
     categories,
     onConfirm
 }) => {
     const [editableTransactions, setEditableTransactions] = useState<EditableTransaction[]>([]);
+    const aiTransactions = importResult.transactions;
+    const pendentes = editableTransactions.filter(tx => !tx.isNewCategory && !tx.categoryId).length;
 
     useEffect(() => {
         if (aiTransactions && aiTransactions.length > 0) {
@@ -110,7 +112,7 @@ export const ReviewImportModal: React.FC<ReviewImportModalProps> = ({
     return (
         <Modal
             onFechar={onClose}
-            titulo="✨ Revisão Inteligente"
+            titulo={importResult.aiUsed ? '✨ Revisão da importação' : 'Revisão da importação'}
             tamanho="xl"
             corpoRolavel
             className="review-modal-content"
@@ -128,8 +130,26 @@ export const ReviewImportModal: React.FC<ReviewImportModalProps> = ({
             }
         >
                     <p className="modal-subtitle">
-                        Revise as classificações sugeridas pela IA. Você pode aceitar, escolher uma categoria existente ou digitar um novo nome.
+                        {importResult.parserUsed
+                            ? `Arquivo lido por: ${importResult.parserUsed}. `
+                            : ''}
+                        Revise as categorias antes de salvar. Você pode aceitar a sugestão, escolher uma
+                        categoria existente ou digitar um novo nome.
                     </p>
+
+                    {importResult.aiUnavailable && (
+                        <p className="modal-aviso" role="status">
+                            ⚠️ O agente de IA está indisponível. As transações foram lidas normalmente e
+                            classificadas pelo que você já registrou antes
+                            {pendentes > 0
+                                ? `; ${pendentes} ainda precisa(m) de categoria.`
+                                : '.'}
+                        </p>
+                    )}
+
+                    {!importResult.aiUnavailable && importResult.warnings.map(warning => (
+                        <p key={warning} className="modal-aviso" role="status">⚠️ {warning}</p>
+                    ))}
                     
                     <div className="table-container">
                         <table className="transactions-table">

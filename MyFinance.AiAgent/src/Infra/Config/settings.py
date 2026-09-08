@@ -55,10 +55,9 @@ class Settings(BaseSettings):
     # ── Backend .NET ─────────────────────────────────────────────────────────────
     api_url: str = "http://localhost:5088/api"
 
-    # ── Caminhos de dados (RAG e cache de categorização) ────────────────────────
+    # ── Caminhos de dados (RAG) ─────────────────────────────────────────────────
     books_dir: str = "data/books"
     faiss_index_path: str = "data/faiss_index"
-    knowledge_base_path: str = "knowledge_base.json"
 
     # ── CORS (frontend) ──────────────────────────────────────────────────────────
     cors_allow_origins: list[str] = ["http://localhost:5173"]
