@@ -247,11 +247,41 @@ public class TransactionService : ITransactionService
         return new ServiceResponse<IEnumerable<TransactionResponseDto>> { Data = responseDtos };
     }
 
-    public async Task SaveBatchAsync(List<SaveBatchTransactionRequestDto> dtos, Guid userId)
+    public async Task<ServiceResponse<SaveBatchResultDto>> SaveBatchAsync(
+        List<SaveBatchTransactionRequestDto> dtos, Guid userId)
     {
+        var result = new SaveBatchResultDto();
+
         if (dtos == null || !dtos.Any())
         {
-            return;
+            return new ServiceResponse<SaveBatchResultDto> { Data = result };
+        }
+
+        // A validação roda inteira ANTES de qualquer escrita: assim o usuário
+        // recebe todos os problemas de uma vez e o banco não é tocado enquanto
+        // houver linha inválida.
+        var accountsById = await LoadAccountsAsync(dtos, userId, result.Errors);
+        var userCategoryIds = (await _categoryRepository.GetAllByUserIdAsync(userId))
+            .Select(c => c.Id)
+            .ToHashSet();
+
+        ValidateLines(dtos, accountsById, userCategoryIds, result.Errors);
+
+        if (result.Errors.Count > 0)
+        {
+            return new ServiceResponse<SaveBatchResultDto>
+            {
+                Data = result,
+                Success = false,
+                ErrorMessage = result.Errors.Count == 1
+                    ? "Uma transação do lote precisa ser corrigida."
+                    : $"{result.Errors.Count} transações do lote precisam ser corrigidas."
+            };
+        }
+
+        foreach (var accountGroup in dtos.GroupBy(dto => dto.AccountId))
+        {
+            accountsById[accountGroup.Key].UpdateBalance(accountGroup.Sum(dto => dto.Amount));
         }
 
         var newlyCreatedCategories = new Dictionary<string, Guid>();
@@ -261,23 +291,6 @@ public class TransactionService : ITransactionService
         // A chave é a mesma normalização usada na leitura do extrato — se as duas
         // divergirem, o aprendizado nunca é reencontrado.
         var learnedRules = new Dictionary<string, Guid>(StringComparer.Ordinal);
-
-        // Buscar e atualizar o saldo de cada conta uma única vez por AccountId
-        var accountsById = new Dictionary<Guid, Account>();
-
-        foreach (var accountGroup in dtos.GroupBy(dto => dto.AccountId))
-        {
-            var accountId = accountGroup.Key;
-            var account = await _accountRepository.GetByIdAsync(accountId, userId);
-            if (account == null)
-            {
-                throw new Exception($"Conta {accountId} não encontrada ou não pertence ao usuário.");
-            }
-
-            var groupTotal = accountGroup.Sum(dto => dto.Amount);
-            account.UpdateBalance(groupTotal);
-            accountsById[accountId] = account;
-        }
 
         await using var dbTransaction = await _transactionRepository.BeginTransactionAsync();
         try
@@ -311,7 +324,8 @@ public class TransactionService : ITransactionService
                 }
                 else
                 {
-                    finalCategoryId = dto.CategoryId ?? throw new Exception("Categoria não informada para a transação.");
+                    // A validação acima já garantiu que o Id existe e é do usuário.
+                    finalCategoryId = dto.CategoryId!.Value;
                 }
 
                 var transaction = new Transaction(
@@ -354,7 +368,101 @@ public class TransactionService : ITransactionService
             await dbTransaction.RollbackAsync();
             throw;
         }
+
+        result.SavedCount = transactionsToSave.Count;
+        return new ServiceResponse<SaveBatchResultDto> { Data = result };
     }
+
+    /// <summary>
+    /// Carrega as contas citadas no lote. Conta inexistente ou de outro usuário
+    /// vira erro nas linhas dela — antes isso era uma exceção genérica, que na
+    /// tela virava "erro ao salvar" sem dizer o quê.
+    /// </summary>
+    private async Task<Dictionary<Guid, Account>> LoadAccountsAsync(
+        List<SaveBatchTransactionRequestDto> dtos, Guid userId, List<BatchLineErrorDto> errors)
+    {
+        var accountsById = new Dictionary<Guid, Account>();
+
+        foreach (var accountId in dtos.Select(d => d.AccountId).Distinct())
+        {
+            var account = await _accountRepository.GetByIdAsync(accountId, userId);
+            if (account != null)
+            {
+                accountsById[accountId] = account;
+                continue;
+            }
+
+            AddLineErrors(
+                dtos, errors,
+                (dto, _) => dto.AccountId == accountId,
+                "Conta não encontrada ou não pertence ao usuário.");
+        }
+
+        return accountsById;
+    }
+
+    private static void ValidateLines(
+        List<SaveBatchTransactionRequestDto> dtos,
+        Dictionary<Guid, Account> accountsById,
+        HashSet<Guid> userCategoryIds,
+        List<BatchLineErrorDto> errors)
+    {
+        for (var index = 0; index < dtos.Count; index++)
+        {
+            var dto = dtos[index];
+
+            // Conta já reportada em LoadAccountsAsync; não repetir a mesma linha.
+            if (!accountsById.ContainsKey(dto.AccountId))
+                continue;
+
+            if (string.IsNullOrWhiteSpace(dto.Description))
+            {
+                errors.Add(BuildError(index, dto, "A transação precisa de uma descrição."));
+                continue;
+            }
+
+            if (dto.Date == default)
+            {
+                errors.Add(BuildError(index, dto, "A transação precisa de uma data."));
+                continue;
+            }
+
+            if (dto.IsNewCategory)
+            {
+                if (string.IsNullOrWhiteSpace(dto.NewCategoryName))
+                    errors.Add(BuildError(index, dto, "Informe o nome da nova categoria."));
+
+                continue;
+            }
+
+            if (dto.CategoryId is null)
+            {
+                errors.Add(BuildError(index, dto, "Escolha uma categoria para a transação."));
+                continue;
+            }
+
+            // Sem esta checagem o Id inválido só falhava no banco, como violação de
+            // chave estrangeira — mensagem cifrada e impossível de corrigir na tela.
+            if (!userCategoryIds.Contains(dto.CategoryId.Value))
+                errors.Add(BuildError(index, dto, "A categoria escolhida não existe mais. Selecione outra."));
+        }
+    }
+
+    private static void AddLineErrors(
+        List<SaveBatchTransactionRequestDto> dtos,
+        List<BatchLineErrorDto> errors,
+        Func<SaveBatchTransactionRequestDto, int, bool> predicate,
+        string message)
+    {
+        for (var index = 0; index < dtos.Count; index++)
+        {
+            if (predicate(dtos[index], index))
+                errors.Add(BuildError(index, dtos[index], message));
+        }
+    }
+
+    private static BatchLineErrorDto BuildError(int index, SaveBatchTransactionRequestDto dto, string message) =>
+        new() { Index = index, Description = dto.Description ?? string.Empty, Message = message };
 
     // --- Mátodos Auxiliares ---
     private TransactionResponseDto MapTransactionToResponseDto(Transaction transaction)

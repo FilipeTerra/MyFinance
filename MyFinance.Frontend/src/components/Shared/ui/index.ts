@@ -8,4 +8,6 @@ export { EstadoVazio } from './EstadoVazio';
 export { Skeleton } from './Skeleton';
 export { Alerta } from './Alerta';
 export { Modal } from './Modal';
+export { FeedbackModal } from './FeedbackModal';
+export type { FeedbackModalProps, VarianteFeedback } from './FeedbackModal';
 export type { ModalProps, TamanhoModal } from './Modal';

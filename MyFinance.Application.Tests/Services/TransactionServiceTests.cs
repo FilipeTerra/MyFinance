@@ -28,10 +28,19 @@ public class TransactionServiceTests
             _goalRepository.Object,
             _categoryRuleRepository.Object);
         _transactionRepository.Setup(r => r.BeginTransactionAsync()).ReturnsAsync(MockDbTransaction.Create().Object);
+        _categoryRepository.Setup(r => r.GetAllByUserIdAsync(_userId)).ReturnsAsync(Array.Empty<Category>());
     }
 
     private Account BuildAccount(decimal initial = 1000m) => new("Conta", AccountType.ContaCorrente, initial, _userId);
     private Category BuildCategory() => new("Categoria", _userId);
+
+    /// <summary>
+    /// Declara quais categorias existem para o usuário. O lote valida o CategoryId
+    /// contra essa lista, então um teste que usa um Id solto é rejeitado — como
+    /// seria em produção.
+    /// </summary>
+    private void ComCategorias(params Category[] categorias) =>
+        _categoryRepository.Setup(r => r.GetAllByUserIdAsync(_userId)).ReturnsAsync(categorias);
 
     // ---------- CreateTransactionAsync ----------
 
@@ -342,11 +351,12 @@ public class TransactionServiceTests
     public async Task SaveBatchAsync_WithExistingCategory_UpdatesAccountBalanceAndAddsRange()
     {
         var account = BuildAccount(1000m);
-        var categoryId = Guid.NewGuid();
+        var category = BuildCategory();
+        ComCategorias(category);
         var dtos = new List<SaveBatchTransactionRequestDto>
         {
-            new() { Description = "T1", Amount = -50m, Date = DateTime.UtcNow, AccountId = account.Id, CategoryId = categoryId, IsNewCategory = false },
-            new() { Description = "T2", Amount = 200m, Date = DateTime.UtcNow, AccountId = account.Id, CategoryId = categoryId, IsNewCategory = false }
+            new() { Description = "T1", Amount = -50m, Date = DateTime.UtcNow, AccountId = account.Id, CategoryId = category.Id, IsNewCategory = false },
+            new() { Description = "T2", Amount = 200m, Date = DateTime.UtcNow, AccountId = account.Id, CategoryId = category.Id, IsNewCategory = false }
         };
 
         _accountRepository.Setup(r => r.GetByIdAsync(account.Id, _userId)).ReturnsAsync(account);
@@ -384,10 +394,11 @@ public class TransactionServiceTests
         // O que o usuário confirma aqui é o que vai categorizar a próxima
         // importação — inclusive com o agente de IA fora do ar.
         var account = BuildAccount(1000m);
-        var categoryId = Guid.NewGuid();
+        var category = BuildCategory();
+        ComCategorias(category);
         var dtos = new List<SaveBatchTransactionRequestDto>
         {
-            new() { Description = "IFD*IFOOD CLUB   Osasco   BRA", Amount = -5.95m, Date = DateTime.UtcNow, AccountId = account.Id, CategoryId = categoryId, IsNewCategory = false }
+            new() { Description = "IFD*IFOOD CLUB   Osasco   BRA", Amount = -5.95m, Date = DateTime.UtcNow, AccountId = account.Id, CategoryId = category.Id, IsNewCategory = false }
         };
 
         _accountRepository.Setup(r => r.GetByIdAsync(account.Id, _userId)).ReturnsAsync(account);
@@ -399,7 +410,7 @@ public class TransactionServiceTests
             It.Is<IReadOnlyCollection<CategoryRuleDraft>>(drafts =>
                 drafts.Count == 1
                 && drafts.Single().DescriptionKey == "IFD IFOOD CLUB OSASCO"
-                && drafts.Single().CategoryId == categoryId)),
+                && drafts.Single().CategoryId == category.Id)),
             Times.Once);
     }
 
@@ -407,11 +418,12 @@ public class TransactionServiceTests
     public async Task SaveBatchAsync_AprendeUmaRegraPorDescricaoAindaQueRepetidaNoLote()
     {
         var account = BuildAccount(1000m);
-        var categoryId = Guid.NewGuid();
+        var category = BuildCategory();
+        ComCategorias(category);
         var dtos = new List<SaveBatchTransactionRequestDto>
         {
-            new() { Description = "DL*UberRides", Amount = -9.94m, Date = DateTime.UtcNow, AccountId = account.Id, CategoryId = categoryId },
-            new() { Description = "DL*UberRides", Amount = -8.94m, Date = DateTime.UtcNow, AccountId = account.Id, CategoryId = categoryId }
+            new() { Description = "DL*UberRides", Amount = -9.94m, Date = DateTime.UtcNow, AccountId = account.Id, CategoryId = category.Id },
+            new() { Description = "DL*UberRides", Amount = -8.94m, Date = DateTime.UtcNow, AccountId = account.Id, CategoryId = category.Id }
         };
 
         _accountRepository.Setup(r => r.GetByIdAsync(account.Id, _userId)).ReturnsAsync(account);
@@ -445,7 +457,7 @@ public class TransactionServiceTests
     }
 
     [Fact]
-    public async Task SaveBatchAsync_WhenAccountNotFound_Throws()
+    public async Task SaveBatchAsync_ContaInexistente_DevolveErroDeValidacaoSemGravar()
     {
         _accountRepository.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<Guid>())).ReturnsAsync((Account?)null);
         var dtos = new List<SaveBatchTransactionRequestDto>
@@ -453,7 +465,112 @@ public class TransactionServiceTests
             new() { Description = "T1", Amount = -50m, Date = DateTime.UtcNow, AccountId = Guid.NewGuid(), CategoryId = Guid.NewGuid() }
         };
 
-        await Assert.ThrowsAsync<Exception>(() => _sut.SaveBatchAsync(dtos, _userId));
+        var response = await _sut.SaveBatchAsync(dtos, _userId);
+
+        Assert.False(response.Success);
+        Assert.Contains("Conta não encontrada", Assert.Single(response.Data!.Errors).Message);
+        _transactionRepository.Verify(r => r.AddRangeAsync(It.IsAny<IEnumerable<Transaction>>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task SaveBatchAsync_LoteValido_DevolveAContagemSalva()
+    {
+        var account = BuildAccount(1000m);
+        var category = BuildCategory();
+        ComCategorias(category);
+        _accountRepository.Setup(r => r.GetByIdAsync(account.Id, _userId)).ReturnsAsync(account);
+
+        var dtos = new List<SaveBatchTransactionRequestDto>
+        {
+            new() { Description = "T1", Amount = -50m, Date = DateTime.UtcNow, AccountId = account.Id, CategoryId = category.Id },
+            new() { Description = "T2", Amount = -20m, Date = DateTime.UtcNow, AccountId = account.Id, CategoryId = category.Id }
+        };
+
+        var response = await _sut.SaveBatchAsync(dtos, _userId);
+
+        Assert.True(response.Success);
+        Assert.Equal(2, response.Data!.SavedCount);
+        Assert.Empty(response.Data.Errors);
+    }
+
+    [Fact]
+    public async Task SaveBatchAsync_LinhaSemCategoria_ApontaOIndiceENaoGravaNada()
+    {
+        var account = BuildAccount(1000m);
+        var category = BuildCategory();
+        ComCategorias(category);
+        _accountRepository.Setup(r => r.GetByIdAsync(account.Id, _userId)).ReturnsAsync(account);
+
+        var dtos = new List<SaveBatchTransactionRequestDto>
+        {
+            new() { Description = "T1", Amount = -50m, Date = DateTime.UtcNow, AccountId = account.Id, CategoryId = category.Id },
+            new() { Description = "SEM CATEGORIA", Amount = -20m, Date = DateTime.UtcNow, AccountId = account.Id, CategoryId = null }
+        };
+
+        var response = await _sut.SaveBatchAsync(dtos, _userId);
+
+        var erro = Assert.Single(response.Data!.Errors);
+        Assert.Equal(1, erro.Index);
+        Assert.Equal("SEM CATEGORIA", erro.Description);
+        Assert.Equal(0, response.Data.SavedCount);
+
+        // A linha válida do mesmo lote também não pode ter entrado: é tudo ou nada.
+        _transactionRepository.Verify(r => r.AddRangeAsync(It.IsAny<IEnumerable<Transaction>>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task SaveBatchAsync_CategoriaDeOutroUsuario_EhRejeitadaNaValidacao()
+    {
+        // Antes, um Id destes só falhava no banco como violação de chave
+        // estrangeira, virando mensagem cifrada na tela.
+        var account = BuildAccount(1000m);
+        ComCategorias(BuildCategory());
+        _accountRepository.Setup(r => r.GetByIdAsync(account.Id, _userId)).ReturnsAsync(account);
+
+        var dtos = new List<SaveBatchTransactionRequestDto>
+        {
+            new() { Description = "T1", Amount = -50m, Date = DateTime.UtcNow, AccountId = account.Id, CategoryId = Guid.NewGuid() }
+        };
+
+        var response = await _sut.SaveBatchAsync(dtos, _userId);
+
+        Assert.False(response.Success);
+        Assert.Contains("não existe mais", Assert.Single(response.Data!.Errors).Message);
+        _transactionRepository.Verify(r => r.AddRangeAsync(It.IsAny<IEnumerable<Transaction>>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task SaveBatchAsync_NovaCategoriaSemNome_EhRejeitada()
+    {
+        var account = BuildAccount(1000m);
+        ComCategorias(BuildCategory());
+        _accountRepository.Setup(r => r.GetByIdAsync(account.Id, _userId)).ReturnsAsync(account);
+
+        var dtos = new List<SaveBatchTransactionRequestDto>
+        {
+            new() { Description = "T1", Amount = -50m, Date = DateTime.UtcNow, AccountId = account.Id, IsNewCategory = true, NewCategoryName = "  " }
+        };
+
+        var response = await _sut.SaveBatchAsync(dtos, _userId);
+
+        Assert.Contains("nova categoria", Assert.Single(response.Data!.Errors).Message);
+    }
+
+    [Fact]
+    public async Task SaveBatchAsync_ComErro_NaoAlteraOSaldoDaConta()
+    {
+        var account = BuildAccount(1000m);
+        ComCategorias(BuildCategory());
+        _accountRepository.Setup(r => r.GetByIdAsync(account.Id, _userId)).ReturnsAsync(account);
+
+        var dtos = new List<SaveBatchTransactionRequestDto>
+        {
+            new() { Description = "T1", Amount = -50m, Date = DateTime.UtcNow, AccountId = account.Id, CategoryId = Guid.NewGuid() }
+        };
+
+        await _sut.SaveBatchAsync(dtos, _userId);
+
+        Assert.Equal(1000m, account.Balance);
     }
 
     [Fact]

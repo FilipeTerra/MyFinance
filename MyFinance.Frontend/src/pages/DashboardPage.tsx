@@ -5,6 +5,8 @@ import { InvestimentoModal } from '../components/Investimentos/InvestimentoModal
 import { CalculadoraProjecao } from '../components/Calculadora/CalculadoraProjecao';
 import { AnaliseGastos } from '../components/Gastos/AnaliseGastos';
 import { InsightCard } from '../components/Shared/InsightCard';
+import { FeedbackModal } from '../components/Shared/ui/FeedbackModal';
+import { useFeedback } from '../hooks/useFeedback';
 import { financialGoalService, investimentoService, aiService } from '../services/Api';
 import type { FinancialGoalResponseDto } from '../types/FinancialGoalResponseDto';
 import type { InvestimentoResponseDto } from '../types/InvestimentoResponseDto';
@@ -50,6 +52,7 @@ function computeInvestStats(items: InvestimentoResponseDto[]) {
 }
 
 export function DashboardPage() {
+    const { feedback, mostrarSucesso, fechar: fecharFeedback } = useFeedback();
     const [activeTab, setActiveTab] = useState<DashboardTab>('metas');
 
     const [goals, setGoals]                 = useState<FinancialGoalResponseDto[]>([]);
@@ -100,7 +103,7 @@ export function DashboardPage() {
     }, []);
 
     const handleContributionSuccess = async () => {
-        alert('Aporte realizado com sucesso! A barra de progresso foi atualizada.');
+        mostrarSucesso('Aporte realizado com sucesso! A barra de progresso foi atualizada.');
         await fetchGoals();
     };
 
@@ -331,6 +334,15 @@ export function DashboardPage() {
                         setCreateOpen(false);
                         void fetchInvestimentos();
                     }}
+                />
+            )}
+
+            {feedback && (
+                <FeedbackModal
+                    variante={feedback.variante}
+                    titulo={feedback.titulo}
+                    mensagem={feedback.mensagem}
+                    onFechar={fecharFeedback}
                 />
             )}
         </div>

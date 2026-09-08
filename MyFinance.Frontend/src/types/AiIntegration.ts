@@ -43,6 +43,21 @@ export interface SaveBatchTransactionRequestDto {
     isNewCategory: boolean;
 }
 
+/** Problema apontado pela API numa linha específica do lote enviado. */
+export interface BatchLineError {
+    // Posição na lista ENVIADA (só as linhas marcadas), não na tabela da tela.
+    index: number;
+    description: string;
+    message: string;
+}
+
+/** Resposta de POST /transactions/batch, tanto no sucesso quanto no 400. */
+export interface SaveBatchResponse {
+    message: string;
+    savedCount?: number;
+    errors: BatchLineError[];
+}
+
 export type ProactiveInsightCardType = 'aviso' | 'info';
 
 export interface ProactiveInsightResponseDto {

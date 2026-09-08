@@ -41,10 +41,13 @@ public interface ITransactionService
     Task<ServiceResponse<IEnumerable<TransactionResponseDto>>> SearchTransactionsAsync(Guid userId, TransactionSearchRequestDto filters);
 
     /// <summary>
-    /// Salva um lote de transações, criando novas categorias se necessário, e associando as transações às contas e categorias corretas.
+    /// Salva um lote de transações, criando novas categorias se necessário, e
+    /// associando as transações às contas e categorias corretas.
+    ///
+    /// O lote é tudo ou nada: se qualquer linha não passar na validação, nada é
+    /// gravado e a resposta traz os problemas por linha, para o usuário corrigir
+    /// na tela de revisão.
     /// </summary>
-    /// <param name="transactions"></param>
-    /// <param name="userId"></param>
-    /// <returns></returns>
-    Task SaveBatchAsync(List<SaveBatchTransactionRequestDto> transactions, Guid userId);
+    Task<ServiceResponse<SaveBatchResultDto>> SaveBatchAsync(
+        List<SaveBatchTransactionRequestDto> transactions, Guid userId);
 }

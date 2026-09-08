@@ -1,17 +1,21 @@
 // src/components/Transactions/ReviewImportModal.tsx
 import React, { useState, useEffect } from 'react';
-import type { SaveBatchTransactionRequestDto, StatementImportResultDto } from '../../types/AiIntegration';
+import type {
+    BatchLineError,
+    SaveBatchTransactionRequestDto,
+    StatementImportResultDto,
+} from '../../types/AiIntegration';
 import type { CategoryResponseDto } from '../../types/CategoryResponseDto';
 import { Modal } from '../Shared/ui/Modal';
 import './ReviewImportModal.css';
 
-// 1. CORREÇÃO: Removemos os 'any' e voltamos a usar as interfaces corretas
 interface ReviewImportModalProps {
     isOpen: boolean;
     onClose: () => void;
     importResult: StatementImportResultDto;
     categories: CategoryResponseDto[];
-    onConfirm: (finalTransactions: SaveBatchTransactionRequestDto[]) => void;
+    /** Devolve os erros por linha do lote; lista vazia significa que salvou. */
+    onConfirm: (finalTransactions: SaveBatchTransactionRequestDto[]) => Promise<BatchLineError[]>;
 }
 
 interface EditableTransaction extends SaveBatchTransactionRequestDto {
@@ -30,6 +34,9 @@ export const ReviewImportModal: React.FC<ReviewImportModalProps> = ({
     onConfirm
 }) => {
     const [editableTransactions, setEditableTransactions] = useState<EditableTransaction[]>([]);
+    // Erro que o servidor apontou, por posição na tabela desta tela.
+    const [errosPorLinha, setErrosPorLinha] = useState<Record<number, string>>({});
+    const [salvando, setSalvando] = useState(false);
     const aiTransactions = importResult.transactions;
 
     const selecionadas = editableTransactions.filter(tx => tx.selected);
@@ -51,7 +58,7 @@ export const ReviewImportModal: React.FC<ReviewImportModalProps> = ({
                     categoryId: tx.categoryId,
                     newCategoryName: tx.isSuggestion ? tx.suggestedCategoryName : null,
                     isNewCategory: tx.isSuggestion,
-                    isCustomEditing: false, 
+                    isCustomEditing: false,
                     customCategoryText: tx.isSuggestion && tx.suggestedCategoryName ? tx.suggestedCategoryName : '',
                     selected: !tx.isDuplicate,
                     isDuplicate: tx.isDuplicate
@@ -61,21 +68,31 @@ export const ReviewImportModal: React.FC<ReviewImportModalProps> = ({
         }
     }, [aiTransactions]);
 
+    /** Mexer na linha apaga o erro dela: o aviso antigo já não vale mais. */
+    const limparErro = (index: number) => {
+        setErrosPorLinha(atual => {
+            if (!(index in atual)) return atual;
+            const resto = { ...atual };
+            delete resto[index];
+            return resto;
+        });
+    };
+
     const handleCategoryChange = (index: number, selectedValue: string, originalSuggestion: string | null) => {
         const updatedList = [...editableTransactions];
-        
+
         if (selectedValue === "SUGGESTION") {
             updatedList[index].isNewCategory = true;
             updatedList[index].categoryId = null;
             updatedList[index].newCategoryName = originalSuggestion;
             updatedList[index].isCustomEditing = false;
             updatedList[index].customCategoryText = originalSuggestion || '';
-        } 
+        }
         else if (selectedValue === "CUSTOM") {
             updatedList[index].isNewCategory = true;
             updatedList[index].categoryId = null;
             updatedList[index].isCustomEditing = true;
-            updatedList[index].customCategoryText = originalSuggestion || ''; 
+            updatedList[index].customCategoryText = originalSuggestion || '';
             updatedList[index].newCategoryName = updatedList[index].customCategoryText;
         }
         else {
@@ -84,14 +101,16 @@ export const ReviewImportModal: React.FC<ReviewImportModalProps> = ({
             updatedList[index].newCategoryName = null;
             updatedList[index].isCustomEditing = false;
         }
-        
+
         setEditableTransactions(updatedList);
+        limparErro(index);
     };
 
     const handleSelectionChange = (index: number, selected: boolean) => {
         const updatedList = [...editableTransactions];
         updatedList[index].selected = selected;
         setEditableTransactions(updatedList);
+        limparErro(index);
     };
 
     const handleSelectAll = (selected: boolean) => {
@@ -103,30 +122,49 @@ export const ReviewImportModal: React.FC<ReviewImportModalProps> = ({
         updatedList[index].customCategoryText = newText;
         updatedList[index].newCategoryName = newText;
         setEditableTransactions(updatedList);
+        limparErro(index);
     };
 
-    const canSubmit = selecionadas.length > 0 && selecionadas.every(tx => {
+    const canSubmit = !salvando && selecionadas.length > 0 && selecionadas.every(tx => {
         if (!tx.isNewCategory) return !!tx.categoryId;
         return tx.newCategoryName && tx.newCategoryName.trim() !== '';
     });
 
-    const handleConfirm = () => {
-    const payload: SaveBatchTransactionRequestDto[] = selecionadas.map(tx => {
-        const dateAsUtc = new Date(tx.date).toISOString();
+    const handleConfirm = async () => {
+        // O índice que o servidor devolve é da lista ENVIADA — só as marcadas.
+        // Sem guardar esta correspondência, o erro apareceria na linha errada.
+        const indicesOriginais: number[] = [];
+        const payload: SaveBatchTransactionRequestDto[] = [];
 
-        return {
-            date: dateAsUtc, 
-            description: tx.description,
-            amount: tx.amount,
-            accountId: tx.accountId,
-            categoryId: !tx.isNewCategory ? tx.categoryId : null,
-            newCategoryName: tx.isNewCategory ? tx.newCategoryName : null,
-            isNewCategory: tx.isNewCategory
-        };
-    });
+        editableTransactions.forEach((tx, index) => {
+            if (!tx.selected) return;
 
-    onConfirm(payload);
-};
+            indicesOriginais.push(index);
+            payload.push({
+                date: new Date(tx.date).toISOString(),
+                description: tx.description,
+                amount: tx.amount,
+                accountId: tx.accountId,
+                categoryId: !tx.isNewCategory ? tx.categoryId : null,
+                newCategoryName: tx.isNewCategory ? tx.newCategoryName : null,
+                isNewCategory: tx.isNewCategory
+            });
+        });
+
+        setSalvando(true);
+        try {
+            const erros = await onConfirm(payload);
+
+            const porLinha: Record<number, string> = {};
+            erros.forEach(erro => {
+                const indiceOriginal = indicesOriginais[erro.index];
+                if (indiceOriginal !== undefined) porLinha[indiceOriginal] = erro.message;
+            });
+            setErrosPorLinha(porLinha);
+        } finally {
+            setSalvando(false);
+        }
+    };
 
     if (!isOpen) return null;
 
@@ -145,7 +183,7 @@ export const ReviewImportModal: React.FC<ReviewImportModalProps> = ({
                         className="btn-primary"
                         disabled={!canSubmit}
                     >
-                        Confirmar e Salvar ({selecionadas.length})
+                        {salvando ? 'Salvando...' : `Confirmar e Salvar (${selecionadas.length})`}
                     </button>
                 </>
             }
@@ -178,70 +216,91 @@ export const ReviewImportModal: React.FC<ReviewImportModalProps> = ({
                             desmarcados. Se alguma dessas compras aconteceu de novo, marque a linha para importá-la.
                         </p>
                     )}
-                    
+
+                    {/* Fica fora do cabeçalho da tabela de propósito: no celular o
+                        `<thead>` vira sr-only, e um "marcar todos" escondido lá
+                        dentro sumiria justo onde marcar em lote é mais trabalhoso. */}
+                    <div className="review-barra-selecao">
+                        <span className="review-contagem">
+                            <strong>{selecionadas.length}</strong> de {editableTransactions.length} selecionados
+                        </span>
+                        <button
+                            type="button"
+                            className="review-btn-selecionar"
+                            onClick={() => handleSelectAll(!todasSelecionadas)}
+                        >
+                            {todasSelecionadas ? 'Desmarcar todos' : 'Marcar todos'}
+                        </button>
+                    </div>
+
                     <div className="table-container">
-                        <table className="transactions-table">
-                            <thead>
-                                <tr>
-                                    <th className="select-column">
-                                        <input
-                                            type="checkbox"
-                                            checked={todasSelecionadas}
-                                            onChange={(e) => handleSelectAll(e.target.checked)}
-                                            aria-label="Marcar ou desmarcar todos os lançamentos"
-                                        />
-                                    </th>
-                                    <th>Data</th>
-                                    <th>Descrição</th>
-                                    <th>Valor</th>
-                                    <th className="category-column">Categoria</th>
-                                    <th className="status-column">Status</th>
+                        {/* Os `role` explícitos não são redundantes: no celular o CSS
+                            troca o `display` de table/tr/td para virar cartões, e isso
+                            apaga a semântica implícita de tabela. Sem eles, um leitor
+                            de tela perderia a relação entre cada valor e sua coluna. */}
+                        <table className="transactions-table" role="table">
+                            <thead className="transactions-table-head" role="rowgroup">
+                                <tr role="row">
+                                    <th role="columnheader" scope="col" className="select-column">Importar</th>
+                                    <th role="columnheader" scope="col">Data</th>
+                                    <th role="columnheader" scope="col">Descrição</th>
+                                    <th role="columnheader" scope="col">Valor</th>
+                                    <th role="columnheader" scope="col" className="category-column">Categoria</th>
+                                    <th role="columnheader" scope="col" className="status-column">Status</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody role="rowgroup">
                                 {editableTransactions.map((tx, index) => {
-                                    const originalAiTx = aiTransactions[index]; 
+                                    const originalAiTx = aiTransactions[index];
+                                    const erro = errosPorLinha[index];
 
                                     return (
                                         <tr
                                             key={index}
+                                            role="row"
                                             className={[
                                                 tx.isNewCategory ? 'row-suggestion' : 'row-confirmed',
                                                 tx.isDuplicate ? 'row-duplicate' : '',
-                                                tx.selected ? '' : 'row-unselected'
+                                                tx.selected ? '' : 'row-unselected',
+                                                erro ? 'row-error' : ''
                                             ].filter(Boolean).join(' ')}
                                         >
-                                            <td className="select-cell">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={tx.selected}
-                                                    onChange={(e) => handleSelectionChange(index, e.target.checked)}
-                                                    aria-label={`Importar ${tx.description}`}
-                                                />
+                                            <td role="cell" className="select-cell">
+                                                {/* O <label> é o alvo de toque: dar padding ao próprio
+                                                    checkbox não aumenta a área clicável dele. */}
+                                                <label className="select-toque">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={tx.selected}
+                                                        onChange={(e) => handleSelectionChange(index, e.target.checked)}
+                                                        aria-label={`Importar ${tx.description}`}
+                                                    />
+                                                </label>
                                             </td>
-                                            <td className="date-cell">{new Date(tx.date).toLocaleDateString('pt-BR')}</td>
-                                            <td className="desc-cell" title={tx.description}>{tx.description}</td>
-                                            <td className={tx.amount >= 0 ? 'amount-cell text-success' : 'amount-cell text-danger'}>
+                                            <td role="cell" className="date-cell">{new Date(tx.date).toLocaleDateString('pt-BR')}</td>
+                                            <td role="cell" className="desc-cell" title={tx.description}>{tx.description}</td>
+                                            <td role="cell" className={tx.amount >= 0 ? 'amount-cell text-success' : 'amount-cell text-danger'}>
                                                 {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(tx.amount)}
                                             </td>
-                                            <td className="category-cell">
-                                                <select 
+                                            <td role="cell" className="category-cell">
+                                                <select
                                                     value={tx.isCustomEditing ? "CUSTOM" : (tx.isNewCategory && !tx.isCustomEditing ? "SUGGESTION" : (tx.categoryId || ""))}
                                                     onChange={(e) => handleCategoryChange(index, e.target.value, originalAiTx.suggestedCategoryName || null)}
                                                     className="category-select"
+                                                    aria-label={`Categoria de ${tx.description}`}
                                                 >
                                                     <option value="" disabled>-- Selecione --</option>
-                                                    
+
                                                     {originalAiTx.isSuggestion && (
                                                         <option value="SUGGESTION" className="opt-suggestion">
                                                             ✨ Sugestão: {originalAiTx.suggestedCategoryName}
                                                         </option>
                                                     )}
-                                                    
+
                                                     <option value="CUSTOM" className="opt-custom">
                                                         ➕ Criar Nova Categoria...
                                                     </option>
-                                                    
+
                                                     <optgroup label="Suas Categorias">
                                                         {/* Agora podemos confiar que 'categories' é um array de CategoryResponseDto */}
                                                         {categories && categories.length > 0 ? (
@@ -257,7 +316,7 @@ export const ReviewImportModal: React.FC<ReviewImportModalProps> = ({
                                                 </select>
 
                                                 {tx.isCustomEditing && (
-                                                    <input 
+                                                    <input
                                                         type="text"
                                                         className="category-input custom-fade-in"
                                                         value={tx.customCategoryText}
@@ -267,8 +326,10 @@ export const ReviewImportModal: React.FC<ReviewImportModalProps> = ({
                                                     />
                                                 )}
                                             </td>
-                                            <td className="status-cell">
-                                                {tx.isDuplicate ? (
+                                            <td role="cell" className="status-cell">
+                                                {erro ? (
+                                                    <span className="review-erro-linha">⛔ {erro}</span>
+                                                ) : tx.isDuplicate ? (
                                                     <span className="badge badge-duplicate">🔁 Já importada</span>
                                                 ) : tx.isNewCategory ? (
                                                     <span className="badge badge-new">💡 Nova</span>

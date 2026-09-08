@@ -9,8 +9,10 @@ import { CreateTransactionButton } from '../components/Transactions/CreateTransa
 import { CreateAccountButton } from '../components/Accounts/CreateAccountButton';
 import { UploadTransactionFileButton } from '../components/Transactions/UploadTransactionFileButton';
 import { TransactionModal } from '../components/Transactions/TransactionModal';
-import { accountService, categoryService, transactionService, aiService, AxiosError, type ApiErrorResponse } from '../services/Api';
+import { accountService, categoryService, transactionService, aiService, mensagemDeErro, AxiosError, type ApiErrorResponse } from '../services/Api';
 import { ConfirmationModal } from '../components/Shared/ConfirmationModal';
+import { FeedbackModal } from '../components/Shared/ui/FeedbackModal';
+import { useFeedback } from '../hooks/useFeedback';
 import { LifestyleInsightCard } from '../components/Shared/LifestyleInsightCard';
 import type { LifestyleInsightResponseDto } from '../types/AiIntegration';
 
@@ -32,6 +34,7 @@ interface FiltersState {
 }
 
 export function HomePage() {
+    const { feedback, mostrarSucesso, mostrarErro, fechar: fecharFeedback } = useFeedback();
     const [accounts, setAccounts] = useState<AccountResponseDto[]>([]);
     
     // Estados para Transações
@@ -152,10 +155,9 @@ export function HomePage() {
             setTransactions(prevTransactions => 
                 prevTransactions.filter(tx => tx.id !== id)
             );
-            alert('Transação excluída com sucesso!'); 
+            mostrarSucesso('Transação excluída com sucesso.');
         } catch (err) {
-            const axiosError = err as AxiosError<ApiErrorResponse>;
-            alert(axiosError.response?.data?.message || "Erro ao tentar excluir a transação.");
+            mostrarErro(mensagemDeErro(err, 'Não foi possível excluir a transação.'));
         }
     };
 
@@ -174,25 +176,6 @@ export function HomePage() {
         setTransactionToEdit(null); 
         if (activeFilters) {
             setActiveFilters({ ...activeFilters });
-        }
-    };
-
-    const handleFileUpload = async (file: File, selectedAccountId: string) => {
-        try {
-            setIsLoadingTransactions(true); 
-        await transactionService.uploadFile(file, selectedAccountId);
-        alert("Arquivo enviado com sucesso! O Agente IA processou as transações.");
-        
-        if (activeFilters) {
-            handleFilterChange(activeFilters); 
-        }
-            
-        } catch (err) {
-            const axiosError = err as AxiosError<ApiErrorResponse>;
-            alert(axiosError.response?.data?.message || "Erro ao fazer upload do arquivo.");
-            throw err;
-        } finally {
-            setIsLoadingTransactions(false);
         }
     };
 
@@ -255,8 +238,8 @@ export function HomePage() {
             
         } catch (err) {
             console.error("Erro ao excluir conta:", err);
-            const axiosError = err as AxiosError<ApiErrorResponse>;
-            alert(axiosError.response?.data?.message || 'Erro ao excluir conta. Verifique se existem transações vinculadas.');
+            mostrarErro(mensagemDeErro(
+                err, 'Não foi possível excluir a conta. Verifique se existem transações vinculadas.'));
             setIsDeleteAccountModalOpen(false); 
         }
     };
@@ -337,7 +320,6 @@ export function HomePage() {
             <UploadTransactionModal 
                 isOpen={isUploadModalOpen}
                 onClose={() => setIsUploadModalOpen(false)}
-                onUpload={handleFileUpload}
                 accounts={accounts} 
                 onAccountCreated={handleAccountCreatedFromTransaction}
                 onTransactionSaved={handleTransactionSaved}
@@ -361,6 +343,16 @@ export function HomePage() {
                 onSuccess={handleAccountSaved}
                 accountToEdit={accountToEdit}
             />
+
+            {feedback && (
+                <FeedbackModal
+                    variante={feedback.variante}
+                    titulo={feedback.titulo}
+                    mensagem={feedback.mensagem}
+                    detalhes={feedback.detalhes}
+                    onFechar={fecharFeedback}
+                />
+            )}
         </div>
     );
 }

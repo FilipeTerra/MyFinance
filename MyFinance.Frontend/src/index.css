@@ -302,12 +302,15 @@ img, svg, video, canvas {
     /* Piso de 16px em campos de formulário. Abaixo disso o Safari do iOS dá
        zoom ao focar o campo e desalinha o layout inteiro.
 
-       O `!important` é deliberado e é o único do arquivo. Media query não
-       soma especificidade, então um seletor de elemento perderia para
-       qualquer regra de classe — e todos os campos problemáticos do app são
-       de classe (`.gastos-account-select` em 13px, `.filter-group input` em
-       14px, e `.category-select` que já usa `!important` por conta própria).
-       Aqui 16px é restrição rígida de usabilidade, não preferência de estilo.
+       O `!important` é deliberado e é o único do arquivo. Aqui 16px é
+       restrição rígida de usabilidade, não preferência de estilo.
+
+       Atenção ao alcance: entre duas declarações `!important`, quem decide
+       ainda é a especificidade — e este seletor é de elemento. Ele cobre
+       `.gastos-account-select` (13px) e `.filter-group input` (14px), que não
+       usam `!important`, mas NÃO alcança `.category-select`, cuja regra base é
+       de classe e já vem com `!important`. Esse campo resolve o piso de 16px
+       por conta própria, no ReviewImportModal.css.
 
        O `max()` preserva campos que já sejam maiores que 16px. */
     input, select, textarea {
