@@ -9,7 +9,7 @@ import type { CategoryResponseDto } from '../types/CategoryResponseDto';
 import type { AccountRequestDto } from '../types/AccountRequestDto';
 import type { CategoryRequestDto } from '../types/CategoryRequestDto';
 import type { UpdateAccountRequestDto } from '../types/UpdateAccountRequestDto';
-import type { AiTransactionResponseDto, SaveBatchTransactionRequestDto, ProactiveInsightResponseDto, LifestyleInsightResponseDto } from '../types/AiIntegration';
+import type { StatementImportResultDto, SaveBatchTransactionRequestDto, ProactiveInsightResponseDto, LifestyleInsightResponseDto } from '../types/AiIntegration';
 import type { FinancialGoalResponseDto, CreateFinancialGoalRequestDto } from '../types/FinancialGoalResponseDto';
 import type {
     InvestimentoResponseDto,
@@ -153,7 +153,7 @@ const transactionService = {
         formData.append('file', file);
         formData.append('accountId', accountId);
 
-        return apiClient.post<AiTransactionResponseDto[]>('/transactions/upload', formData, {
+        return apiClient.post<StatementImportResultDto>('/transactions/upload', formData, {
             headers: {
                 'Content-Type': 'multipart/form-data'
             }

@@ -2,8 +2,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MyFinance.Application.Dtos;
+using MyFinance.Application.Dtos.StatementImport;
 using MyFinance.Application.Interfaces.Services;
-using System.Net.Http.Headers;
 using System.Security.Claims;
 
 namespace MyFinance.Api.Controllers;
@@ -17,18 +17,25 @@ namespace MyFinance.Api.Controllers;
 [Authorize]
 public class TransactionsController : ControllerBase
 {
+    /// <summary>Extensões aceitas no upload de extrato.</summary>
+    private static readonly string[] AllowedExtensions = { ".csv", ".txt", ".pdf" };
+
+    /// <summary>Teto do upload: uma fatura em PDF raramente passa de alguns MB.</summary>
+    private const long MaxUploadBytes = 10 * 1024 * 1024;
+
     private readonly ITransactionService _transactionService;
-    private readonly IAiIntegrationService _aiIntegrationService;
+    private readonly IStatementImportService _statementImportService;
 
     /// <summary>
     /// Inicializa uma nova instância do controlador de transações com o serviço de transações injetado.
     /// </summary>
     /// <param name="transactionService">Serviço responsável pela lógica de negócio das transações</param>
-    /// <param name="aiIntegrationService">Serviço responsável pela integração com o Agente de IA</param>
-    public TransactionsController(ITransactionService transactionService, IAiIntegrationService aiIntegrationService)
+    /// <param name="statementImportService">Serviço responsável pela importação de extratos</param>
+    public TransactionsController(
+        ITransactionService transactionService, IStatementImportService statementImportService)
     {
         _transactionService = transactionService;
-        _aiIntegrationService = aiIntegrationService;
+        _statementImportService = statementImportService;
     }
 
     /// <summary>
@@ -101,41 +108,51 @@ public async Task<IActionResult> SaveBatch([FromBody] List<SaveBatchTransactionR
     }
 }
 
-/// <summary>
-/// Endpoint para upload de extrato bancário/cartão de crédito (CSV ou PDF) e processamento via Agente de IA.
-/// </summary>
-/// <param name="file"></param>
-/// <param name="accountId"></param>
-/// <returns></returns>
-[HttpPost("upload")]
-public async Task<IActionResult> UploadExtrato(IFormFile file, [FromForm] Guid accountId)
-{
-    if (file == null || file.Length == 0)
-        return BadRequest(new { message = "Nenhum arquivo enviado." });
-
-    var userIdString = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-    if (!Guid.TryParse(userIdString, out Guid userId))
-        return Unauthorized(new { message = "Usuário não autenticado." });
-
-    try
+    /// <summary>
+    /// Importa um extrato bancário ou fatura de cartão (CSV ou PDF).
+    ///
+    /// A leitura é determinística: o agente de IA só entra se nenhum parser
+    /// reconhecer o formato, ou para sugerir categoria ao que sobrou sem
+    /// classificação. Com o agente fora do ar a importação continua funcionando.
+    /// </summary>
+    /// <param name="file">Arquivo do extrato (.csv, .txt ou .pdf)</param>
+    /// <param name="accountId">Conta em que as transações serão lançadas</param>
+    /// <returns>As transações lidas, já com as categorias que foi possível resolver</returns>
+    [HttpPost("upload")]
+    [RequestSizeLimit(MaxUploadBytes)]
+    public async Task<IActionResult> UploadExtrato(IFormFile file, [FromForm] Guid accountId)
     {
-        using var fileStream = file.OpenReadStream();
-        
-        var aiResult = await _aiIntegrationService.ProcessStatementAsync(
-            fileStream, 
-            file.FileName, 
-            file.ContentType, 
-            accountId, 
-            userId
-        );
-        
-        return Ok(aiResult); 
+        if (file == null || file.Length == 0)
+            return BadRequest(new { message = "Nenhum arquivo enviado." });
+
+        if (file.Length > MaxUploadBytes)
+            return BadRequest(new { message = "Arquivo muito grande. O limite é de 10 MB." });
+
+        var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+        if (!AllowedExtensions.Contains(extension))
+            return BadRequest(new { message = "Formato não suportado. Envie um arquivo .csv, .txt ou .pdf." });
+
+        var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!Guid.TryParse(userIdString, out Guid userId))
+            return Unauthorized(new { message = "Usuário não autenticado." });
+
+        try
+        {
+            // O arquivo é lido inteiro em memória porque os parsers precisam
+            // percorrê-lo mais de uma vez — identificar o formato e depois extrair.
+            using var buffer = new MemoryStream();
+            await file.CopyToAsync(buffer);
+
+            var statementFile = new StatementFile(file.FileName, file.ContentType, buffer.ToArray());
+            var result = await _statementImportService.ImportAsync(statementFile, accountId, userId);
+
+            return result.Success ? Ok(result) : BadRequest(result);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = $"Falha ao importar o extrato: {ex.Message}" });
+        }
     }
-    catch (Exception ex)
-    {
-        return StatusCode(500, new { message = $"Falha de comunicação com o Agente IA: {ex.Message}" });
-    }
-}
 
     /// <summary>
     /// Retorna todas as transações de uma conta específica do usuário autenticado.

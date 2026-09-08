@@ -1,5 +1,6 @@
 using Moq;
 using MyFinance.Application.Dtos;
+using MyFinance.Application.Dtos.StatementImport;
 using MyFinance.Application.Interfaces.Repositories;
 using MyFinance.Application.Services;
 using MyFinance.Application.Tests.TestHelpers;
@@ -14,6 +15,7 @@ public class TransactionServiceTests
     private readonly Mock<IAccountRepository> _accountRepository = new();
     private readonly Mock<ICategoryRepository> _categoryRepository = new();
     private readonly Mock<IFinancialGoalRepository> _goalRepository = new();
+    private readonly Mock<ICategoryRuleRepository> _categoryRuleRepository = new();
     private readonly TransactionService _sut;
     private readonly Guid _userId = Guid.NewGuid();
 
@@ -23,7 +25,8 @@ public class TransactionServiceTests
             _transactionRepository.Object,
             _accountRepository.Object,
             _categoryRepository.Object,
-            _goalRepository.Object);
+            _goalRepository.Object,
+            _categoryRuleRepository.Object);
         _transactionRepository.Setup(r => r.BeginTransactionAsync()).ReturnsAsync(MockDbTransaction.Create().Object);
     }
 
@@ -373,6 +376,72 @@ public class TransactionServiceTests
         // Mesma categoria nova reutilizada entre as duas transações -> criada só uma vez
         _categoryRepository.Verify(r => r.AddAsync(It.IsAny<Category>()), Times.Once);
         _transactionRepository.Verify(r => r.AddRangeAsync(It.Is<IEnumerable<Transaction>>(t => t.Count() == 2)), Times.Once);
+    }
+
+    [Fact]
+    public async Task SaveBatchAsync_AprendeADescricaoNormalizadaComACategoriaEscolhida()
+    {
+        // O que o usuário confirma aqui é o que vai categorizar a próxima
+        // importação — inclusive com o agente de IA fora do ar.
+        var account = BuildAccount(1000m);
+        var categoryId = Guid.NewGuid();
+        var dtos = new List<SaveBatchTransactionRequestDto>
+        {
+            new() { Description = "IFD*IFOOD CLUB   Osasco   BRA", Amount = -5.95m, Date = DateTime.UtcNow, AccountId = account.Id, CategoryId = categoryId, IsNewCategory = false }
+        };
+
+        _accountRepository.Setup(r => r.GetByIdAsync(account.Id, _userId)).ReturnsAsync(account);
+
+        await _sut.SaveBatchAsync(dtos, _userId);
+
+        _categoryRuleRepository.Verify(r => r.UpsertRangeAsync(
+            _userId,
+            It.Is<IReadOnlyCollection<CategoryRuleDraft>>(drafts =>
+                drafts.Count == 1
+                && drafts.Single().DescriptionKey == "IFD IFOOD CLUB OSASCO"
+                && drafts.Single().CategoryId == categoryId)),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task SaveBatchAsync_AprendeUmaRegraPorDescricaoAindaQueRepetidaNoLote()
+    {
+        var account = BuildAccount(1000m);
+        var categoryId = Guid.NewGuid();
+        var dtos = new List<SaveBatchTransactionRequestDto>
+        {
+            new() { Description = "DL*UberRides", Amount = -9.94m, Date = DateTime.UtcNow, AccountId = account.Id, CategoryId = categoryId },
+            new() { Description = "DL*UberRides", Amount = -8.94m, Date = DateTime.UtcNow, AccountId = account.Id, CategoryId = categoryId }
+        };
+
+        _accountRepository.Setup(r => r.GetByIdAsync(account.Id, _userId)).ReturnsAsync(account);
+
+        await _sut.SaveBatchAsync(dtos, _userId);
+
+        _categoryRuleRepository.Verify(r => r.UpsertRangeAsync(
+            _userId, It.Is<IReadOnlyCollection<CategoryRuleDraft>>(drafts => drafts.Count == 1)), Times.Once);
+    }
+
+    [Fact]
+    public async Task SaveBatchAsync_AprendeTambemACategoriaCriadaNoMomento()
+    {
+        var account = BuildAccount(1000m);
+        var dtos = new List<SaveBatchTransactionRequestDto>
+        {
+            new() { Description = "PADARIA CENTRAL", Amount = -12m, Date = DateTime.UtcNow, AccountId = account.Id, IsNewCategory = true, NewCategoryName = "Padaria" }
+        };
+
+        _accountRepository.Setup(r => r.GetByIdAsync(account.Id, _userId)).ReturnsAsync(account);
+        _categoryRepository.Setup(r => r.GetByNameAsync("Padaria", _userId)).ReturnsAsync((Category?)null);
+
+        await _sut.SaveBatchAsync(dtos, _userId);
+
+        _categoryRuleRepository.Verify(r => r.UpsertRangeAsync(
+            _userId,
+            It.Is<IReadOnlyCollection<CategoryRuleDraft>>(drafts =>
+                drafts.Single().DescriptionKey == "PADARIA CENTRAL"
+                && drafts.Single().CategoryId != Guid.Empty)),
+            Times.Once);
     }
 
     [Fact]

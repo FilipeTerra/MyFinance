@@ -87,7 +87,7 @@ Serviço FastAPI que orquestra agentes de IA com **LangGraph**, também organiza
 * **Insights de IA (proativos):**
   * *Reserva de Emergência* — avalia se o valor guardado atinge o ideal recomendado.
   * *Inflação do Estilo de Vida* — detecta se gastos supérfluos crescem mais rápido que os investimentos.
-* **Processamento de extratos por IA:** Extração automática de transações a partir de arquivos.
+* **Importação de extratos (CSV e PDF):** Leitura determinística de faturas e extratos na própria API — fatura do Inter em CSV, fatura do Inter em PDF e CSVs genéricos de outros bancos. As categorias saem das regras que o usuário já confirmou e do histórico dele; o que sobra é marcado manualmente na tela de revisão. **Funciona com o agente de IA fora do ar**, que entra apenas como reforço: interpreta formatos não reconhecidos e sugere categoria para o que ficou em branco.
 
 ---
 
@@ -96,6 +96,7 @@ Serviço FastAPI que orquestra agentes de IA com **LangGraph**, também organiza
 ### Backend — API (.NET 9)
 * **C# / ASP.NET Core** — API RESTful
 * **Entity Framework Core** + **PostgreSQL (Npgsql)** — persistência
+* **PdfPig** — leitura de faturas em PDF na importação de extratos
 * **JWT Bearer** — autenticação
 * **BCrypt.Net** — hashing de senhas
 * **Swagger / OpenAPI** — documentação da API
@@ -105,7 +106,7 @@ Serviço FastAPI que orquestra agentes de IA com **LangGraph**, também organiza
 * **LangChain + LangGraph** — orquestração de agentes
 * **FAISS** — vector store para RAG
 * **Ollama** — execução de LLMs (local ou proxy remoto)
-* **pandas / pdfplumber** — processamento de extratos
+* **pdfplumber** — leitura de PDF na extração semântica (fallback de formatos desconhecidos)
 
 ### Frontend (React 19)
 * **React + Vite** — SPA rápida e reativa

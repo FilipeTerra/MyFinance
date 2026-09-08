@@ -23,4 +23,11 @@
     <ProjectReference Include="..\MyFinance.Application\MyFinance.Application.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Extratos de exemplo usados pelos testes de importação. Conteúdo anonimizado. -->
+    <None Update="Fixtures\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

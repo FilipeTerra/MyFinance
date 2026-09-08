@@ -10,6 +10,24 @@ export interface AiTransactionResponseDto {
     isSuggestion: boolean;
 }
 
+/**
+ * Resposta da importação de extrato. A leitura é determinística na API; a IA só
+ * entra quando nenhum parser reconhece o arquivo ou para sugerir categoria ao
+ * que sobrou — por isso o resultado diz o que de fato aconteceu.
+ */
+export interface StatementImportResultDto {
+    success: boolean;
+    // Preenchido apenas quando success = false.
+    message: string | null;
+    transactions: AiTransactionResponseDto[];
+    // Nome do parser que leu o arquivo, ou "IA" quando veio do agente.
+    parserUsed: string | null;
+    aiUsed: boolean;
+    // A IA foi consultada e não respondeu; a importação seguiu sem ela.
+    aiUnavailable: boolean;
+    warnings: string[];
+}
+
 export interface SaveBatchTransactionRequestDto {
     date: string;
     description: string;

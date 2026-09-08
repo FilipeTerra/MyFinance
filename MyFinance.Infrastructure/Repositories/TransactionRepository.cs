@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using MyFinance.Application.Dtos;
+using MyFinance.Application.Dtos.StatementImport;
 using MyFinance.Application.Interfaces.Repositories;
 using MyFinance.Domain.Entities;
 
@@ -120,6 +121,18 @@ public class TransactionRepository : ITransactionRepository
         return await _context.Transactions
             .Where(t => t.InvestimentoId == investimentoId)
             .Include(t => t.Account)
+            .ToListAsync();
+    }
+
+    public async Task<IReadOnlyList<DescriptionCategoryCount>> GetDescriptionCategoryHistoryAsync(Guid userId)
+    {
+        // Agrega no banco: um extrato tem dezenas de linhas, mas o histórico do
+        // usuário tem milhares de transações — trazer todas para contar em memória
+        // seria desperdício.
+        return await _context.Transactions
+            .Where(t => t.Account.UserId == userId)
+            .GroupBy(t => new { t.Description, t.CategoryId })
+            .Select(g => new DescriptionCategoryCount(g.Key.Description, g.Key.CategoryId, g.Count()))
             .ToListAsync();
     }
 

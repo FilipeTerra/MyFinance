@@ -4,6 +4,8 @@ using MyFinance.Infrastructure;
 using MyFinance.Application.Interfaces.Services;
 using MyFinance.Application.Interfaces.Repositories;
 using MyFinance.Application.Services;
+using MyFinance.Application.Services.StatementImport;
+using MyFinance.Infrastructure.Documents;
 using MyFinance.Infrastructure.HostedServices;
 using MyFinance.Infrastructure.Integrations;
 using MyFinance.Infrastructure.Repositories;
@@ -107,6 +109,16 @@ builder.Services.AddScoped<ICotacaoHistoricoRepository, CotacaoHistoricoReposito
 builder.Services.AddScoped<IMarketSyncService, MarketSyncService>();
 builder.Services.AddScoped<IAnalyticsRepository, AnalyticsRepository>();
 builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
+builder.Services.AddScoped<ICategoryRuleRepository, CategoryRuleRepository>();
+
+// Importação de extrato: os parsers determinísticos são tentados na ordem de
+// Priority e não dependem do agente de IA — é o que mantém o fluxo de pé quando
+// ele está fora do ar.
+builder.Services.AddScoped<IPdfTextExtractor, PdfPigTextExtractor>();
+builder.Services.AddScoped<IStatementParser, InterCsvStatementParser>();
+builder.Services.AddScoped<IStatementParser, InterPdfStatementParser>();
+builder.Services.AddScoped<IStatementParser, GenericCsvStatementParser>();
+builder.Services.AddScoped<IStatementImportService, StatementImportService>();
 
 // Integrações externas (brapi/B3, Banco Central, Agente de IA) — URLs, tokens e
 // TTLs de cache vêm da seção ExternalServices da configuração.

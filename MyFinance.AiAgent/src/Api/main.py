@@ -1,4 +1,3 @@
-import json
 import logging
 import os
 import tempfile
@@ -6,7 +5,7 @@ import time
 import asyncio
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, UploadFile, File, Form
+from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import List
@@ -14,7 +13,7 @@ from typing import List
 from src.Infra.Config.settings import get_settings
 from src.Infra.Llm.ollama_utils import ensure_model
 from src.Infra.Llm.ollama_provider import list_models, get_model, is_remote, _MODELS
-from src.Infra.Cache.knowledge_base import KnowledgeBase
+from src.Infra.Llm.category_suggester import CategorySuggester
 from src.Infra.Llm.semantic_extractor import SemanticExtractor
 from src.Infra.Data.financial_rag import FinancialKnowledgeBase
 from src.Infra.Logging.agent_logger import setup_logging
@@ -82,18 +81,23 @@ class IngestRequest(BaseModel):
     directory: str = _BOOKS_DIR
 
 
-class LearnRule(BaseModel):
-    description: str
-    category_name: str
-
-
-class LearnRequest(BaseModel):
-    account_id: str
-    rules: List[LearnRule]
+class SuggestCategoriesRequest(BaseModel):
+    descriptions: List[str]
+    categories: List[str]
 
 
 class ProactiveInsightRequest(BaseModel):
     jwt_token: str
+
+
+@app.get("/health")
+async def health():
+    """
+    Sinal de vida do agente, usado pela API para decidir em segundos se vale a
+    pena tentar o caminho com IA. Não toca no Ollama de propósito: aqui a
+    pergunta é "o processo está no ar?", não "o modelo responde?".
+    """
+    return {"status": "ok"}
 
 
 @app.get("/api/ai/models")
@@ -177,31 +181,13 @@ async def proactive_lifestyle_inflation(request: ProactiveInsightRequest):
         }
 
 
-@app.post("/api/ai/learn")
-async def learn_from_confirmed(request: LearnRequest):
+@app.post("/api/ai/extract-statement")
+async def extract_statement(file: UploadFile = File(...)):
     """
-    Recebe as associações descrição→categoria confirmadas pelo usuário e
-    persiste no knowledge_base. Chamado pelo frontend após o batch save.
-    """
-    kb = KnowledgeBase()
-    saved = 0
-    for rule in request.rules:
-        if rule.description and rule.category_name:
-            kb.add_rule(request.account_id, rule.description, rule.category_name)
-            saved += 1
-            _logger.info("📚 [KB] Aprendi: '%s' → '%s'", rule.description, rule.category_name)
-
-    return {"success": True, "learned": saved}
-
-
-async def _process_statement_impl(accountId: str, categoriesJson: str, file: UploadFile) -> dict:
-    """
-    Implementação única do Parser Semântico Universal: aceita qualquer CSV ou PDF
-    de extrato bancário, sem mapeamento hardcoded de colunas. O LLM interpreta o
-    documento e extrai data, descrição, valor, tipo e categoria do texto bruto.
-
-    Compartilhada pelas rotas /process-file e /process-file-semantic (eram
-    duplicadas linha a linha — agora há um único ponto de manutenção).
+    Extração semântica de um extrato que nenhum parser determinístico da API
+    reconheceu. Devolve as transações cruas — sem conta, sem categoria resolvida:
+    o cruzamento com as categorias e o histórico do usuário é feito na API, que
+    é quem tem o banco.
     """
     # basename() neutraliza path traversal (ex: filename="../../etc/cron.d/x")
     safe_name = os.path.basename(file.filename or "upload.tmp")
@@ -211,18 +197,25 @@ async def _process_statement_impl(accountId: str, categoriesJson: str, file: Upl
         with open(file_location, "wb+") as file_object:
             file_object.write(await file.read())
 
-        existing_categories = json.loads(categoriesJson)
-
-        extractor = SemanticExtractor()
-        use_case = ProcessFileSemanticUseCase(extractor)
+        use_case = ProcessFileSemanticUseCase(SemanticExtractor())
 
         # A extração chama o LLM de forma síncrona e pode levar minutos —
         # roda em thread para não bloquear o event loop da API.
-        processed_transactions = await asyncio.to_thread(
-            use_case.execute, file_location, accountId, existing_categories
-        )
+        extracted = await asyncio.to_thread(use_case.execute, file_location)
 
-        return {"success": True, "data": processed_transactions}
+        return {
+            "success": True,
+            "transactions": [
+                {
+                    "date": t.data,
+                    "description": t.descricao,
+                    "valor": t.valor,
+                    "tipo": t.tipo,
+                    "categoria": t.categoria,
+                }
+                for t in extracted
+            ],
+        }
 
     except Exception:
         _logger.exception("❌ [FILE] Erro crítico ao processar extrato '%s'", safe_name)
@@ -235,19 +228,19 @@ async def _process_statement_impl(accountId: str, categoriesJson: str, file: Upl
             pass
 
 
-@app.post("/api/ai/process-file")
-async def process_statement(
-    accountId: str = Form(...),
-    categoriesJson: str = Form(...),
-    file: UploadFile = File(...)
-):
-    return await _process_statement_impl(accountId, categoriesJson, file)
-
-
-@app.post("/api/ai/process-file-semantic")
-async def process_statement_semantic(
-    accountId: str = Form(...),
-    categoriesJson: str = Form(...),
-    file: UploadFile = File(...)
-):
-    return await _process_statement_impl(accountId, categoriesJson, file)
+@app.post("/api/ai/suggest-categories")
+async def suggest_categories(request: SuggestCategoriesRequest):
+    """
+    Sugere categoria para as descrições que a API não resolveu pelas regras
+    aprendidas nem pelo histórico. Enriquecimento opcional: a API segue com as
+    linhas em branco se este endpoint falhar.
+    """
+    try:
+        suggester = CategorySuggester()
+        suggestions = await asyncio.to_thread(
+            suggester.suggest, request.descriptions, request.categories
+        )
+        return {"success": True, "suggestions": suggestions}
+    except Exception:
+        _logger.exception("❌ [SUGESTÃO] Erro ao sugerir categorias")
+        return {"success": False, "suggestions": {}}

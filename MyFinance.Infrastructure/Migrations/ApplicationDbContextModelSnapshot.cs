@@ -52,7 +52,7 @@ namespace MyFinance.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Accounts", (string)null);
+                    b.ToTable("Accounts");
                 });
 
             modelBuilder.Entity("MyFinance.Domain.Entities.Category", b =>
@@ -75,7 +75,40 @@ namespace MyFinance.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Categories", (string)null);
+                    b.ToTable("Categories");
+                });
+
+            modelBuilder.Entity("MyFinance.Domain.Entities.CategoryRule", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CategoryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DescriptionKey")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CategoryId");
+
+                    b.HasIndex("UserId", "DescriptionKey")
+                        .IsUnique();
+
+                    b.ToTable("CategoryRules", (string)null);
                 });
 
             modelBuilder.Entity("MyFinance.Domain.Entities.CotacaoHistorico", b =>
@@ -156,13 +189,14 @@ namespace MyFinance.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<decimal>("TotalAportado")
+                        .HasColumnType("decimal(18,2)")
+                        .HasColumnName("ValorInicial");
+
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
 
                     b.Property<decimal>("ValorAtual")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal>("ValorInicial")
                         .HasColumnType("decimal(18,2)");
 
                     b.HasKey("Id");
@@ -217,7 +251,7 @@ namespace MyFinance.Infrastructure.Migrations
 
                     b.HasIndex("InvestimentoId");
 
-                    b.ToTable("Transactions", (string)null);
+                    b.ToTable("Transactions");
                 });
 
             modelBuilder.Entity("MyFinance.Domain.Entities.User", b =>
@@ -249,7 +283,7 @@ namespace MyFinance.Infrastructure.Migrations
                     b.HasIndex("Email")
                         .IsUnique();
 
-                    b.ToTable("Users", (string)null);
+                    b.ToTable("Users");
                 });
 
             modelBuilder.Entity("MyFinance.Domain.Entities.Account", b =>
@@ -270,6 +304,25 @@ namespace MyFinance.Infrastructure.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("MyFinance.Domain.Entities.CategoryRule", b =>
+                {
+                    b.HasOne("MyFinance.Domain.Entities.Category", "Category")
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("MyFinance.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Category");
 
                     b.Navigation("User");
                 });

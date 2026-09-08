@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using MyFinance.Application.Dtos;
+using MyFinance.Application.Dtos.StatementImport;
 
 namespace MyFinance.Application.Interfaces.Repositories;
 
@@ -59,4 +60,11 @@ public interface ITransactionRepository
     Task<IEnumerable<Transaction>> GetByFinancialGoalIdAsync(Guid goalId);
 
     Task<IEnumerable<Transaction>> GetByInvestimentoIdAsync(Guid investimentoId);
+
+    /// <summary>
+    /// Quantas vezes cada descrição já foi lançada em cada categoria pelo usuário.
+    /// Alimenta a categorização por histórico na importação de extrato — por isso
+    /// devolve a contagem agregada, e não as transações inteiras.
+    /// </summary>
+    Task<IReadOnlyList<DescriptionCategoryCount>> GetDescriptionCategoryHistoryAsync(Guid userId);
 }
