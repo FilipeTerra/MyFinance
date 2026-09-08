@@ -3,6 +3,8 @@ import type { FinancialGoalResponseDto } from '../../types/FinancialGoalResponse
 import { ContributeToGoalModal } from './ContributeToGoalModal';
 import { SimularMetaModal } from './SimularMetaModal';
 import { financialGoalService } from '../../services/Api';
+import { FeedbackModal } from '../Shared/ui/FeedbackModal';
+import { useFeedback } from '../../hooks/useFeedback';
 import './FinancialGoalCard.css';
 
 interface FinancialGoalCardProps {
@@ -56,6 +58,7 @@ function buildInsight(goal: FinancialGoalResponseDto, status: GoalStatus, daysLe
 }
 
 export function FinancialGoalCard({ goal, onContributionSuccess, onDeleteSuccess }: FinancialGoalCardProps) {
+    const { feedback, mostrarErro, fechar: fecharFeedback } = useFeedback();
     const [isContributeModalOpen, setIsContributeModalOpen] = useState(false);
     const [isSimularModalOpen, setIsSimularModalOpen] = useState(false);
     const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
@@ -67,7 +70,7 @@ export function FinancialGoalCard({ goal, onContributionSuccess, onDeleteSuccess
             await financialGoalService.delete(goal.id);
             onDeleteSuccess();
         } catch {
-            alert('Não foi possível excluir a meta. Tente novamente.');
+            mostrarErro('Não foi possível excluir a meta. Tente novamente.');
             setIsConfirmingDelete(false);
         } finally {
             setIsDeleting(false);
@@ -193,6 +196,15 @@ export function FinancialGoalCard({ goal, onContributionSuccess, onDeleteSuccess
                     goalId={goal.id}
                     goalName={goal.name}
                     onClose={() => setIsSimularModalOpen(false)}
+                />
+            )}
+
+            {feedback && (
+                <FeedbackModal
+                    variante={feedback.variante}
+                    titulo={feedback.titulo}
+                    mensagem={feedback.mensagem}
+                    onFechar={fecharFeedback}
                 />
             )}
         </div>

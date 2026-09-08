@@ -9,7 +9,7 @@ import type { CategoryResponseDto } from '../types/CategoryResponseDto';
 import type { AccountRequestDto } from '../types/AccountRequestDto';
 import type { CategoryRequestDto } from '../types/CategoryRequestDto';
 import type { UpdateAccountRequestDto } from '../types/UpdateAccountRequestDto';
-import type { StatementImportResultDto, SaveBatchTransactionRequestDto, ProactiveInsightResponseDto, LifestyleInsightResponseDto } from '../types/AiIntegration';
+import type { StatementImportResultDto, SaveBatchTransactionRequestDto, SaveBatchResponse, ProactiveInsightResponseDto, LifestyleInsightResponseDto } from '../types/AiIntegration';
 import type { FinancialGoalResponseDto, CreateFinancialGoalRequestDto } from '../types/FinancialGoalResponseDto';
 import type {
     InvestimentoResponseDto,
@@ -57,6 +57,17 @@ export interface ApiErrorResponse {
     message: string;
     errors?: Record<string, string[]>;
 }
+
+/**
+ * Mensagem de erro que a API mandou, com um texto de reserva quando a falha não
+ * veio dela (rede fora, timeout). Centraliza o `response?.data?.message ||` que
+ * estava copiado em cada tela.
+ */
+export function mensagemDeErro(erro: unknown, reserva: string): string {
+    const resposta = (erro as { response?: { data?: ApiErrorResponse } })?.response?.data;
+    return resposta?.message?.trim() || reserva;
+}
+
 
 const tokenManager = {
     setAuthToken: (token: string | null) => {
@@ -160,7 +171,7 @@ const transactionService = {
         });
     },
     saveBatchTransactions: async (transactions: SaveBatchTransactionRequestDto[]) => {
-        const response = await apiClient.post('/transactions/batch', transactions);
+        const response = await apiClient.post<SaveBatchResponse>('/transactions/batch', transactions);
         return response.data;
     }
 };

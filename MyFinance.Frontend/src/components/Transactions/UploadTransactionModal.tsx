@@ -1,19 +1,25 @@
 // src/components/Transactions/UploadTransactionModal.tsx
 import React, { useState, useRef, useEffect } from 'react';
-import { transactionService, categoryService } from '../../services/Api';
+import { transactionService, categoryService, mensagemDeErro } from '../../services/Api';
 import { AccountSelectField } from '../Accounts/AccountSelectField';
 import { ReviewImportModal } from './ReviewImportModal';
 import type { AccountResponseDto } from '../../types/AccountResponseDto';
 import type { CategoryResponseDto } from '../../types/CategoryResponseDto';
-import type { StatementImportResultDto, SaveBatchTransactionRequestDto } from '../../types/AiIntegration';
+import type {
+    BatchLineError,
+    SaveBatchResponse,
+    SaveBatchTransactionRequestDto,
+    StatementImportResultDto,
+} from '../../types/AiIntegration';
 import { Modal } from '../Shared/ui/Modal';
+import { FeedbackModal } from '../Shared/ui/FeedbackModal';
+import { useFeedback } from '../../hooks/useFeedback';
 import './TransactionModal.css';
 import './UploadTransactionModal.css';
 
 interface UploadTransactionModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onUpload: (file: File, accountId: string) => Promise<void>;
     accounts: AccountResponseDto[];
     onAccountCreated: (newAccount: AccountResponseDto) => void;
     onTransactionSaved: () => void;
@@ -35,6 +41,7 @@ export function UploadTransactionModal({
     const [importResult, setImportResult] = useState<StatementImportResultDto | null>(null);
     const [categories, setCategories] = useState<CategoryResponseDto[]>([]);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
+    const { feedback, mostrarSucesso, mostrarErro, fechar: fecharFeedback } = useFeedback();
 
     useEffect(() => {
         if (isOpen) {
@@ -89,45 +96,81 @@ export function UploadTransactionModal({
         }
     };
 
-    const handleConfirmBatch = async (finalTransactions: SaveBatchTransactionRequestDto[]) => {
+    const encerrarImportacao = () => {
+        setIsReviewing(false);
+        setImportResult(null);
+        setFile(null);
+        setAccountId('');
+        onClose();
+        onTransactionSaved();
+    };
+
+    const handleConfirmBatch = async (
+        finalTransactions: SaveBatchTransactionRequestDto[],
+    ): Promise<BatchLineError[]> => {
         setIsLoading(true);
         try {
             // A API aprende as associações descrição → categoria dentro da mesma
             // transação do lote, então não há um segundo passo de aprendizado aqui.
-            await transactionService.saveBatchTransactions(finalTransactions);
+            const resultado = await transactionService.saveBatchTransactions(finalTransactions);
 
-            setIsReviewing(false);
-            setImportResult(null);
-            setFile(null);
-            setAccountId('');
-            onClose();
-            onTransactionSaved();
+            // A revisão só fecha quando o usuário dispensa a confirmação: fechar
+            // antes desmontaria o popup junto e ninguém leria nada.
+            mostrarSucesso(resultado.message, { aoFechar: encerrarImportacao });
+            return [];
         } catch (error) {
-            alert('Erro ao gravar o lote de transações.');
-            console.error(error);
+            console.error('Erro ao salvar o lote de transações:', error);
+
+            const resposta = (error as { response?: { data?: SaveBatchResponse } })?.response?.data;
+            const erros = resposta?.errors ?? [];
+
+            mostrarErro(
+                mensagemDeErro(error, 'Não foi possível salvar o lote. Nenhuma transação foi gravada.'),
+                {
+                    titulo: 'Nada foi salvo',
+                    detalhes: erros.map(e => `Linha ${e.index + 1} — ${e.description}: ${e.message}`),
+                },
+            );
+
+            // A revisão continua aberta com tudo preenchido para o usuário corrigir.
+            return erros;
         } finally {
             setIsLoading(false);
         }
     };
 
+    const popupFeedback = feedback && (
+        <FeedbackModal
+            variante={feedback.variante}
+            titulo={feedback.titulo}
+            mensagem={feedback.mensagem}
+            detalhes={feedback.detalhes}
+            onFechar={fecharFeedback}
+        />
+    );
+
     if (isReviewing && importResult) {
         return (
-            <ReviewImportModal
-                isOpen={isReviewing}
-                onClose={() => {
-                    setIsReviewing(false);
-                    setImportResult(null);
-                    setFile(null);
-                    onClose();
-                }}
-                importResult={importResult}
-                categories={categories}
-                onConfirm={handleConfirmBatch}
-            />
+            <>
+                <ReviewImportModal
+                    isOpen={isReviewing}
+                    onClose={() => {
+                        setIsReviewing(false);
+                        setImportResult(null);
+                        setFile(null);
+                        onClose();
+                    }}
+                    importResult={importResult}
+                    categories={categories}
+                    onConfirm={handleConfirmBatch}
+                />
+                {popupFeedback}
+            </>
         );
     }
 
     return (
+        <>
         <Modal onFechar={onClose} titulo="Importar Extrato" tamanho="md">
                 <form onSubmit={handleSubmit} className="upload-form">
                     
@@ -214,5 +257,7 @@ export function UploadTransactionModal({
                     </div>
                 </form>
         </Modal>
+        {popupFeedback}
+        </>
     );
 }

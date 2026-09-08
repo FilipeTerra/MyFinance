@@ -28,6 +28,9 @@ public class StatementImportServiceTests
         _categoryRuleRepository.Setup(r => r.GetAllByUserIdAsync(_userId)).ReturnsAsync(Array.Empty<CategoryRule>());
         _transactionRepository.Setup(r => r.GetDescriptionCategoryHistoryAsync(_userId))
             .ReturnsAsync(Array.Empty<DescriptionCategoryCount>());
+        _transactionRepository.Setup(r => r.GetDigestsForDuplicateCheckAsync(
+                _accountId, _userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .ReturnsAsync(Array.Empty<TransactionDigest>());
         _pdfTextExtractor.Setup(e => e.ExtractLines(It.IsAny<byte[]>()))
             .Returns(StatementFixtures.InterPdfLines());
     }
@@ -117,6 +120,66 @@ public class StatementImportServiceTests
         Assert.Empty(result.Transactions);
     }
 
+    // ---------- Duplicatas ----------
+
+    [Fact]
+    public async Task ImportAsync_SemHistorico_NaoMarcaDuplicata()
+    {
+        AgenteForaDoAr();
+
+        var result = await BuildSut().ImportAsync(StatementFixtures.InterCsv(), _accountId, _userId);
+
+        Assert.Equal(0, result.DuplicateCount);
+        Assert.All(result.Transactions, t => Assert.False(t.IsDuplicate));
+    }
+
+    [Fact]
+    public async Task ImportAsync_ReimportarOMesmoArquivoMarcaTodasAsLinhas()
+    {
+        AgenteForaDoAr();
+        var jaSalvas = (await ImportarUmaVez()).Transactions
+            .Select(t => new TransactionDigest(t.Date, t.Amount, t.Description))
+            .ToList();
+
+        _transactionRepository.Setup(r => r.GetDigestsForDuplicateCheckAsync(
+                _accountId, _userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .ReturnsAsync(jaSalvas);
+
+        var result = await BuildSut().ImportAsync(StatementFixtures.InterCsv(), _accountId, _userId);
+
+        Assert.Equal(result.Transactions.Count, result.DuplicateCount);
+        Assert.All(result.Transactions, t => Assert.True(t.IsDuplicate));
+    }
+
+    [Fact]
+    public async Task ImportAsync_ConsultaApenasAFaixaDeDatasDoArquivo()
+    {
+        AgenteForaDoAr();
+
+        await BuildSut().ImportAsync(StatementFixtures.InterCsv(), _accountId, _userId);
+
+        // O fixture vai de 26/07 a 30/08; varrer a conta inteira seria desperdício.
+        _transactionRepository.Verify(r => r.GetDigestsForDuplicateCheckAsync(
+            _accountId, _userId,
+            new DateTime(2026, 7, 26, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2026, 8, 30, 0, 0, 0, DateTimeKind.Utc)), Times.Once);
+    }
+
+    [Fact]
+    public async Task ImportAsync_FalhaNaChecagemDeDuplicataNaoDerrubaAImportacao()
+    {
+        AgenteForaDoAr();
+        _transactionRepository.Setup(r => r.GetDigestsForDuplicateCheckAsync(
+                _accountId, _userId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+            .ThrowsAsync(new InvalidOperationException("banco indisponível"));
+
+        var result = await BuildSut().ImportAsync(StatementFixtures.InterCsv(), _accountId, _userId);
+
+        Assert.True(result.Success);
+        Assert.Equal(10, result.Transactions.Count);
+        Assert.Equal(0, result.DuplicateCount);
+    }
+
     // ---------- Enriquecimento de categorias ----------
 
     [Fact]
@@ -165,6 +228,10 @@ public class StatementImportServiceTests
     // ---------- Helpers ----------
 
     private void AgenteForaDoAr() => _ai.Setup(a => a.IsAvailableAsync()).ReturnsAsync(false);
+
+    /// <summary>Primeira importação do fixture, para servir de "histórico já salvo".</summary>
+    private Task<StatementImportResultDto> ImportarUmaVez() =>
+        BuildSut().ImportAsync(StatementFixtures.InterCsv(), _accountId, _userId);
 
     private void AgenteNoAr() => _ai.Setup(a => a.IsAvailableAsync()).ReturnsAsync(true);
 

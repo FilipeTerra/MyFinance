@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using MyFinance.Application.Dtos;
 using MyFinance.Application.Dtos.StatementImport;
 using MyFinance.Application.Interfaces.Services;
@@ -25,17 +24,22 @@ public class TransactionsController : ControllerBase
 
     private readonly ITransactionService _transactionService;
     private readonly IStatementImportService _statementImportService;
+    private readonly ILogger<TransactionsController> _logger;
 
     /// <summary>
     /// Inicializa uma nova instância do controlador de transações com o serviço de transações injetado.
     /// </summary>
     /// <param name="transactionService">Serviço responsável pela lógica de negócio das transações</param>
     /// <param name="statementImportService">Serviço responsável pela importação de extratos</param>
+    /// <param name="logger">Log de falhas inesperadas, que não são expostas ao cliente</param>
     public TransactionsController(
-        ITransactionService transactionService, IStatementImportService statementImportService)
+        ITransactionService transactionService,
+        IStatementImportService statementImportService,
+        ILogger<TransactionsController> logger)
     {
         _transactionService = transactionService;
         _statementImportService = statementImportService;
+        _logger = logger;
     }
 
     /// <summary>
@@ -77,36 +81,61 @@ public class TransactionsController : ControllerBase
         return CreatedAtAction(nameof(GetTransactionById), new { id = response.Data!.Id }, response.Data);
     }
 
-/// <summary>
-/// Salva um lote de transações, criando novas categorias se necessário, e associando as transações às contas e categorias corretas.
-/// </summary>
-/// <param name="transactions"></param>
-/// <returns></returns>
-[HttpPost("batch")]
-public async Task<IActionResult> SaveBatch([FromBody] List<SaveBatchTransactionRequestDto> transactions)
-{
-    if (transactions == null || !transactions.Any())
-        return BadRequest(new { message = "Nenhuma transação enviada para salvamento." });
+    /// <summary>
+    /// Salva um lote de transações revisadas, criando novas categorias se necessário.
+    ///
+    /// O lote é tudo ou nada: se qualquer linha não passar na validação, nada é
+    /// gravado e a resposta traz os problemas por linha, para o usuário corrigir
+    /// na tela de revisão e reenviar.
+    /// </summary>
+    /// <param name="transactions">Transações já revisadas pelo usuário</param>
+    /// <returns>200 com a contagem salva, ou 400 com os erros por linha</returns>
+    [HttpPost("batch")]
+    public async Task<IActionResult> SaveBatch([FromBody] List<SaveBatchTransactionRequestDto> transactions)
+    {
+        if (transactions == null || !transactions.Any())
+            return BadRequest(new { message = "Nenhuma transação enviada para salvamento." });
 
-    var userIdString = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-    if (!Guid.TryParse(userIdString, out Guid userId))
-        return Unauthorized();
+        var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!Guid.TryParse(userIdString, out Guid userId))
+            return Unauthorized();
 
-    try
-    {
-        await _transactionService.SaveBatchAsync(transactions, userId);
-        return Ok(new { message = $"{transactions.Count} transações processadas e salvas com sucesso." });
+        try
+        {
+            var response = await _transactionService.SaveBatchAsync(transactions, userId);
+
+            if (!response.Success)
+            {
+                return BadRequest(new
+                {
+                    message = response.ErrorMessage,
+                    errors = response.Data?.Errors ?? new List<BatchLineErrorDto>()
+                });
+            }
+
+            var savedCount = response.Data!.SavedCount;
+            return Ok(new
+            {
+                message = savedCount == 1
+                    ? "1 transação salva com sucesso."
+                    : $"{savedCount} transações salvas com sucesso.",
+                savedCount,
+                errors = new List<BatchLineErrorDto>()
+            });
+        }
+        catch (Exception ex)
+        {
+            // O detalhe fica no log do servidor: mensagem de banco exposta ao
+            // cliente vaza schema e não ajuda ninguém a corrigir nada.
+            _logger.LogError(ex, "Falha ao salvar lote de {Total} transação(ões).", transactions.Count);
+
+            return StatusCode(500, new
+            {
+                message = "Não foi possível salvar o lote. Nenhuma transação foi gravada. Tente novamente.",
+                errors = new List<BatchLineErrorDto>()
+            });
+        }
     }
-    catch (DbUpdateException ex) 
-    {
-        var innerMessage = ex.InnerException?.Message ?? ex.Message;
-        return BadRequest(new { message = $"Erro de Banco de Dados: {innerMessage}" });
-    }
-    catch (Exception ex) 
-    {
-        return BadRequest(new { message = $"Erro ao salvar lote: {ex.Message}" });
-    }
-}
 
     /// <summary>
     /// Importa um extrato bancário ou fatura de cartão (CSV ou PDF).

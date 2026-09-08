@@ -96,3 +96,7 @@ MyFinance.AiAgent/data/books/
 MyFinance.AiAgent/data/exemplo.py
 
 teste.ipynb
+
+# SQL gerado por MyFinance.AiAgent/scripts/import_kb_to_api.py — artefato de
+# migração one-off, com os lançamentos financeiros do usuário.
+knowledge_base_rules.sql

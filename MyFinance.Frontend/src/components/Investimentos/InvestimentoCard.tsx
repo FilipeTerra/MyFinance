@@ -6,6 +6,8 @@ import { InvestimentoModal } from './InvestimentoModal';
 import { AporteInvestimentoModal } from './AporteInvestimentoModal';
 import { HistoricoAportesModal } from './HistoricoAportesModal';
 import { CotacaoSparkline } from './CotacaoSparkline';
+import { FeedbackModal } from '../Shared/ui/FeedbackModal';
+import { useFeedback } from '../../hooks/useFeedback';
 import './InvestimentoCard.css';
 
 interface InvestimentoCardProps {
@@ -35,6 +37,7 @@ const TREND_META: Record<Trend, { arrow: string; label: string }> = {
 };
 
 export function InvestimentoCard({ investimento, onUpdateSuccess, onDeleteSuccess }: InvestimentoCardProps) {
+    const { feedback, mostrarErro, fechar: fecharFeedback } = useFeedback();
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isAporteModalOpen, setIsAporteModalOpen] = useState(false);
     const [isHistoricoModalOpen, setIsHistoricoModalOpen] = useState(false);
@@ -47,7 +50,7 @@ export function InvestimentoCard({ investimento, onUpdateSuccess, onDeleteSucces
             await investimentoService.delete(investimento.id);
             onDeleteSuccess();
         } catch {
-            alert('Não foi possível excluir o investimento. Tente novamente.');
+            mostrarErro('Não foi possível excluir o investimento. Tente novamente.');
             setIsConfirmingDelete(false);
         } finally {
             setIsDeleting(false);
@@ -205,6 +208,15 @@ export function InvestimentoCard({ investimento, onUpdateSuccess, onDeleteSucces
                     investimentoId={investimento.id}
                     investimentoNome={investimento.nome}
                     onClose={() => setIsHistoricoModalOpen(false)}
+                />
+            )}
+
+            {feedback && (
+                <FeedbackModal
+                    variante={feedback.variante}
+                    titulo={feedback.titulo}
+                    mensagem={feedback.mensagem}
+                    onFechar={fecharFeedback}
                 />
             )}
         </div>

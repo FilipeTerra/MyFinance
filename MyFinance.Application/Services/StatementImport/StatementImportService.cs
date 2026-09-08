@@ -57,12 +57,15 @@ public class StatementImportService : IStatementImportService
         var context = await BuildContextAsync(userId);
         result.Transactions = CategoryResolver.Resolve(entries, accountId, context);
 
+        result.DuplicateCount = await MarkDuplicatesAsync(result.Transactions, entries, accountId, userId);
+
         await EnrichWithAiAsync(result, context);
 
         _logger.LogInformation(
-            "Extrato '{Arquivo}' importado por {Parser}: {Total} transação(ões), {SemCategoria} sem categoria.",
+            "Extrato '{Arquivo}' importado por {Parser}: {Total} transação(ões), "
+            + "{SemCategoria} sem categoria, {Duplicadas} já existente(s) na conta.",
             file.FileName, result.ParserUsed, result.Transactions.Count,
-            CategoryResolver.Unresolved(result.Transactions).Count);
+            CategoryResolver.Unresolved(result.Transactions).Count, result.DuplicateCount);
 
         return result;
     }
@@ -122,6 +125,33 @@ public class StatementImportService : IStatementImportService
         result.AiUsed = true;
         result.ParserUsed = AiParserName;
         return aiEntries.ToList();
+    }
+
+    /// <summary>
+    /// Confronta o que foi lido com o que já está salvo na conta, na faixa de datas
+    /// do próprio arquivo. Uma falha aqui não pode impedir a importação: no pior
+    /// caso o usuário revisa sem o aviso de duplicata, que é o comportamento que
+    /// existia antes.
+    /// </summary>
+    private async Task<int> MarkDuplicatesAsync(
+        List<AiTransactionResponseDto> transactions,
+        IReadOnlyList<ParsedStatementEntry> entries,
+        Guid accountId,
+        Guid userId)
+    {
+        try
+        {
+            var (from, to) = DuplicateDetector.DateRange(entries);
+            var existing = await _transactionRepository.GetDigestsForDuplicateCheckAsync(
+                accountId, userId, from, to);
+
+            return DuplicateDetector.Mark(transactions, existing);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Falha ao verificar duplicatas do extrato. A importação segue sem o aviso.");
+            return 0;
+        }
     }
 
     private async Task<CategoryResolutionContext> BuildContextAsync(Guid userId)
