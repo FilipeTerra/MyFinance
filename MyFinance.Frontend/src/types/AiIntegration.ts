@@ -8,6 +8,9 @@ export interface AiTransactionResponseDto {
     categoryId: string | null;
     suggestedCategoryName: string | null;
     isSuggestion: boolean;
+    // Um lançamento igual já existe na conta. A linha continua na lista, mas
+    // chega desmarcada na revisão.
+    isDuplicate: boolean;
 }
 
 /**
@@ -25,6 +28,8 @@ export interface StatementImportResultDto {
     aiUsed: boolean;
     // A IA foi consultada e não respondeu; a importação seguiu sem ela.
     aiUnavailable: boolean;
+    // Quantas transações do arquivo já existem na conta.
+    duplicateCount: number;
     warnings: string[];
 }
 

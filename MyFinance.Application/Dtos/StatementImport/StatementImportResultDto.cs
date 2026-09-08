@@ -27,5 +27,8 @@ public class StatementImportResultDto
     /// </summary>
     public bool AiUnavailable { get; set; }
 
+    /// <summary>Quantas transações do arquivo já existem na conta.</summary>
+    public int DuplicateCount { get; set; }
+
     public List<string> Warnings { get; set; } = new();
 }

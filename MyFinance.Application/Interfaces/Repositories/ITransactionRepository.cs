@@ -67,4 +67,12 @@ public interface ITransactionRepository
     /// devolve a contagem agregada, e não as transações inteiras.
     /// </summary>
     Task<IReadOnlyList<DescriptionCategoryCount>> GetDescriptionCategoryHistoryAsync(Guid userId);
+
+    /// <summary>
+    /// Transações já salvas na conta dentro da faixa de datas, no formato mínimo
+    /// para detectar reimportação de extrato. A faixa vem do próprio arquivo, para
+    /// não varrer o histórico inteiro da conta a cada importação.
+    /// </summary>
+    Task<IReadOnlyList<TransactionDigest>> GetDigestsForDuplicateCheckAsync(
+        Guid accountId, Guid userId, DateTime from, DateTime to);
 }

@@ -17,6 +17,9 @@ interface ReviewImportModalProps {
 interface EditableTransaction extends SaveBatchTransactionRequestDto {
     isCustomEditing: boolean;
     customCategoryText: string;
+    // Só as linhas marcadas vão para o lote. Duplicatas chegam desmarcadas.
+    selected: boolean;
+    isDuplicate: boolean;
 }
 
 export const ReviewImportModal: React.FC<ReviewImportModalProps> = ({
@@ -28,7 +31,13 @@ export const ReviewImportModal: React.FC<ReviewImportModalProps> = ({
 }) => {
     const [editableTransactions, setEditableTransactions] = useState<EditableTransaction[]>([]);
     const aiTransactions = importResult.transactions;
-    const pendentes = editableTransactions.filter(tx => !tx.isNewCategory && !tx.categoryId).length;
+
+    const selecionadas = editableTransactions.filter(tx => tx.selected);
+    // "Pendente" é o que falta categorizar entre o que vai ser salvo — linha
+    // desmarcada sem categoria não impede nada.
+    const pendentes = selecionadas.filter(tx => !tx.isNewCategory && !tx.categoryId).length;
+    const todasSelecionadas = editableTransactions.length > 0
+        && selecionadas.length === editableTransactions.length;
 
     useEffect(() => {
         if (aiTransactions && aiTransactions.length > 0) {
@@ -43,7 +52,9 @@ export const ReviewImportModal: React.FC<ReviewImportModalProps> = ({
                     newCategoryName: tx.isSuggestion ? tx.suggestedCategoryName : null,
                     isNewCategory: tx.isSuggestion,
                     isCustomEditing: false, 
-                    customCategoryText: tx.isSuggestion && tx.suggestedCategoryName ? tx.suggestedCategoryName : ''
+                    customCategoryText: tx.isSuggestion && tx.suggestedCategoryName ? tx.suggestedCategoryName : '',
+                    selected: !tx.isDuplicate,
+                    isDuplicate: tx.isDuplicate
                 };
             });
             setEditableTransactions(initialData);
@@ -77,6 +88,16 @@ export const ReviewImportModal: React.FC<ReviewImportModalProps> = ({
         setEditableTransactions(updatedList);
     };
 
+    const handleSelectionChange = (index: number, selected: boolean) => {
+        const updatedList = [...editableTransactions];
+        updatedList[index].selected = selected;
+        setEditableTransactions(updatedList);
+    };
+
+    const handleSelectAll = (selected: boolean) => {
+        setEditableTransactions(editableTransactions.map(tx => ({ ...tx, selected })));
+    };
+
     const handleCustomTextChange = (index: number, newText: string) => {
         const updatedList = [...editableTransactions];
         updatedList[index].customCategoryText = newText;
@@ -84,13 +105,13 @@ export const ReviewImportModal: React.FC<ReviewImportModalProps> = ({
         setEditableTransactions(updatedList);
     };
 
-    const canSubmit = editableTransactions.every(tx => {
-        if (!tx.isNewCategory) return !!tx.categoryId; 
-        return tx.newCategoryName && tx.newCategoryName.trim() !== ''; 
+    const canSubmit = selecionadas.length > 0 && selecionadas.every(tx => {
+        if (!tx.isNewCategory) return !!tx.categoryId;
+        return tx.newCategoryName && tx.newCategoryName.trim() !== '';
     });
 
     const handleConfirm = () => {
-    const payload: SaveBatchTransactionRequestDto[] = editableTransactions.map(tx => {
+    const payload: SaveBatchTransactionRequestDto[] = selecionadas.map(tx => {
         const dateAsUtc = new Date(tx.date).toISOString();
 
         return {
@@ -124,7 +145,7 @@ export const ReviewImportModal: React.FC<ReviewImportModalProps> = ({
                         className="btn-primary"
                         disabled={!canSubmit}
                     >
-                        Confirmar e Salvar ({editableTransactions.length})
+                        Confirmar e Salvar ({selecionadas.length})
                     </button>
                 </>
             }
@@ -150,11 +171,26 @@ export const ReviewImportModal: React.FC<ReviewImportModalProps> = ({
                     {!importResult.aiUnavailable && importResult.warnings.map(warning => (
                         <p key={warning} className="modal-aviso" role="status">⚠️ {warning}</p>
                     ))}
+
+                    {importResult.duplicateCount > 0 && (
+                        <p className="modal-aviso" role="status">
+                            🔁 {importResult.duplicateCount} lançamento(s) já existem nesta conta e vieram
+                            desmarcados. Se alguma dessas compras aconteceu de novo, marque a linha para importá-la.
+                        </p>
+                    )}
                     
                     <div className="table-container">
                         <table className="transactions-table">
                             <thead>
                                 <tr>
+                                    <th className="select-column">
+                                        <input
+                                            type="checkbox"
+                                            checked={todasSelecionadas}
+                                            onChange={(e) => handleSelectAll(e.target.checked)}
+                                            aria-label="Marcar ou desmarcar todos os lançamentos"
+                                        />
+                                    </th>
                                     <th>Data</th>
                                     <th>Descrição</th>
                                     <th>Valor</th>
@@ -167,7 +203,22 @@ export const ReviewImportModal: React.FC<ReviewImportModalProps> = ({
                                     const originalAiTx = aiTransactions[index]; 
 
                                     return (
-                                        <tr key={index} className={tx.isNewCategory ? 'row-suggestion' : 'row-confirmed'}>
+                                        <tr
+                                            key={index}
+                                            className={[
+                                                tx.isNewCategory ? 'row-suggestion' : 'row-confirmed',
+                                                tx.isDuplicate ? 'row-duplicate' : '',
+                                                tx.selected ? '' : 'row-unselected'
+                                            ].filter(Boolean).join(' ')}
+                                        >
+                                            <td className="select-cell">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={tx.selected}
+                                                    onChange={(e) => handleSelectionChange(index, e.target.checked)}
+                                                    aria-label={`Importar ${tx.description}`}
+                                                />
+                                            </td>
                                             <td className="date-cell">{new Date(tx.date).toLocaleDateString('pt-BR')}</td>
                                             <td className="desc-cell" title={tx.description}>{tx.description}</td>
                                             <td className={tx.amount >= 0 ? 'amount-cell text-success' : 'amount-cell text-danger'}>
@@ -217,7 +268,9 @@ export const ReviewImportModal: React.FC<ReviewImportModalProps> = ({
                                                 )}
                                             </td>
                                             <td className="status-cell">
-                                                {tx.isNewCategory ? (
+                                                {tx.isDuplicate ? (
+                                                    <span className="badge badge-duplicate">🔁 Já importada</span>
+                                                ) : tx.isNewCategory ? (
                                                     <span className="badge badge-new">💡 Nova</span>
                                                 ) : (
                                                     tx.categoryId ? <span className="badge badge-ok">✅ Ok</span> : <span className="badge badge-pending">⚠️ Pendente</span>

@@ -136,6 +136,18 @@ public class TransactionRepository : ITransactionRepository
             .ToListAsync();
     }
 
+    public async Task<IReadOnlyList<TransactionDigest>> GetDigestsForDuplicateCheckAsync(
+        Guid accountId, Guid userId, DateTime from, DateTime to)
+    {
+        return await _context.Transactions
+            .Where(t => t.AccountId == accountId
+                        && t.Account.UserId == userId
+                        && t.Date >= from
+                        && t.Date <= to)
+            .Select(t => new TransactionDigest(t.Date, t.Amount, t.Description))
+            .ToListAsync();
+    }
+
     public async Task AddAsync(Transaction transaction)
     {
         await _context.Transactions.AddAsync(transaction);

@@ -76,6 +76,32 @@
 .transactions-table tbody tr:hover { background-color: var(--slate-50); }
 .row-suggestion:hover { background-color: #fef9c3; }
 
+/* Lançamento que já existe na conta: chega desmarcado e recuado visualmente,
+   mas continua legível — quem decide se é reimportação ou compra repetida é o
+   usuário, e para isso ele precisa conseguir ler a linha. */
+.row-duplicate { background-color: var(--slate-50); }
+.row-duplicate:hover { background-color: var(--slate-100); }
+
+/* O esmaecimento acompanha a seleção, não a duplicata: marcar a linha de volta
+   a devolve ao normal. */
+.row-unselected .desc-cell,
+.row-unselected .date-cell,
+.row-unselected .amount-cell { opacity: 0.55; }
+
+.select-column { width: 44px; text-align: center; }
+
+.select-cell {
+    text-align: center;
+}
+
+    .select-cell input[type="checkbox"],
+    .select-column input[type="checkbox"] {
+        width: 16px;
+        height: 16px;
+        cursor: pointer;
+        accent-color: var(--color-primary);
+    }
+
 /* =========================================
    3. INPUTS E SELECTS 
    ========================================= */
@@ -140,6 +166,7 @@
 .badge-new { background-color: var(--amber-100); color: var(--amber-700); border: 1px solid var(--amber-200); }
 .badge-ok { background-color: var(--green-100); color: #047857; border: 1px solid var(--green-200); }
 .badge-pending { background-color: var(--slate-100); color: var(--slate-600); border: 1px solid var(--slate-200); }
+.badge-duplicate { background-color: var(--slate-200); color: var(--slate-700); border: 1px solid var(--slate-300); }
 
 /* =========================================
    5. BOTÕES DO RODAPÉ
