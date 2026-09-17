@@ -51,6 +51,19 @@ public class StatementImportServiceTests
     }
 
     [Fact]
+    public async Task ImportAsync_ImportaExtratoDeContaCorrenteComOAgenteForaDoAr()
+    {
+        AgenteForaDoAr();
+
+        var result = await BuildSut().ImportAsync(StatementFixtures.InterExtratoCsv(), _accountId, _userId);
+
+        Assert.True(result.Success);
+        Assert.Equal(6, result.Transactions.Count);
+        Assert.Equal("Inter Extrato CSV", result.ParserUsed);
+        Assert.False(result.AiUsed);
+    }
+
+    [Fact]
     public async Task ImportAsync_ImportaPdfComOAgenteForaDoAr()
     {
         AgenteForaDoAr();
@@ -396,6 +409,7 @@ public class StatementImportServiceTests
         var parsers = new IStatementParser[]
         {
             new InterCsvStatementParser(),
+            new InterExtratoCsvStatementParser(),
             new InterPdfStatementParser(_pdfTextExtractor.Object),
             new GenericCsvStatementParser()
         };

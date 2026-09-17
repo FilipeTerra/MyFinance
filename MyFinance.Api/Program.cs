@@ -116,6 +116,7 @@ builder.Services.AddScoped<ICategoryRuleRepository, CategoryRuleRepository>();
 // ele está fora do ar.
 builder.Services.AddScoped<IPdfTextExtractor, PdfPigTextExtractor>();
 builder.Services.AddScoped<IStatementParser, InterCsvStatementParser>();
+builder.Services.AddScoped<IStatementParser, InterExtratoCsvStatementParser>();
 builder.Services.AddScoped<IStatementParser, InterPdfStatementParser>();
 builder.Services.AddScoped<IStatementParser, GenericCsvStatementParser>();
 builder.Services.AddScoped<IStatementImportService, StatementImportService>();

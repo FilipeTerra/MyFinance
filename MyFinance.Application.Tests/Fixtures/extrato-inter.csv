@@ -1,0 +1,12 @@
+Extrato Conta Corrente
+Conta ;12345678
+Período ;01/01/2026 a 31/01/2026
+Saldo: ;1.234,56
+
+Data Lançamento;Descrição;Valor;Saldo
+05/01/2026;Pix recebido: "00019 11111111 FULANO DE TAL";1.076,26;1.076,26
+06/01/2026;Pix enviado: "Cp :00000000-Beltrano da Silva";-50,00;1.026,26
+07/01/2026;Pagamento efetuado NU PAGAMENTOS SA;-188,10;838,16
+08/01/2026;Compra no debito: "No estabelecimento MERCADO TESTE BELO HORIZONT BRA";-45,90;792,26
+10/01/2026;Boleto recebido 24 horas: "7777011736814090457124466";600,00;1392,26
+12/01/2026;SAQUE BANCO 24H: "No estabelecimento Banco24Horas";-200,00;1192,26
