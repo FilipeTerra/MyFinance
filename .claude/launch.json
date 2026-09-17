@@ -6,6 +6,18 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["--prefix", "MyFinance.Frontend", "run", "dev"],
       "port": 5173
+    },
+    {
+      "name": "api",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--project", "MyFinance.Api", "--launch-profile", "http"],
+      "port": 5088
+    },
+    {
+      "name": "aiagent",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd MyFinance.AiAgent && venv/bin/uvicorn src.Api.main:app --port 8181"],
+      "port": 8181
     }
   ]
 }
