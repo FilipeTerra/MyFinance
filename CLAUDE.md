@@ -4,6 +4,12 @@ MyFinance é um gestor de finanças pessoais com foco em IA: agentes analisam o 
 
 **Stack:** API em C#/.NET (Clean Architecture) + EF Core + PostgreSQL · AiAgent em Python (FastAPI, LangChain/LangGraph, Ollama) · Frontend em React + TypeScript + Vite.
 
+## Comandos
+
+- **Backend**: `dotnet build MyFinance.sln` · `dotnet test MyFinance.sln`. Nova migration: `dotnet ef migrations add <Nome> --project MyFinance.Infrastructure --startup-project MyFinance.Api` (roda a partir da raiz do repo).
+- **Frontend** (a partir de `MyFinance.Frontend/`): typecheck é `npx tsc --noEmit -p tsconfig.app.json` — **sem o `-p tsconfig.app.json` o comando não verifica nada** e sai com sucesso mesmo com erro de tipo. Lint: `npx eslint src --ext .ts,.tsx`. Build de produção: `npx vite build`.
+- **AiAgent** (a partir de `MyFinance.AiAgent/`): `./venv/bin/python -m pytest`.
+
 ## Commits
 
 **Nunca crie um commit sem que o usuário peça explicitamente**, mesmo depois de terminar uma tarefa, corrigir um bug ou concluir um plano aprovado. Terminar a implementação não é pedido de commit.
