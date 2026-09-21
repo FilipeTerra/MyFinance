@@ -111,6 +111,26 @@
     border-color: var(--slate-400);
 }
 
+/* Entrada: o seletor R$/% e o campo dividem a mesma linha, porque a unidade
+   só faz sentido lida junto do número que ela qualifica. */
+.fin-entrada-linha {
+    display: flex;
+    align-items: center;
+    gap: var(--space-7);
+}
+
+.fin-entrada-linha input {
+    flex: 1;
+    min-width: 0;
+}
+
+@media (max-width: 480px) {
+    .fin-entrada-linha {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
+
 .fin-conversor-form {
     display: flex;
     align-items: flex-end;

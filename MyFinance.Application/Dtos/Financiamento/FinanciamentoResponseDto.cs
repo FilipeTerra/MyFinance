@@ -1,3 +1,5 @@
+using MyFinance.Domain.Enums;
+
 namespace MyFinance.Application.Dtos.Financiamento
 {
     /// <summary>
@@ -9,10 +11,13 @@ namespace MyFinance.Application.Dtos.Financiamento
         public ResultadoFinanciamentoDto Price { get; set; } = new();
         public ResultadoFinanciamentoDto Sac { get; set; } = new();
 
-        /// <summary>"Price" ou "SAC" — qual dos dois sistemas resulta em menos juros pagos.</summary>
-        public string SistemaMaisBarato { get; set; } = string.Empty;
+        /// <summary>Qual dos dois sistemas resulta em menos juros pagos.</summary>
+        public SistemaAmortizacao SistemaMaisBarato { get; set; }
 
         /// <summary>Quanto a mais o sistema mais caro custa em juros totais, em R$.</summary>
         public decimal DiferencaTotalJuros { get; set; }
+
+        /// <summary>Decomposição do imóvel entre entrada e valor financiado.</summary>
+        public ComposicaoFinanciamentoDto Composicao { get; set; } = new();
     }
 }

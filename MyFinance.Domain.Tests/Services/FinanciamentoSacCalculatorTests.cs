@@ -45,6 +45,26 @@ public class FinanciamentoSacCalculatorTests
         Assert.Equal(0m, resultado.Parcelas[^1].SaldoDevedor);
     }
 
+    [Fact]
+    public void Calcular_WhenPrincipalDoesNotDivideEvenly_LastInstallmentLiquidatesTheRemainder()
+    {
+        // 20000/24 = 833,3333..., arredondado para 833,33 — sobram R$ 0,08 que
+        // precisam cair na última parcela para o contrato fechar em zero.
+        var resultado = FinanciamentoSacCalculator.Calcular(20000m, 1.5m, 24);
+
+        Assert.Equal(0m, resultado.Parcelas[^1].SaldoDevedor);
+        Assert.Equal(833.41m, resultado.Parcelas[^1].Amortizacao);
+        Assert.Equal(20000m, resultado.Parcelas.Sum(p => p.Amortizacao));
+    }
+
+    [Fact]
+    public void Calcular_TotalPagoEqualsPrincipalPlusInterest()
+    {
+        var resultado = FinanciamentoSacCalculator.Calcular(20000m, 1.5m, 24);
+
+        Assert.Equal(20000m + resultado.TotalJuros, resultado.TotalPago);
+    }
+
     [Theory]
     [InlineData(0, 1, 12)]
     [InlineData(-1, 1, 12)]

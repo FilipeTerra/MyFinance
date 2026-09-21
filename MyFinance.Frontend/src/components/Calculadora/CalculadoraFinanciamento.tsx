@@ -10,9 +10,16 @@ import {
     ResponsiveContainer,
 } from 'recharts';
 import { financiamentoService, AxiosError, type ApiErrorResponse } from '../../services/Api';
-import type { FinanciamentoResponseDto, ResultadoFinanciamentoDto, TaxaEfetivaResponseDto } from '../../types/Financiamento';
-import { parseCurrency, parsePercent, formatCurrency } from './calculadoraUtils';
-import { prazoParaMeses } from './calculadoraValidacao';
+import type {
+    AmortizacaoExtraAvulsaDto,
+    FinanciamentoResponseDto,
+    ParcelaFinanciamentoDto,
+    ResultadoFinanciamentoDto,
+    TaxaEfetivaResponseDto,
+} from '../../types/Financiamento';
+import { ModoAmortizacaoExtra, ROTULO_SISTEMA, SistemaAmortizacao } from '../../types/SistemaAmortizacao';
+import { parseCurrency, parsePercent, formatCurrency, maskCurrency } from './calculadoraUtils';
+import { prazoParaMeses, formatPrazo } from './calculadoraValidacao';
 import type { PrazoValue } from './calculadoraTypes';
 import { CampoMoeda } from './campos/CampoMoeda';
 import { CampoPrazo } from './campos/CampoPrazo';
@@ -27,10 +34,31 @@ import { useIsMobile } from '../../hooks/useIsMobile';
 import './CalculadoraFinanciamento.css';
 
 type SistemaVisivel = 'price' | 'sac';
-type CampoErro = 'valor' | 'taxa' | 'prazo';
-const ID_POR_CAMPO: Record<CampoErro, string> = { valor: 'finValor', taxa: 'finTaxa-taxa-valor', prazo: 'finPrazo' };
+type EntradaModo = 'reais' | 'percentual';
+
+/** Chave de UI do modo de amortização — o SegmentedControl só trabalha com string. */
+type ModoExtraUi = 'prazo' | 'parcela';
+const MODO_EXTRA_API: Record<ModoExtraUi, ModoAmortizacaoExtra> = {
+    prazo: ModoAmortizacaoExtra.ReduzirPrazo,
+    parcela: ModoAmortizacaoExtra.ReduzirParcela,
+};
+type CampoErro = 'valor' | 'taxa' | 'prazo' | 'entrada' | 'amortizacoesExtras';
+const ID_POR_CAMPO: Record<CampoErro, string> = {
+    valor: 'finValor',
+    taxa: 'finTaxa-taxa-valor',
+    prazo: 'finPrazo',
+    entrada: 'finEntrada',
+    amortizacoesExtras: 'finAmortizacoesExtras',
+};
 
 const PARCELAS_INICIAIS_VISIVEIS = 60;
+
+let proximoIdAmortizacao = 0;
+interface AmortizacaoExtraForm {
+    id: string;
+    mes: string;
+    valor: string;
+}
 
 /**
  * Converte uma taxa anual (%) na taxa mensal equivalente (%) por juros
@@ -41,20 +69,47 @@ const PARCELAS_INICIAIS_VISIVEIS = 60;
 const taxaAnualParaMensal = (taxaAnualPercentual: number): number =>
     (Math.pow(1 + taxaAnualPercentual / 100, 1 / 12) - 1) * 100;
 
+/** Indexa as parcelas pelo número para casar os dois cronogramas mês a mês. */
+const indexarPorNumero = (parcelas: ParcelaFinanciamentoDto[]) =>
+    new Map(parcelas.map(p => [p.numero, p]));
+
+/**
+ * Quantos meses o resultado cobre. Price e SAC podem quitar em meses
+ * diferentes quando há amortização extra encurtando o prazo, então nada aqui
+ * pode assumir que os dois cronogramas têm o mesmo comprimento.
+ */
+const mesesCobertos = (resultado: FinanciamentoResponseDto) =>
+    Math.max(resultado.price.parcelas.length, resultado.sac.parcelas.length);
+
 /** Gera e baixa um CSV com o cronograma de amortização dos dois sistemas lado a lado. */
 function exportarCronogramaCsv(resultado: FinanciamentoResponseDto) {
-    const cabecalho = [
-        'Parcela',
-        'Price - Valor', 'Price - Juros', 'Price - Amortizacao', 'Price - Saldo Devedor',
-        'SAC - Valor', 'SAC - Juros', 'SAC - Amortizacao', 'SAC - Saldo Devedor',
+    const colunasPorSistema = (sistema: string) => [
+        `${sistema} - Valor`, `${sistema} - Juros`, `${sistema} - Amortizacao`, `${sistema} - Amortizacao Extra`,
+        `${sistema} - Seguros`, `${sistema} - Taxa Adm`, `${sistema} - Boleto`, `${sistema} - Saldo Devedor`,
     ];
-    const linhas = resultado.price.parcelas.map((p, idx) => {
-        const s = resultado.sac.parcelas[idx];
-        return [
-            p.numero,
-            p.valorParcela.toFixed(2), p.juros.toFixed(2), p.amortizacao.toFixed(2), p.saldoDevedor.toFixed(2),
-            s.valorParcela.toFixed(2), s.juros.toFixed(2), s.amortizacao.toFixed(2), s.saldoDevedor.toFixed(2),
-        ].join(';');
+    const cabecalho = ['Parcela', ...colunasPorSistema('Price'), ...colunasPorSistema('SAC')];
+
+    const price = indexarPorNumero(resultado.price.parcelas);
+    const sac = indexarPorNumero(resultado.sac.parcelas);
+
+    // Célula vazia para o sistema que já quitou: casar as duas tabelas por
+    // posição quebraria assim que os cronogramas tivessem tamanhos diferentes.
+    const celulas = (p?: ParcelaFinanciamentoDto) => p
+        ? [
+            p.valorParcela.toFixed(2),
+            p.juros.toFixed(2),
+            p.amortizacao.toFixed(2),
+            p.amortizacaoExtra.toFixed(2),
+            (p.seguroMip + p.seguroDfi).toFixed(2),
+            p.taxaAdministracao.toFixed(2),
+            p.parcelaTotal.toFixed(2),
+            p.saldoDevedor.toFixed(2),
+        ]
+        : ['', '', '', '', '', '', '', ''];
+
+    const linhas = Array.from({ length: mesesCobertos(resultado) }, (_, idx) => {
+        const numero = idx + 1;
+        return [numero, ...celulas(price.get(numero)), ...celulas(sac.get(numero))].join(';');
     });
     const csv = [cabecalho.join(';'), ...linhas].join('\n');
 
@@ -71,23 +126,54 @@ function exportarCronogramaCsv(resultado: FinanciamentoResponseDto) {
  * Fonte única dos campos do comparativo Price x SAC — consumida pela tabela
  * (desktop, uma linha por sistema) e pelos cartões (celular, um cartão por
  * sistema). Mesmo raciocínio do `linhasComparacao` de `ComparadorCenarios`:
- * evita reescrever os cinco campos duas vezes e correr o risco de as duas
- * versões divergirem numa correção futura.
+ * evita reescrever os campos duas vezes e correr o risco de as duas versões
+ * divergirem numa correção futura. As linhas de prazo e economia só aparecem
+ * quando há amortização extra — sem ela seriam sempre iguais e zeradas.
  */
-const camposComparativoFinanciamento: { chave: string; rotulo: string; valor: (r: ResultadoFinanciamentoDto) => string }[] = [
+const camposComparativoFinanciamento = (
+    temAmortizacaoExtra: boolean,
+    temEncargos: boolean,
+): { chave: string; rotulo: string; valor: (r: ResultadoFinanciamentoDto) => string }[] => [
     { chave: 'parcela1', rotulo: '1ª parcela', valor: r => formatCurrency(r.primeiraParcela) },
+    ...(temEncargos
+        ? [{ chave: 'parcela1Total', rotulo: '1º boleto (com encargos)', valor: (r: ResultadoFinanciamentoDto) => formatCurrency(r.primeiraParcelaTotal) }]
+        : []),
     { chave: 'parcelaUltima', rotulo: 'Última parcela', valor: r => formatCurrency(r.ultimaParcela) },
     { chave: 'totalPago', rotulo: 'Total pago', valor: r => formatCurrency(r.totalPago) },
     { chave: 'totalJuros', rotulo: 'Total de juros', valor: r => formatCurrency(r.totalJuros) },
-    { chave: 'custoEfetivo', rotulo: 'Custo efetivo', valor: r => `${r.custoEfetivoTotalPercentual.toFixed(2)}%` },
+    ...(temEncargos
+        ? [
+            { chave: 'totalSeguros', rotulo: 'Seguros + tarifas', valor: (r: ResultadoFinanciamentoDto) => formatCurrency(r.totalSeguros + r.totalTaxaAdministracao) },
+            { chave: 'totalDesembolsado', rotulo: 'Desembolso total', valor: (r: ResultadoFinanciamentoDto) => formatCurrency(r.totalDesembolsado) },
+        ]
+        : []),
+    { chave: 'jurosFinanciado', rotulo: 'Juros / financiado', valor: r => `${r.jurosSobreFinanciadoPercentual.toFixed(2)}%` },
+    { chave: 'cet', rotulo: 'CET (a.a.)', valor: r => r.cetConvergiu ? `${r.cetAnualPercentual.toFixed(2)}%` : '—' },
+    ...(temAmortizacaoExtra
+        ? [
+            { chave: 'prazoFinal', rotulo: 'Prazo final', valor: (r: ResultadoFinanciamentoDto) => formatPrazo(r.prazoFinalMeses) },
+            { chave: 'economiaJuros', rotulo: 'Economia de juros', valor: (r: ResultadoFinanciamentoDto) => formatCurrency(r.economiaJuros) },
+        ]
+        : []),
 ];
 
 export function CalculadoraFinanciamento() {
     const ehMobile = useIsMobile();
-    const [valorFinanciado, setValorFinanciado] = useState('');
+    const [valorImovel, setValorImovel] = useState('');
+    const [entradaModo, setEntradaModo] = useState<EntradaModo>('reais');
+    const [entrada, setEntrada] = useState('');
     const [periodicidade, setPeriodicidade] = useState<PeriodicidadeTaxa>('mensal');
     const [taxaValor, setTaxaValor] = useState('');
     const [prazo, setPrazo] = useState<PrazoValue>({ valor: '48', unidade: 'meses' });
+
+    const [extraMensal, setExtraMensal] = useState('');
+    const [amortizacoesExtras, setAmortizacoesExtras] = useState<AmortizacaoExtraForm[]>([]);
+    const [modoExtra, setModoExtra] = useState<ModoExtraUi>('prazo');
+
+    const [seguroMip, setSeguroMip] = useState('');
+    const [seguroDfi, setSeguroDfi] = useState('');
+    const [taxaAdministracao, setTaxaAdministracao] = useState('');
+    const [tarifasContratacao, setTarifasContratacao] = useState('');
 
     const [isLoading, setIsLoading] = useState(false);
     const [resultado, setResultado] = useState<FinanciamentoResponseDto | null>(null);
@@ -103,13 +189,53 @@ export function CalculadoraFinanciamento() {
     const [taxaErroConversor, setTaxaErroConversor] = useState<string | null>(null);
     const [taxaResultado, setTaxaResultado] = useState<TaxaEfetivaResponseDto | null>(null);
 
+    const adicionarAmortizacaoExtra = () =>
+        setAmortizacoesExtras(prev => [...prev, { id: `amort-${proximoIdAmortizacao++}`, mes: '', valor: '' }]);
+    const removerAmortizacaoExtra = (id: string) =>
+        setAmortizacoesExtras(prev => prev.filter(a => a.id !== id));
+    const atualizarAmortizacaoExtra = (id: string, patch: Partial<AmortizacaoExtraForm>) =>
+        setAmortizacoesExtras(prev => prev.map(a => (a.id === id ? { ...a, ...patch } : a)));
+
+    const prazoEmMeses = prazoParaMeses(prazo);
+    const opcoesAmortizacaoAtivas =
+        (parseCurrency(extraMensal) > 0 ? 1 : 0) + (amortizacoesExtras.length > 0 ? 1 : 0);
+
+    // Prévia do que será financiado, para o usuário conferir a conta antes de simular.
+    const financiadoPrevisto = useMemo(() => {
+        const imovel = parseCurrency(valorImovel);
+        if (!imovel) return null;
+        const valorEntrada = entradaModo === 'reais'
+            ? parseCurrency(entrada)
+            : imovel * (parsePercent(entrada) ?? 0) / 100;
+        if (valorEntrada <= 0 || valorEntrada >= imovel) return null;
+        return imovel - valorEntrada;
+    }, [valorImovel, entrada, entradaModo]);
+
+    const temAmortizacaoExtra = (resultado?.sac.totalAmortizacaoExtra ?? 0) > 0;
+    const temEncargos = ((resultado?.sac.totalSeguros ?? 0) + (resultado?.sac.totalTaxaAdministracao ?? 0)) > 0;
+
+    const encargosAtivos =
+        ((parsePercent(seguroMip) ?? 0) > 0 ? 1 : 0) +
+        ((parsePercent(seguroDfi) ?? 0) > 0 ? 1 : 0) +
+        (parseCurrency(taxaAdministracao) > 0 ? 1 : 0) +
+        (parseCurrency(tarifasContratacao) > 0 ? 1 : 0);
+
     const dadosGrafico = useMemo(() => {
         if (!resultado) return [];
-        return resultado.price.parcelas.map((p, idx) => ({
-            numero: p.numero,
-            saldoPrice: p.saldoDevedor,
-            saldoSac: resultado.sac.parcelas[idx].saldoDevedor,
-        }));
+        const price = indexarPorNumero(resultado.price.parcelas);
+        const sac = indexarPorNumero(resultado.sac.parcelas);
+
+        return Array.from({ length: mesesCobertos(resultado) }, (_, idx) => {
+            const numero = idx + 1;
+            // `undefined` nos meses em que aquele sistema já quitou — o Recharts
+            // simplesmente interrompe a linha ali, que é a leitura correta
+            // ("o Price acabou no mês 213"), em vez de desenhar um zero falso.
+            return {
+                numero,
+                saldoPrice: price.get(numero)?.saldoDevedor,
+                saldoSac: sac.get(numero)?.saldoDevedor,
+            };
+        });
     }, [resultado]);
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -119,14 +245,37 @@ export function CalculadoraFinanciamento() {
 
         const novosErros: Partial<Record<CampoErro, string>> = {};
 
-        const valorNumero = parseCurrency(valorFinanciado);
-        if (!valorNumero || valorNumero <= 0) novosErros.valor = 'Informe um valor financiado válido maior que zero.';
+        const imovel = parseCurrency(valorImovel);
+        if (!imovel || imovel <= 0) novosErros.valor = 'Informe o valor do imóvel — precisa ser maior que zero.';
+
+        const valorEntrada = entradaModo === 'reais'
+            ? parseCurrency(entrada)
+            : imovel * (parsePercent(entrada) ?? 0) / 100;
+        if (valorEntrada < 0) {
+            novosErros.entrada = 'A entrada não pode ser negativa.';
+        } else if (imovel > 0 && valorEntrada >= imovel) {
+            novosErros.entrada = 'A entrada precisa ser menor que o valor do imóvel — senão não sobra nada a financiar.';
+        }
 
         const taxaDigitada = parsePercent(taxaValor);
         if (taxaDigitada === null || taxaDigitada < 0) novosErros.taxa = 'Informe uma taxa de juros válida.';
 
-        const numParcelas = prazoParaMeses(prazo);
+        const numParcelas = prazoEmMeses;
         if (!numParcelas || numParcelas <= 0) novosErros.prazo = 'Informe um número de parcelas válido maior que zero.';
+
+        const avulsasValidadas: AmortizacaoExtraAvulsaDto[] = [];
+        for (const item of amortizacoesExtras) {
+            const mes = parseInt(item.mes, 10);
+            const valor = parseCurrency(item.valor);
+            if (!mes || mes <= 0 || (numParcelas > 0 && mes > numParcelas) || !valor || valor <= 0) {
+                novosErros.amortizacoesExtras =
+                    'Confira as amortizações extras: o mês deve estar dentro do prazo e o valor ser maior que zero.';
+                break;
+            }
+            avulsasValidadas.push({ mes, valor });
+        }
+
+        const valorExtraMensal = parseCurrency(extraMensal);
 
         if (Object.keys(novosErros).length > 0) {
             definirEFocar(novosErros, ID_POR_CAMPO);
@@ -139,9 +288,18 @@ export function CalculadoraFinanciamento() {
         setResultado(null);
         try {
             const data = await financiamentoService.simular({
-                valorFinanciado: valorNumero,
+                valorFinanciado: imovel - valorEntrada,
+                valorImovel: imovel,
+                entrada: valorEntrada,
                 taxaJurosMensalPercentual: taxaMensal,
                 numParcelas,
+                amortizacaoExtraMensal: valorExtraMensal > 0 ? valorExtraMensal : undefined,
+                amortizacoesExtrasAvulsas: avulsasValidadas.length > 0 ? avulsasValidadas : undefined,
+                modoAmortizacaoExtra: MODO_EXTRA_API[modoExtra],
+                seguroMipMensalPercentualSaldo: parsePercent(seguroMip) ?? undefined,
+                seguroDfiMensalPercentualImovel: parsePercent(seguroDfi) ?? undefined,
+                taxaAdministracaoMensal: parseCurrency(taxaAdministracao) || undefined,
+                tarifasContratacao: parseCurrency(tarifasContratacao) || undefined,
             });
             setResultado(data);
         } catch (err) {
@@ -191,6 +349,14 @@ export function CalculadoraFinanciamento() {
         limpar('taxa');
     };
 
+    const camposComparativo = camposComparativoFinanciamento(temAmortizacaoExtra, temEncargos);
+    const sistemas = resultado
+        ? ([
+            { sistema: SistemaAmortizacao.Price, dados: resultado.price },
+            { sistema: SistemaAmortizacao.Sac, dados: resultado.sac },
+        ] as const)
+        : [];
+
     const schedulesVisiveis: ResultadoFinanciamentoDto | null = resultado
         ? (sistemaVisivel === 'price' ? resultado.price : resultado.sac)
         : null;
@@ -205,9 +371,9 @@ export function CalculadoraFinanciamento() {
                 <div className="proj-form-row">
                     <CampoMoeda
                         id="finValor"
-                        label="Valor financiado (R$)"
-                        value={valorFinanciado}
-                        onChange={v => { setValorFinanciado(v); limpar('valor'); }}
+                        label="Valor do imóvel (R$)"
+                        value={valorImovel}
+                        onChange={v => { setValorImovel(v); limpar('valor'); }}
                         disabled={isLoading}
                         erro={erros.valor}
                     />
@@ -222,6 +388,43 @@ export function CalculadoraFinanciamento() {
                     />
                 </div>
 
+                <div className="campo-form-group">
+                    <label htmlFor="finEntrada">Entrada</label>
+                    <div className="fin-entrada-linha">
+                        <SegmentedControl
+                            value={entradaModo}
+                            onChange={v => { setEntradaModo(v); setEntrada(''); limpar('entrada'); }}
+                            ariaLabel="Informar a entrada em reais ou em percentual"
+                            opcoes={[
+                                { valor: 'reais', rotulo: 'R$' },
+                                { valor: 'percentual', rotulo: '%' },
+                            ]}
+                            disabled={isLoading}
+                        />
+                        <input
+                            id="finEntrada"
+                            type="text"
+                            inputMode={entradaModo === 'reais' ? 'numeric' : 'decimal'}
+                            placeholder={entradaModo === 'reais' ? '0,00' : 'Ex: 20'}
+                            value={entrada}
+                            onChange={e => {
+                                setEntrada(entradaModo === 'reais' ? maskCurrency(e.target.value) : e.target.value);
+                                limpar('entrada');
+                            }}
+                            disabled={isLoading}
+                            aria-invalid={!!erros.entrada}
+                            aria-describedby={erros.entrada ? 'finEntrada-erro' : undefined}
+                            className={erros.entrada ? 'campo-input--erro' : undefined}
+                        />
+                    </div>
+                    <p className="campo-hint">
+                        {financiadoPrevisto !== null
+                            ? `Valor financiado: ${formatCurrency(financiadoPrevisto)} — a entrada não paga juros.`
+                            : 'Opcional. Quanto maior a entrada, menos juros você paga no total.'}
+                    </p>
+                    {erros.entrada && <span id="finEntrada-erro" className="campo-erro">{erros.entrada}</span>}
+                </div>
+
                 <CampoTaxaPeriodica
                     id="finTaxa-taxa-valor"
                     periodicidade={periodicidade}
@@ -232,6 +435,148 @@ export function CalculadoraFinanciamento() {
                     erro={erros.taxa}
                     hint={periodicidade === 'anual' ? 'A taxa anual é convertida para a mensal equivalente antes de simular (juros compostos).' : undefined}
                 />
+
+                <Colapsavel
+                    titulo="Amortização extra — pagar a mais para quitar antes"
+                    selo={opcoesAmortizacaoAtivas > 0 ? `${opcoesAmortizacaoAtivas} ativa${opcoesAmortizacaoAtivas > 1 ? 's' : ''}` : undefined}
+                >
+                    <p className="campo-hint">
+                        Todo real pago além da parcela abate o saldo devedor direto, sem passar por juros.
+                        Você escolhe o que o abatimento faz com o contrato.
+                    </p>
+
+                    <div className="campo-form-group">
+                        <label htmlFor="finModoExtra">O que a amortização extra deve reduzir</label>
+                        <SegmentedControl
+                            value={modoExtra}
+                            onChange={setModoExtra}
+                            ariaLabel="O que a amortização extra deve reduzir"
+                            full
+                            opcoes={[
+                                { valor: 'prazo', rotulo: 'Reduzir prazo' },
+                                { valor: 'parcela', rotulo: 'Reduzir parcela' },
+                            ]}
+                            disabled={isLoading}
+                        />
+                        <p className="campo-hint">
+                            {modoExtra === 'prazo'
+                                ? 'Quita as últimas parcelas e encerra o contrato antes. É o que mais economiza juros.'
+                                : 'Mantém o prazo e recalcula a parcela sobre o saldo menor. Alivia o mês a mês, economiza menos.'}
+                        </p>
+                    </div>
+
+                    <CampoMoeda
+                        id="finExtraMensal"
+                        label="Valor extra todo mês (R$)"
+                        value={extraMensal}
+                        onChange={setExtraMensal}
+                        disabled={isLoading}
+                        hint="Somado a toda parcela, junto da mensalidade."
+                    />
+
+                    <div className="campo-form-group" id="finAmortizacoesExtras">
+                        <label>Amortizações pontuais (FGTS, 13º)</label>
+                        {amortizacoesExtras.map(item => (
+                            <div key={item.id} className="proj-aporte-extra-row">
+                                <input
+                                    type="number"
+                                    min={1}
+                                    max={prazoEmMeses || undefined}
+                                    placeholder="Mês"
+                                    value={item.mes}
+                                    onChange={e => { atualizarAmortizacaoExtra(item.id, { mes: e.target.value }); limpar('amortizacoesExtras'); }}
+                                    disabled={isLoading}
+                                />
+                                <input
+                                    type="text"
+                                    inputMode="numeric"
+                                    placeholder="Valor (R$)"
+                                    value={item.valor}
+                                    onChange={e => { atualizarAmortizacaoExtra(item.id, { valor: maskCurrency(e.target.value) }); limpar('amortizacoesExtras'); }}
+                                    disabled={isLoading}
+                                />
+                                <button
+                                    type="button"
+                                    className="proj-aporte-extra-remover"
+                                    onClick={() => removerAmortizacaoExtra(item.id)}
+                                    disabled={isLoading}
+                                    aria-label={`Remover amortização do mês ${item.mes || 'não informado'}`}
+                                >
+                                    ✕
+                                </button>
+                            </div>
+                        ))}
+                        <button
+                            type="button"
+                            className="proj-aporte-extra-adicionar"
+                            onClick={adicionarAmortizacaoExtra}
+                            disabled={isLoading}
+                        >
+                            + Adicionar amortização pontual
+                        </button>
+                        {erros.amortizacoesExtras && <span className="campo-erro">{erros.amortizacoesExtras}</span>}
+                    </div>
+                </Colapsavel>
+
+                <Colapsavel
+                    titulo="Seguros e taxas obrigatórios"
+                    selo={encargosAtivos > 0 ? `${encargosAtivos} ativo${encargosAtivos > 1 ? 's' : ''}` : undefined}
+                >
+                    <p className="campo-hint">
+                        Todo financiamento imobiliário cobra seguro de morte e invalidez (MIP), seguro de danos
+                        ao imóvel (DFI) e uma tarifa mensal de administração. Eles não abatem a dívida, mas
+                        entram no boleto — sem informá-los, a parcela simulada fica abaixo da que o banco cobra.
+                        Os percentuais estão na proposta do banco.
+                    </p>
+
+                    <div className="proj-form-row">
+                        <div className="campo-form-group">
+                            <label htmlFor="finSeguroMip">Seguro MIP (% a.m. sobre o saldo devedor)</label>
+                            <input
+                                id="finSeguroMip"
+                                type="text"
+                                inputMode="decimal"
+                                placeholder="Ex: 0,025"
+                                value={seguroMip}
+                                onChange={e => setSeguroMip(e.target.value)}
+                                disabled={isLoading}
+                            />
+                            <p className="campo-hint">Cai junto com a dívida — é maior no começo do contrato.</p>
+                        </div>
+                        <div className="campo-form-group">
+                            <label htmlFor="finSeguroDfi">Seguro DFI (% a.m. sobre o imóvel)</label>
+                            <input
+                                id="finSeguroDfi"
+                                type="text"
+                                inputMode="decimal"
+                                placeholder="Ex: 0,01"
+                                value={seguroDfi}
+                                onChange={e => setSeguroDfi(e.target.value)}
+                                disabled={isLoading}
+                            />
+                            <p className="campo-hint">Praticamente fixo: incide sobre o valor do imóvel.</p>
+                        </div>
+                    </div>
+
+                    <div className="proj-form-row">
+                        <CampoMoeda
+                            id="finTaxaAdministracao"
+                            label="Taxa de administração mensal (R$)"
+                            value={taxaAdministracao}
+                            onChange={setTaxaAdministracao}
+                            disabled={isLoading}
+                            hint="Tarifa fixa do contrato — na Caixa costuma ficar em torno de R$ 25."
+                        />
+                        <CampoMoeda
+                            id="finTarifasContratacao"
+                            label="Tarifas de contratação (R$)"
+                            value={tarifasContratacao}
+                            onChange={setTarifasContratacao}
+                            disabled={isLoading}
+                            hint="Avaliação do imóvel, IOF — descontadas do valor liberado. Usadas só no cálculo do CET."
+                        />
+                    </div>
+                </Colapsavel>
 
                 <Colapsavel titulo="Não sei a taxa efetiva — converter de taxa nominal (APR)">
                     <p className="campo-hint">
@@ -289,7 +634,9 @@ export function CalculadoraFinanciamento() {
                 <ResultadoSecao resultadoRef={resultadoRef}>
                     <div className="proj-result-stats">
                         <div className="proj-result-stat proj-result-stat--highlight">
-                            <span className="proj-result-stat-value proj-result-stat-value--texto">{resultado.sistemaMaisBarato}</span>
+                            <span className="proj-result-stat-value proj-result-stat-value--texto">
+                                {ROTULO_SISTEMA[resultado.sistemaMaisBarato]}
+                            </span>
                             <span className="proj-result-stat-label">Sistema com menos juros totais</span>
                         </div>
                         <div className="proj-result-stat">
@@ -299,16 +646,70 @@ export function CalculadoraFinanciamento() {
                             <span className="proj-result-stat-label">Economia escolhendo o sistema mais barato</span>
                         </div>
                         <div className="proj-result-stat">
-                            <span className="proj-result-stat-value">{formatCurrency(resultado.price.totalJuros)}</span>
-                            <span className="proj-result-stat-label">Total de juros — Price</span>
+                            <span className="proj-result-stat-value">{formatCurrency(resultado.composicao.valorFinanciado)}</span>
+                            <span className="proj-result-stat-label">
+                                Valor financiado
+                                {resultado.composicao.entrada > 0 && ` (entrada de ${resultado.composicao.entradaPercentual.toFixed(1)}%)`}
+                            </span>
                         </div>
                         <div className="proj-result-stat">
                             <span className="proj-result-stat-value">{formatCurrency(resultado.sac.totalJuros)}</span>
                             <span className="proj-result-stat-label">Total de juros — SAC</span>
                         </div>
                     </div>
+
+                    {temAmortizacaoExtra && (
+                        <div className="proj-result-stats">
+                            <div className="proj-result-stat">
+                                <span className="proj-result-stat-value proj-result-stat-value--green">
+                                    {formatCurrency(resultado.sac.economiaJuros)}
+                                </span>
+                                <span className="proj-result-stat-label">Juros economizados no SAC</span>
+                            </div>
+                            <div className="proj-result-stat">
+                                <span className="proj-result-stat-value proj-result-stat-value--texto">
+                                    {resultado.sac.mesesEconomizados > 0
+                                        ? formatPrazo(resultado.sac.mesesEconomizados)
+                                        : 'prazo mantido'}
+                                </span>
+                                <span className="proj-result-stat-label">
+                                    {resultado.sac.mesesEconomizados > 0 ? 'Quitação antecipada no SAC' : 'A parcela caiu no lugar do prazo'}
+                                </span>
+                            </div>
+                            <div className="proj-result-stat">
+                                <span className="proj-result-stat-value">{formatCurrency(resultado.sac.totalAmortizacaoExtra)}</span>
+                                <span className="proj-result-stat-label">Total pago em amortização extra</span>
+                            </div>
+                        </div>
+                    )}
+
+                    {temEncargos && (
+                        <div className="proj-result-stats">
+                            <div className="proj-result-stat">
+                                <span className="proj-result-stat-value">{formatCurrency(resultado.sac.primeiraParcelaTotal)}</span>
+                                <span className="proj-result-stat-label">1º boleto no SAC (com seguros e tarifa)</span>
+                            </div>
+                            <div className="proj-result-stat">
+                                <span className="proj-result-stat-value">
+                                    {formatCurrency(resultado.sac.totalSeguros + resultado.sac.totalTaxaAdministracao)}
+                                </span>
+                                <span className="proj-result-stat-label">Seguros + tarifas no SAC</span>
+                            </div>
+                            <div className="proj-result-stat">
+                                <span className="proj-result-stat-value">{formatCurrency(resultado.sac.totalDesembolsado)}</span>
+                                <span className="proj-result-stat-label">Desembolso total no SAC</span>
+                            </div>
+                        </div>
+                    )}
+
                     <p className="calc-resultado-eco">
-                        O sistema <strong>{resultado.sistemaMaisBarato}</strong> sai {formatCurrency(resultado.diferencaTotalJuros)} mais barato no total.
+                        O sistema <strong>{ROTULO_SISTEMA[resultado.sistemaMaisBarato]}</strong> sai {formatCurrency(resultado.diferencaTotalJuros)} mais barato no total.
+                        {temEncargos && ' A comparação é pelos juros; os seguros e tarifas entram no desembolso total.'}
+                    </p>
+                    <p className="campo-hint">
+                        CET (Custo Efetivo Total) é a taxa que já embute seguros e tarifas de contratação —
+                        o número certo para comparar com a proposta de outro banco. Não inclui entrada, ITBI
+                        nem cartório: isso não é custo do empréstimo, é custo do negócio do imóvel.
                     </p>
 
                     {/* Desktop: tabela — só 2 linhas (Price, SAC), cabe sem apertar. */}
@@ -317,14 +718,14 @@ export function CalculadoraFinanciamento() {
                             <thead>
                                 <tr>
                                     <th>Sistema</th>
-                                    {camposComparativoFinanciamento.map(c => <th key={c.chave}>{c.rotulo}</th>)}
+                                    {camposComparativo.map(c => <th key={c.chave}>{c.rotulo}</th>)}
                                 </tr>
                             </thead>
                             <tbody>
-                                {([['Price', resultado.price], ['SAC', resultado.sac]] as const).map(([nome, dados]) => (
-                                    <tr key={nome} className={resultado.sistemaMaisBarato === nome ? 'tabela-row--destaque' : undefined}>
-                                        <td>{nome}</td>
-                                        {camposComparativoFinanciamento.map(c => <td key={c.chave}>{c.valor(dados)}</td>)}
+                                {sistemas.map(({ sistema, dados }) => (
+                                    <tr key={sistema} className={resultado.sistemaMaisBarato === sistema ? 'tabela-row--destaque' : undefined}>
+                                        <td>{ROTULO_SISTEMA[sistema]}</td>
+                                        {camposComparativo.map(c => <td key={c.chave}>{c.valor(dados)}</td>)}
                                     </tr>
                                 ))}
                             </tbody>
@@ -333,17 +734,17 @@ export function CalculadoraFinanciamento() {
 
                     {/* Celular: um cartão por sistema, mesma fonte de campos da tabela. */}
                     <ul className="fin-cartoes">
-                        {([['Price', resultado.price], ['SAC', resultado.sac]] as const).map(([nome, dados]) => (
+                        {sistemas.map(({ sistema, dados }) => (
                             <li
-                                key={nome}
-                                className={`fin-cartao${resultado.sistemaMaisBarato === nome ? ' fin-cartao--melhor' : ''}`}
+                                key={sistema}
+                                className={`fin-cartao${resultado.sistemaMaisBarato === sistema ? ' fin-cartao--melhor' : ''}`}
                             >
                                 <div className="fin-cartao-cabecalho">
-                                    <span className="fin-cartao-titulo">{nome}</span>
-                                    {resultado.sistemaMaisBarato === nome && <span className="tabela-badge">mais barato</span>}
+                                    <span className="fin-cartao-titulo">{ROTULO_SISTEMA[sistema]}</span>
+                                    {resultado.sistemaMaisBarato === sistema && <span className="tabela-badge">mais barato</span>}
                                 </div>
                                 <dl className="fin-cartao-lista">
-                                    {camposComparativoFinanciamento.map(c => (
+                                    {camposComparativo.map(c => (
                                         <div key={c.chave} className="fin-cartao-linha">
                                             <dt>{c.rotulo}</dt>
                                             <dd>{c.valor(dados)}</dd>
@@ -361,7 +762,7 @@ export function CalculadoraFinanciamento() {
                                 <XAxis dataKey="numero" stroke="#94a3b8" fontSize={12} />
                                 <YAxis tickFormatter={(v: number) => ehMobile ? formatCurrencyCompacta(v) : formatCurrency(v)} {...yAxisProps(ehMobile)} />
                                 <Tooltip
-                                    formatter={(value, name) => [formatCurrency(Number(value)), name]}
+                                    formatter={(value, name) => [value == null ? 'quitado' : formatCurrency(Number(value)), name]}
                                     labelFormatter={(numero) => `Parcela ${numero}`}
                                 />
                                 <Legend />
@@ -396,6 +797,10 @@ export function CalculadoraFinanciamento() {
                                         <th>Parcela</th>
                                         <th>Juros</th>
                                         <th>Amortização</th>
+                                        {temAmortizacaoExtra && <th>Extra</th>}
+                                        {temEncargos && <th>Seguros</th>}
+                                        {temEncargos && <th>Taxa adm.</th>}
+                                        {temEncargos && <th>Boleto</th>}
                                         <th>Saldo devedor</th>
                                     </tr>
                                 </thead>
@@ -406,6 +811,10 @@ export function CalculadoraFinanciamento() {
                                             <td>{formatCurrency(p.valorParcela)}</td>
                                             <td>{formatCurrency(p.juros)}</td>
                                             <td>{formatCurrency(p.amortizacao)}</td>
+                                            {temAmortizacaoExtra && <td>{formatCurrency(p.amortizacaoExtra)}</td>}
+                                            {temEncargos && <td>{formatCurrency(p.seguroMip + p.seguroDfi)}</td>}
+                                            {temEncargos && <td>{formatCurrency(p.taxaAdministracao)}</td>}
+                                            {temEncargos && <td>{formatCurrency(p.parcelaTotal)}</td>}
                                             <td>{formatCurrency(p.saldoDevedor)}</td>
                                         </tr>
                                     ))}

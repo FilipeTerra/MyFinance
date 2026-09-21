@@ -18,11 +18,18 @@ public class FinanciamentoPriceCalculatorTests
     }
 
     [Fact]
-    public void Calcular_ParcelaIsConstantAcrossAllMonths()
+    public void Calcular_ParcelaIsConstantExceptForTheLiquidatingOne()
     {
         var resultado = FinanciamentoPriceCalculator.Calcular(10000m, 2m, 12);
 
-        Assert.All(resultado.Parcelas, p => Assert.Equal(resultado.ValorParcela, p.ValorParcela));
+        // A parcela é fixa em todo o contrato menos na última: é ela que liquida o
+        // resíduo de arredondamento (aqui, R$ 0,05 a menos), para o saldo devedor
+        // fechar em zero exato em vez de sobrar centavos.
+        Assert.All(resultado.Parcelas.SkipLast(1), p => Assert.Equal(resultado.ValorParcela, p.ValorParcela));
+
+        var ultima = resultado.Parcelas[^1];
+        Assert.True(ultima.ValorParcela <= resultado.ValorParcela);
+        Assert.Equal(ultima.Juros + ultima.Amortizacao, ultima.ValorParcela);
     }
 
     [Fact]
@@ -30,7 +37,18 @@ public class FinanciamentoPriceCalculatorTests
     {
         var resultado = FinanciamentoPriceCalculator.Calcular(10000m, 2m, 12);
 
-        Assert.Equal(0m, resultado.Parcelas[^1].SaldoDevedor, 1);
+        Assert.Equal(0m, resultado.Parcelas[^1].SaldoDevedor);
+    }
+
+    [Fact]
+    public void Calcular_TotalPagoEqualsPrincipalPlusInterest()
+    {
+        var resultado = FinanciamentoPriceCalculator.Calcular(50000m, 1.5m, 48);
+
+        // O total pago passou a ser acumulado linha a linha em vez de estimado por
+        // parcela × prazo, então tem que fechar exatamente com principal + juros.
+        Assert.Equal(50000m + resultado.TotalJuros, resultado.TotalPago);
+        Assert.Equal(50000m, resultado.Parcelas.Sum(p => p.Amortizacao));
     }
 
     [Fact]
