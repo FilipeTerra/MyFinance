@@ -42,6 +42,8 @@ import type {
     FinanciamentoResponseDto,
     TaxaEfetivaRequestDto,
     TaxaEfetivaResponseDto,
+    AmortizarVsInvestirRequestDto,
+    AmortizarVsInvestirResponseDto,
 } from '../types/Financiamento';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -256,6 +258,10 @@ const financiamentoService = {
     },
     calcularTaxaEfetiva: async (data: TaxaEfetivaRequestDto): Promise<TaxaEfetivaResponseDto> => {
         const response = await apiClient.post<TaxaEfetivaResponseDto>('/financiamento/taxa-efetiva', data);
+        return response.data;
+    },
+    amortizarVsInvestir: async (data: AmortizarVsInvestirRequestDto): Promise<AmortizarVsInvestirResponseDto> => {
+        const response = await apiClient.post<AmortizarVsInvestirResponseDto>('/financiamento/amortizar-vs-investir', data);
         return response.data;
     },
 };

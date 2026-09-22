@@ -12,8 +12,13 @@ namespace MyFinance.Application.Dtos.Financiamento
         /// </summary>
         public decimal ValorFinanciado { get; init; }
 
-        /// <summary>Taxa de juros do contrato, ao mês, em % (ex.: 1.5 para 1,5% a.m.).</summary>
-        public decimal TaxaJurosMensalPercentual { get; init; }
+        /// <summary>
+        /// Taxa de juros do contrato, ao mês, em % (ex.: 1.5 para 1,5% a.m.).
+        /// Pode ficar em branco quando <see cref="MinhaCasaMinhaVida"/> é
+        /// verdadeiro e a renda resolve uma faixa — nesse caso usa-se o teto da
+        /// faixa. Fora do MCMV, é obrigatória.
+        /// </summary>
+        public decimal? TaxaJurosMensalPercentual { get; init; }
 
         /// <summary>Número de parcelas mensais contratadas.</summary>
         public int NumParcelas { get; init; }
@@ -54,5 +59,35 @@ namespace MyFinance.Application.Dtos.Financiamento
         /// esses vão para o Estado e o cartório, não para o banco.
         /// </summary>
         public decimal TarifasContratacao { get; init; }
+
+        /// <summary>ITBI (imposto de transmissão), em R$. Pago ao município — não afeta o valor financiado.</summary>
+        public decimal Itbi { get; init; }
+
+        /// <summary>Escritura + registro, em R$.</summary>
+        public decimal CustosCartorio { get; init; }
+
+        /// <summary>
+        /// Renda familiar bruta mensal, em R$. Informada só para o simulador
+        /// avisar se a parcela compromete mais de 30% dela — nunca bloqueia.
+        /// Obrigatória quando <see cref="MinhaCasaMinhaVida"/> é verdadeiro,
+        /// porque é ela que resolve a faixa.
+        /// </summary>
+        public decimal? RendaMensal { get; init; }
+
+        /// <summary>
+        /// Liga as regras do Minha Casa Minha Vida: resolve a faixa pela renda,
+        /// sugere a taxa quando ela fica em branco, aplica o subsídio informado e
+        /// passa a avaliar teto de imóvel, entrada mínima e prazo máximo do
+        /// programa. Desligado (padrão), nada disso é avaliado — comportamento
+        /// idêntico ao de um financiamento comum.
+        /// </summary>
+        public bool MinhaCasaMinhaVida { get; init; }
+
+        /// <summary>
+        /// Subsídio que a Caixa ofereceu, em R$ — só usado quando
+        /// <see cref="MinhaCasaMinhaVida"/> é verdadeiro. Nunca calculado
+        /// automaticamente: é "até", o usuário digita o que foi de fato ofertado.
+        /// </summary>
+        public decimal? SubsidioInformado { get; init; }
     }
 }

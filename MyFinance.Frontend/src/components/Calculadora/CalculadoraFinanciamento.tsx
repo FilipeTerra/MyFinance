@@ -12,18 +12,29 @@ import {
 import { financiamentoService, AxiosError, type ApiErrorResponse } from '../../services/Api';
 import type {
     AmortizacaoExtraAvulsaDto,
+    AmortizarVsInvestirResponseDto,
     FinanciamentoResponseDto,
     ParcelaFinanciamentoDto,
     ResultadoFinanciamentoDto,
     TaxaEfetivaResponseDto,
 } from '../../types/Financiamento';
-import { ModoAmortizacaoExtra, ROTULO_SISTEMA, SistemaAmortizacao } from '../../types/SistemaAmortizacao';
+import { ROTULO_FAIXA_MCMV } from '../../types/Financiamento';
+import {
+    ModoAmortizacaoExtra,
+    ROTULO_SISTEMA,
+    SistemaAmortizacao,
+    RecomendacaoFinanceira,
+    ROTULO_RECOMENDACAO,
+} from '../../types/SistemaAmortizacao';
+import { TipoAtivoCalculadora } from '../../types/TipoAtivoCalculadora';
 import { parseCurrency, parsePercent, formatCurrency, maskCurrency } from './calculadoraUtils';
-import { prazoParaMeses, formatPrazo } from './calculadoraValidacao';
-import type { PrazoValue } from './calculadoraTypes';
+import { prazoParaMeses, formatPrazo, parametrosTaxa, validarTaxaRendimento } from './calculadoraValidacao';
+import type { PrazoValue, TaxaRendimentoValue } from './calculadoraTypes';
 import { CampoMoeda } from './campos/CampoMoeda';
 import { CampoPrazo } from './campos/CampoPrazo';
 import { CampoTaxaPeriodica, type PeriodicidadeTaxa } from './campos/CampoTaxaPeriodica';
+import { CampoTaxaRendimento } from './campos/CampoTaxaRendimento';
+import { CampoTipoAtivo } from './campos/CampoTipoAtivo';
 import { FormFooterCalculadora } from './campos/FormFooterCalculadora';
 import { ResultadoSecao } from './campos/ResultadoSecao';
 import { SegmentedControl, Colapsavel } from '../Shared/ui';
@@ -31,6 +42,7 @@ import { useResultadoFoco } from '../../hooks/useResultadoFoco';
 import { useErrosFormulario } from '../../hooks/useErrosFormulario';
 import { yAxisProps, formatCurrencyCompacta } from '../Shared/charts/chartTheme';
 import { useIsMobile } from '../../hooks/useIsMobile';
+import { AvisosFinanciamento } from './AvisosFinanciamento';
 import './CalculadoraFinanciamento.css';
 
 type SistemaVisivel = 'price' | 'sac';
@@ -133,8 +145,12 @@ function exportarCronogramaCsv(resultado: FinanciamentoResponseDto) {
 const camposComparativoFinanciamento = (
     temAmortizacaoExtra: boolean,
     temEncargos: boolean,
+    temRenda: boolean,
 ): { chave: string; rotulo: string; valor: (r: ResultadoFinanciamentoDto) => string }[] => [
     { chave: 'parcela1', rotulo: '1ª parcela', valor: r => formatCurrency(r.primeiraParcela) },
+    ...(temRenda
+        ? [{ chave: 'comprometimento', rotulo: '% da renda', valor: (r: ResultadoFinanciamentoDto) => `${r.comprometimentoRendaPercentual.toFixed(1)}%` }]
+        : []),
     ...(temEncargos
         ? [{ chave: 'parcela1Total', rotulo: '1º boleto (com encargos)', valor: (r: ResultadoFinanciamentoDto) => formatCurrency(r.primeiraParcelaTotal) }]
         : []),
@@ -170,10 +186,25 @@ export function CalculadoraFinanciamento() {
     const [amortizacoesExtras, setAmortizacoesExtras] = useState<AmortizacaoExtraForm[]>([]);
     const [modoExtra, setModoExtra] = useState<ModoExtraUi>('prazo');
 
+    const [taxaInvestimento, setTaxaInvestimento] = useState<TaxaRendimentoValue>({
+        modo: 'selic', taxaManual: '', percentualCdi: '',
+    });
+    const [tipoAtivoInvestimento, setTipoAtivoInvestimento] = useState<TipoAtivoCalculadora>(TipoAtivoCalculadora.TesouroSelic);
+    const [isLoadingComparacao, setIsLoadingComparacao] = useState(false);
+    const [erroComparacao, setErroComparacao] = useState<string | null>(null);
+    const [resultadoComparacao, setResultadoComparacao] = useState<AmortizarVsInvestirResponseDto | null>(null);
+
     const [seguroMip, setSeguroMip] = useState('');
     const [seguroDfi, setSeguroDfi] = useState('');
     const [taxaAdministracao, setTaxaAdministracao] = useState('');
     const [tarifasContratacao, setTarifasContratacao] = useState('');
+
+    const [itbi, setItbi] = useState('');
+    const [custosCartorio, setCustosCartorio] = useState('');
+    const [rendaMensal, setRendaMensal] = useState('');
+
+    const [minhaCasaMinhaVida, setMinhaCasaMinhaVida] = useState(false);
+    const [subsidioInformado, setSubsidioInformado] = useState('');
 
     const [isLoading, setIsLoading] = useState(false);
     const [resultado, setResultado] = useState<FinanciamentoResponseDto | null>(null);
@@ -213,12 +244,18 @@ export function CalculadoraFinanciamento() {
 
     const temAmortizacaoExtra = (resultado?.sac.totalAmortizacaoExtra ?? 0) > 0;
     const temEncargos = ((resultado?.sac.totalSeguros ?? 0) + (resultado?.sac.totalTaxaAdministracao ?? 0)) > 0;
+    const temCustoAquisicao = ((resultado?.composicao.itbi ?? 0) + (resultado?.composicao.custosCartorio ?? 0)) > 0;
 
     const encargosAtivos =
         ((parsePercent(seguroMip) ?? 0) > 0 ? 1 : 0) +
         ((parsePercent(seguroDfi) ?? 0) > 0 ? 1 : 0) +
         (parseCurrency(taxaAdministracao) > 0 ? 1 : 0) +
         (parseCurrency(tarifasContratacao) > 0 ? 1 : 0);
+
+    const custoAquisicaoAtivo =
+        (parseCurrency(itbi) > 0 ? 1 : 0) +
+        (parseCurrency(custosCartorio) > 0 ? 1 : 0) +
+        (parseCurrency(rendaMensal) > 0 ? 1 : 0);
 
     const dadosGrafico = useMemo(() => {
         if (!resultado) return [];
@@ -257,8 +294,13 @@ export function CalculadoraFinanciamento() {
             novosErros.entrada = 'A entrada precisa ser menor que o valor do imóvel — senão não sobra nada a financiar.';
         }
 
+        // Fora do MCMV, ou sem renda informada, a taxa continua obrigatória:
+        // sem faixa resolvida não há teto para usar no lugar dela.
+        const taxaEmBrancoPermitida = minhaCasaMinhaVida && parseCurrency(rendaMensal) > 0 && taxaValor.trim() === '';
         const taxaDigitada = parsePercent(taxaValor);
-        if (taxaDigitada === null || taxaDigitada < 0) novosErros.taxa = 'Informe uma taxa de juros válida.';
+        if (!taxaEmBrancoPermitida && (taxaDigitada === null || taxaDigitada < 0)) {
+            novosErros.taxa = 'Informe uma taxa de juros válida.';
+        }
 
         const numParcelas = prazoEmMeses;
         if (!numParcelas || numParcelas <= 0) novosErros.prazo = 'Informe um número de parcelas válido maior que zero.';
@@ -282,7 +324,9 @@ export function CalculadoraFinanciamento() {
             return;
         }
 
-        const taxaMensal = periodicidade === 'anual' ? taxaAnualParaMensal(taxaDigitada!) : taxaDigitada!;
+        const taxaMensal = taxaDigitada === null
+            ? undefined
+            : (periodicidade === 'anual' ? taxaAnualParaMensal(taxaDigitada) : taxaDigitada);
 
         setIsLoading(true);
         setResultado(null);
@@ -293,6 +337,8 @@ export function CalculadoraFinanciamento() {
                 entrada: valorEntrada,
                 taxaJurosMensalPercentual: taxaMensal,
                 numParcelas,
+                minhaCasaMinhaVida: minhaCasaMinhaVida || undefined,
+                subsidioInformado: minhaCasaMinhaVida ? (parseCurrency(subsidioInformado) || undefined) : undefined,
                 amortizacaoExtraMensal: valorExtraMensal > 0 ? valorExtraMensal : undefined,
                 amortizacoesExtrasAvulsas: avulsasValidadas.length > 0 ? avulsasValidadas : undefined,
                 modoAmortizacaoExtra: MODO_EXTRA_API[modoExtra],
@@ -300,6 +346,9 @@ export function CalculadoraFinanciamento() {
                 seguroDfiMensalPercentualImovel: parsePercent(seguroDfi) ?? undefined,
                 taxaAdministracaoMensal: parseCurrency(taxaAdministracao) || undefined,
                 tarifasContratacao: parseCurrency(tarifasContratacao) || undefined,
+                itbi: parseCurrency(itbi) || undefined,
+                custosCartorio: parseCurrency(custosCartorio) || undefined,
+                rendaMensal: parseCurrency(rendaMensal) || undefined,
             });
             setResultado(data);
         } catch (err) {
@@ -307,6 +356,64 @@ export function CalculadoraFinanciamento() {
             setErroGeral(axiosError.response?.data?.message || 'Não foi possível simular o financiamento. Tente novamente.');
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    /**
+     * Reaproveita os campos já preenchidos do financiamento (imóvel, entrada,
+     * taxa, prazo) e do "valor extra todo mês" — não duplica esses campos aqui,
+     * só pergunta o que falta: a taxa de investimento e o tipo de ativo.
+     */
+    const handleCompararAmortizarVsInvestir = async () => {
+        setErroComparacao(null);
+        setResultadoComparacao(null);
+
+        const imovel = parseCurrency(valorImovel);
+        const valorEntrada = entradaModo === 'reais'
+            ? parseCurrency(entrada)
+            : imovel * (parsePercent(entrada) ?? 0) / 100;
+        const taxaDigitada = parsePercent(taxaValor);
+        const taxaMensal = taxaDigitada === null
+            ? null
+            : (periodicidade === 'anual' ? taxaAnualParaMensal(taxaDigitada) : taxaDigitada);
+        const numParcelas = prazoEmMeses;
+        const valorExtraMensal = parseCurrency(extraMensal);
+
+        if (!imovel || imovel <= 0 || valorEntrada >= imovel || taxaMensal === null || !numParcelas || numParcelas <= 0) {
+            setErroComparacao('Preencha o valor do imóvel, a entrada, a taxa e o prazo do financiamento antes de comparar.');
+            return;
+        }
+        if (valorExtraMensal <= 0) {
+            setErroComparacao('Informe um valor extra mensal maior que zero para comparar.');
+            return;
+        }
+        const erroTaxaInvestimento = validarTaxaRendimento(taxaInvestimento);
+        if (erroTaxaInvestimento) {
+            setErroComparacao(erroTaxaInvestimento);
+            return;
+        }
+
+        const { fonteTaxaJuros, taxaJurosAnualPercentual, percentualCdi } = parametrosTaxa(taxaInvestimento);
+
+        setIsLoadingComparacao(true);
+        try {
+            const data = await financiamentoService.amortizarVsInvestir({
+                valorFinanciado: imovel - valorEntrada,
+                taxaJurosMensalPercentual: taxaMensal,
+                numParcelas,
+                sistema: SistemaAmortizacao.Sac,
+                valorDisponivelMensal: valorExtraMensal,
+                tipoAtivoInvestimento,
+                fonteTaxaJurosInvestimento: fonteTaxaJuros,
+                taxaJurosAnualInvestimentoPercentual: taxaJurosAnualPercentual,
+                percentualCdiInvestimento: percentualCdi,
+            });
+            setResultadoComparacao(data);
+        } catch (err) {
+            const axiosError = err as AxiosError<ApiErrorResponse>;
+            setErroComparacao(axiosError.response?.data?.message || 'Não foi possível comparar. Tente novamente.');
+        } finally {
+            setIsLoadingComparacao(false);
         }
     };
 
@@ -349,7 +456,8 @@ export function CalculadoraFinanciamento() {
         limpar('taxa');
     };
 
-    const camposComparativo = camposComparativoFinanciamento(temAmortizacaoExtra, temEncargos);
+    const temRenda = ((resultado?.sac.comprometimentoRendaPercentual ?? 0) > 0);
+    const camposComparativo = camposComparativoFinanciamento(temAmortizacaoExtra, temEncargos, temRenda);
     const sistemas = resultado
         ? ([
             { sistema: SistemaAmortizacao.Price, dados: resultado.price },
@@ -516,6 +624,62 @@ export function CalculadoraFinanciamento() {
                         </button>
                         {erros.amortizacoesExtras && <span className="campo-erro">{erros.amortizacoesExtras}</span>}
                     </div>
+
+                    {parseCurrency(extraMensal) > 0 && (
+                        <div className="fin-vs-investir">
+                            <p className="fin-vs-investir-titulo">
+                                Vale mais a pena amortizar esse extra ou investir esse dinheiro?
+                            </p>
+                            <p className="campo-hint">
+                                Compara os {formatCurrency(parseCurrency(extraMensal))} de extra mensal quitando o
+                                financiamento antes contra o mesmo valor investido pelo mesmo prazo, líquido de
+                                imposto. Usa o valor do imóvel, a entrada, a taxa e o prazo já preenchidos acima.
+                            </p>
+
+                            <CampoTaxaRendimento
+                                idPrefix="finVsInvestir"
+                                label="Taxa de retorno do investimento"
+                                value={taxaInvestimento}
+                                onChange={setTaxaInvestimento}
+                                disabled={isLoadingComparacao}
+                            />
+                            <CampoTipoAtivo
+                                id="finVsInvestirTipoAtivo"
+                                value={tipoAtivoInvestimento}
+                                onChange={setTipoAtivoInvestimento}
+                                disabled={isLoadingComparacao}
+                            />
+
+                            <button
+                                type="button"
+                                className="campo-btn-submit campo-btn-submit--secundaria"
+                                onClick={handleCompararAmortizarVsInvestir}
+                                disabled={isLoadingComparacao}
+                            >
+                                {isLoadingComparacao ? 'Comparando…' : 'Comparar amortizar vs. investir'}
+                            </button>
+
+                            {erroComparacao && (
+                                <p className="campo-erro" role="alert">{erroComparacao}</p>
+                            )}
+
+                            {resultadoComparacao && (
+                                <div className={`fin-vs-investir-resultado fin-vs-investir-resultado--${
+                                    resultadoComparacao.recomendacao === RecomendacaoFinanceira.Investir ? 'investir' : 'amortizar'
+                                }`}>
+                                    <p className="fin-vs-investir-recomendacao">
+                                        {resultadoComparacao.recomendacao === RecomendacaoFinanceira.Investir ? '💰 ' : '🏠 '}
+                                        {ROTULO_RECOMENDACAO[resultadoComparacao.recomendacao]}
+                                    </p>
+                                    <ul className="fin-vs-investir-detalhes">
+                                        <li>Juros economizados amortizando: <strong>{formatCurrency(resultadoComparacao.economiaJurosAmortizando)}</strong></li>
+                                        <li>Valor final líquido investindo: <strong>{formatCurrency(resultadoComparacao.valorFinalLiquidoInvestindo)}</strong></li>
+                                        <li>Diferença a favor de {resultadoComparacao.recomendacao === RecomendacaoFinanceira.Investir ? 'investir' : 'amortizar'}: <strong>{formatCurrency(Math.abs(resultadoComparacao.diferenca))}</strong></li>
+                                    </ul>
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </Colapsavel>
 
                 <Colapsavel
@@ -578,6 +742,75 @@ export function CalculadoraFinanciamento() {
                     </div>
                 </Colapsavel>
 
+                <Colapsavel
+                    titulo="Custo de aquisição e renda"
+                    selo={custoAquisicaoAtivo > 0 ? `${custoAquisicaoAtivo} ativo${custoAquisicaoAtivo > 1 ? 's' : ''}` : undefined}
+                >
+                    <p className="campo-hint">
+                        ITBI, escritura e registro não entram no financiamento — são pagos à parte, no fechamento
+                        do negócio. Informe sua renda para o simulador avisar se a parcela pesa mais que os 30%
+                        que os bancos costumam aceitar.
+                    </p>
+
+                    <div className="proj-form-row">
+                        <CampoMoeda
+                            id="finItbi"
+                            label="ITBI (R$)"
+                            value={itbi}
+                            onChange={setItbi}
+                            disabled={isLoading}
+                            hint="Imposto de transmissão, pago ao município — geralmente 2 a 3% do imóvel."
+                        />
+                        <CampoMoeda
+                            id="finCustosCartorio"
+                            label="Escritura + registro (R$)"
+                            value={custosCartorio}
+                            onChange={setCustosCartorio}
+                            disabled={isLoading}
+                        />
+                    </div>
+
+                    <CampoMoeda
+                        id="finRendaMensal"
+                        label="Renda familiar bruta mensal (R$)"
+                        value={rendaMensal}
+                        onChange={setRendaMensal}
+                        disabled={isLoading}
+                        hint="Usada só para o aviso de comprometimento de renda — não é enviada a nenhum lugar além desta simulação."
+                    />
+                </Colapsavel>
+
+                <div className="fin-mcmv-toggle">
+                    <label className="fin-mcmv-toggle-label" htmlFor="finMcmv">
+                        <input
+                            id="finMcmv"
+                            type="checkbox"
+                            checked={minhaCasaMinhaVida}
+                            onChange={e => setMinhaCasaMinhaVida(e.target.checked)}
+                            disabled={isLoading}
+                        />
+                        Este financiamento é pelo Minha Casa Minha Vida
+                    </label>
+                    {minhaCasaMinhaVida && (
+                        <div className="fin-mcmv-conteudo">
+                            <p className="campo-hint">
+                                A faixa é resolvida automaticamente pela renda informada em "Custo de aquisição e
+                                renda" acima. Deixe a taxa de juros do contrato em branco para usar o teto da faixa —
+                                a leitura conservadora, que nunca promete uma parcela menor do que a pior taxa
+                                possível nela.
+                            </p>
+                            <CampoMoeda
+                                id="finSubsidio"
+                                label="Subsídio oferecido pela Caixa (R$)"
+                                value={subsidioInformado}
+                                onChange={setSubsidioInformado}
+                                disabled={isLoading}
+                                hint="É 'até' — nunca calculado automaticamente. Digite o que a Caixa ofereceu na sua simulação."
+                            />
+                        </div>
+                    )}
+                </div>
+
                 <Colapsavel titulo="Não sei a taxa efetiva — converter de taxa nominal (APR)">
                     <p className="campo-hint">
                         Taxas de empréstimos costumam ser cotadas como uma taxa nominal anual (APR) capitalizada
@@ -632,6 +865,28 @@ export function CalculadoraFinanciamento() {
 
             {resultado && (
                 <ResultadoSecao resultadoRef={resultadoRef}>
+                    <AvisosFinanciamento avisos={resultado.avisos} />
+
+                    {resultado.faixaMcmv && (
+                        <div className="fin-mcmv-faixa">
+                            <p className="fin-mcmv-faixa-titulo">
+                                {ROTULO_FAIXA_MCMV[resultado.faixaMcmv.faixa] ?? resultado.faixaMcmv.faixa} do Minha Casa Minha Vida
+                            </p>
+                            <ul className="fin-mcmv-faixa-detalhes">
+                                <li>Renda até <strong>{formatCurrency(resultado.faixaMcmv.rendaMaxima)}</strong></li>
+                                <li>Taxa da faixa <strong>{resultado.faixaMcmv.taxaAnualMinimaPercentual.toFixed(2)}% a {resultado.faixaMcmv.taxaAnualMaximaPercentual.toFixed(2)}% a.a.</strong></li>
+                                <li>Teto de imóvel (referência) <strong>{formatCurrency(resultado.faixaMcmv.tetoImovelReferencia)}</strong></li>
+                                <li>Entrada mínima <strong>{resultado.faixaMcmv.entradaMinimaPercentual.toFixed(0)}%</strong></li>
+                            </ul>
+                        </div>
+                    )}
+                    {resultado.vigenciaReferenciaMcmv && (
+                        <p className="fin-mcmv-vigencia">
+                            Valores de referência do Minha Casa Minha Vida — vigência {resultado.vigenciaReferenciaMcmv}.
+                            Tetos, faixas e subsídios variam por região e mudam por decreto; confirme sempre com a Caixa.
+                        </p>
+                    )}
+
                     <div className="proj-result-stats">
                         <div className="proj-result-stat proj-result-stat--highlight">
                             <span className="proj-result-stat-value proj-result-stat-value--texto">
@@ -698,6 +953,19 @@ export function CalculadoraFinanciamento() {
                             <div className="proj-result-stat">
                                 <span className="proj-result-stat-value">{formatCurrency(resultado.sac.totalDesembolsado)}</span>
                                 <span className="proj-result-stat-label">Desembolso total no SAC</span>
+                            </div>
+                        </div>
+                    )}
+
+                    {temCustoAquisicao && (
+                        <div className="proj-result-stats">
+                            <div className="proj-result-stat">
+                                <span className="proj-result-stat-value">{formatCurrency(resultado.composicao.itbi + resultado.composicao.custosCartorio)}</span>
+                                <span className="proj-result-stat-label">ITBI + escritura + registro</span>
+                            </div>
+                            <div className="proj-result-stat">
+                                <span className="proj-result-stat-value">{formatCurrency(resultado.composicao.desembolsoInicial)}</span>
+                                <span className="proj-result-stat-label">Desembolso inicial (entrada + custos)</span>
                             </div>
                         </div>
                     )}

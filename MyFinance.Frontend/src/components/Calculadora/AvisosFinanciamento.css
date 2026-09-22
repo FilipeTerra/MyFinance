@@ -1,0 +1,51 @@
+.fin-avisos {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.fin-aviso {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-6);
+    padding: var(--space-6) var(--space-8);
+    border-radius: var(--radius-lg);
+    border: 1px solid;
+    font-size: var(--text-sm);
+    line-height: var(--leading-normal);
+}
+
+.fin-aviso--informativo {
+    background: var(--color-primary-tint-soft);
+    border-color: var(--color-primary-tint);
+    color: var(--color-text);
+}
+
+.fin-aviso--atencao {
+    background: var(--color-warning-tint);
+    border-color: var(--amber-200);
+    color: var(--color-warning-text);
+}
+
+.fin-aviso--critico {
+    background: var(--color-danger-tint);
+    border-color: var(--color-danger-border-strong);
+    color: var(--color-danger-text);
+}
+
+.fin-aviso-icone {
+    flex-shrink: 0;
+    font-size: var(--text-base);
+    line-height: 1;
+}
+
+.fin-aviso-texto {
+    flex: 1;
+}
+
+.fin-aviso-rotulo {
+    font-weight: var(--weight-semibold);
+}

@@ -1,19 +1,29 @@
+using Moq;
 using MyFinance.Application.Dtos.Financiamento;
+using MyFinance.Application.Dtos.Investimentos;
+using MyFinance.Application.Interfaces.Services;
 using MyFinance.Application.Services;
 using MyFinance.Domain.Enums;
+using MyFinance.Domain.Services;
 
 namespace MyFinance.Application.Tests.Services;
 
 public class FinanciamentoServiceTests
 {
-    private readonly FinanciamentoService _sut = new();
+    private readonly Mock<IProjecaoInvestimentoService> _projecaoService = new();
+    private readonly FinanciamentoService _sut;
+
+    public FinanciamentoServiceTests()
+    {
+        _sut = new FinanciamentoService(_projecaoService.Object);
+    }
 
     private static FinanciamentoRequestDto Pedido(
         decimal? valorImovel = null,
         decimal? entrada = null,
         decimal? entradaPercentual = null,
         decimal valorFinanciado = 200000m,
-        decimal taxaMensal = 0.8m,
+        decimal? taxaMensal = 0.8m,
         int numParcelas = 240,
         decimal extraMensal = 0m,
         List<AmortizacaoExtraAvulsaDto>? avulsas = null,
@@ -21,13 +31,23 @@ public class FinanciamentoServiceTests
         decimal mip = 0m,
         decimal dfi = 0m,
         decimal taxaAdministracao = 0m,
-        decimal tarifasContratacao = 0m) =>
+        decimal tarifasContratacao = 0m,
+        decimal itbi = 0m,
+        decimal custosCartorio = 0m,
+        decimal? rendaMensal = null,
+        bool minhaCasaMinhaVida = false,
+        decimal? subsidioInformado = null) =>
         new()
         {
             SeguroMipMensalPercentualSaldo = mip,
             SeguroDfiMensalPercentualImovel = dfi,
             TaxaAdministracaoMensal = taxaAdministracao,
             TarifasContratacao = tarifasContratacao,
+            Itbi = itbi,
+            CustosCartorio = custosCartorio,
+            RendaMensal = rendaMensal,
+            MinhaCasaMinhaVida = minhaCasaMinhaVida,
+            SubsidioInformado = subsidioInformado,
             ValorImovel = valorImovel,
             Entrada = entrada,
             EntradaPercentual = entradaPercentual,
@@ -277,6 +297,211 @@ public class FinanciamentoServiceTests
         Assert.Equal(semEntrada.Sac.CetMensalPercentual, comEntrada.Sac.CetMensalPercentual, 2);
     }
 
+    // ---------- Custo de aquisição ----------
+
+    [Fact]
+    public async Task SimularAsync_SemItbiNemCartorio_DesembolsoInicialIgualaAEntrada()
+    {
+        var resultado = await _sut.SimularAsync(Pedido(valorImovel: 500000m, entrada: 100000m));
+
+        Assert.Equal(0m, resultado.Composicao.Itbi);
+        Assert.Equal(0m, resultado.Composicao.CustosCartorio);
+        Assert.Equal(100000m, resultado.Composicao.DesembolsoInicial);
+    }
+
+    [Fact]
+    public async Task SimularAsync_ComItbiECartorio_SomamNoDesembolsoInicialSemAlterarOFinanciado()
+    {
+        var resultado = await _sut.SimularAsync(Pedido(
+            valorImovel: 500000m, entrada: 100000m, itbi: 15000m, custosCartorio: 4000m));
+
+        Assert.Equal(15000m, resultado.Composicao.Itbi);
+        Assert.Equal(4000m, resultado.Composicao.CustosCartorio);
+        Assert.Equal(119000m, resultado.Composicao.DesembolsoInicial);
+        Assert.Equal(400000m, resultado.Composicao.ValorFinanciado);
+    }
+
+    [Fact]
+    public async Task SimularAsync_ComItbiNegativo_ThrowsArgumentException()
+    {
+        await Assert.ThrowsAsync<ArgumentException>(() => _sut.SimularAsync(Pedido(itbi: -1m)));
+    }
+
+    // ---------- Comprometimento de renda e avisos ----------
+
+    [Fact]
+    public async Task SimularAsync_SemRenda_NaoGeraAvisoENaoCalculaComprometimento()
+    {
+        var resultado = await _sut.SimularAsync(Pedido());
+
+        Assert.Empty(resultado.Avisos);
+        Assert.Equal(0m, resultado.Sac.ComprometimentoRendaPercentual);
+    }
+
+    [Fact]
+    public async Task SimularAsync_ComRendaFolgada_NaoGeraAviso()
+    {
+        var resultado = await _sut.SimularAsync(Pedido(rendaMensal: 50000m));
+
+        Assert.Empty(resultado.Avisos);
+        Assert.True(resultado.Sac.ComprometimentoRendaPercentual > 0);
+    }
+
+    [Fact]
+    public async Task SimularAsync_ComRendaApertada_GeraAvisoParaOSistemaQueEstoura()
+    {
+        // Parcelas de um financiamento de 200k/240x pesam bem mais que 30% de 1500.
+        var resultado = await _sut.SimularAsync(Pedido(rendaMensal: 1500m));
+
+        Assert.NotEmpty(resultado.Avisos);
+        Assert.Contains(resultado.Avisos, a => a.Codigo == "IncomeCommitmentAboveLimit");
+        Assert.All(resultado.Avisos, a => Assert.Equal("Atencao", a.Severidade));
+    }
+
+    [Fact]
+    public async Task SimularAsync_ComRendaApertada_NaoLancaExcecao()
+    {
+        // É um simulador, não esteira de crédito — renda apertada nunca derruba a simulação.
+        var resultado = await _sut.SimularAsync(Pedido(rendaMensal: 100m));
+
+        Assert.True(resultado.Sac.ComprometimentoRendaPercentual > 30m);
+    }
+
+    // ---------- MCMV ----------
+
+    [Fact]
+    public async Task SimularAsync_ComMcmvSemValorDoImovel_ThrowsArgumentException()
+    {
+        var pedido = Pedido(minhaCasaMinhaVida: true, valorFinanciado: 200000m, rendaMensal: 3000m) with
+        {
+            ValorImovel = null
+        };
+
+        await Assert.ThrowsAsync<ArgumentException>(() => _sut.SimularAsync(pedido));
+    }
+
+    [Fact]
+    public async Task SimularAsync_ComMcmvSemRenda_ThrowsArgumentException()
+    {
+        await Assert.ThrowsAsync<ArgumentException>(() => _sut.SimularAsync(
+            Pedido(minhaCasaMinhaVida: true, valorImovel: 200000m, entrada: 20000m, rendaMensal: null)));
+    }
+
+    [Fact]
+    public async Task SimularAsync_ComMcmvETaxaEmBranco_UsaOTetoDaFaixaResolvida()
+    {
+        // Renda 3000 -> Faixa 1, teto de 5,25% a.a.
+        var resultado = await _sut.SimularAsync(Pedido(
+            minhaCasaMinhaVida: true, valorImovel: 200000m, entrada: 20000m, rendaMensal: 3000m, taxaMensal: null));
+
+        Assert.NotNull(resultado.FaixaMcmv);
+        Assert.Equal("Faixa1", resultado.FaixaMcmv!.Faixa);
+        Assert.True(resultado.Sac.TotalJuros > 0);
+    }
+
+    [Fact]
+    public async Task SimularAsync_SemMcmvETaxaEmBranco_ThrowsArgumentException()
+    {
+        await Assert.ThrowsAsync<ArgumentException>(() => _sut.SimularAsync(Pedido(taxaMensal: null)));
+    }
+
+    [Fact]
+    public async Task SimularAsync_ComMcmvETaxaInformada_NaoSobrescreveATaxaDoUsuario()
+    {
+        // Mesmo dentro do teto da Faixa 1, a taxa do usuário sempre vence.
+        var resultado = await _sut.SimularAsync(Pedido(
+            minhaCasaMinhaVida: true, valorImovel: 200000m, entrada: 20000m, rendaMensal: 3000m, taxaMensal: 0.3m));
+
+        var semMcmv = await _sut.SimularAsync(Pedido(valorImovel: 200000m, entrada: 20000m, taxaMensal: 0.3m));
+
+        Assert.Equal(semMcmv.Sac.TotalJuros, resultado.Sac.TotalJuros);
+    }
+
+    [Fact]
+    public async Task SimularAsync_ComRendaAcimaDoTetoDoPrograma_NaoResolveFaixaMasSimulaComATaxaInformada()
+    {
+        var resultado = await _sut.SimularAsync(Pedido(
+            minhaCasaMinhaVida: true, valorImovel: 900000m, entrada: 200000m, rendaMensal: 20000m, taxaMensal: 0.8m));
+
+        Assert.Null(resultado.FaixaMcmv);
+        Assert.True(resultado.Sac.TotalJuros > 0);
+        Assert.Contains(resultado.Avisos, a => a.Codigo == "IncomeAboveMcmvProgramLimit");
+    }
+
+    [Fact]
+    public async Task SimularAsync_ComRendaAcimaDoTetoETaxaEmBranco_ThrowsArgumentException()
+    {
+        // Sem faixa resolvida não há teto de taxa para usar como padrão.
+        await Assert.ThrowsAsync<ArgumentException>(() => _sut.SimularAsync(Pedido(
+            minhaCasaMinhaVida: true, valorImovel: 900000m, entrada: 200000m, rendaMensal: 20000m, taxaMensal: null)));
+    }
+
+    [Fact]
+    public async Task SimularAsync_ComSubsidio_ReduzOFinanciadoEApareceNaComposicao()
+    {
+        var resultado = await _sut.SimularAsync(Pedido(
+            minhaCasaMinhaVida: true, valorImovel: 200000m, entrada: 5000m, rendaMensal: 3000m,
+            subsidioInformado: 100000m));
+
+        Assert.Equal(100000m, resultado.Composicao.Subsidio);
+        Assert.Equal(95000m, resultado.Composicao.ValorFinanciado);
+    }
+
+    [Fact]
+    public async Task SimularAsync_SemMinhaCasaMinhaVida_IgnoraSubsidioInformado()
+    {
+        var resultado = await _sut.SimularAsync(Pedido(
+            valorImovel: 200000m, entrada: 20000m, subsidioInformado: 50000m));
+
+        Assert.Equal(0m, resultado.Composicao.Subsidio);
+        Assert.Equal(180000m, resultado.Composicao.ValorFinanciado);
+    }
+
+    [Fact]
+    public async Task SimularAsync_ComMcmv_IncluiAvisosDoProgramaNaLista()
+    {
+        // Imóvel acima do teto de referência da Faixa 1 (R$264.000).
+        var resultado = await _sut.SimularAsync(Pedido(
+            minhaCasaMinhaVida: true, valorImovel: 300000m, entrada: 30000m, rendaMensal: 3000m, taxaMensal: 0.4m));
+
+        Assert.Contains(resultado.Avisos, a => a.Codigo == "PropertyPriceAboveReferenceLimit");
+        Assert.Contains(resultado.Avisos, a => a.Codigo == "SacIsThePredominantSystem");
+    }
+
+    [Fact]
+    public async Task SimularAsync_SemMcmv_NaoIncluiAvisosDoPrograma()
+    {
+        var resultado = await _sut.SimularAsync(Pedido(valorImovel: 900000m, entrada: 30000m));
+
+        Assert.DoesNotContain(resultado.Avisos, a =>
+            a.Codigo is "PropertyPriceAboveReferenceLimit" or "SacIsThePredominantSystem"
+                or "DownPaymentBelowMinimum" or "TermAboveMaximum" or "SubsidyAboveLimit" or "IncomeAboveMcmvProgramLimit");
+        Assert.Null(resultado.FaixaMcmv);
+        Assert.Null(resultado.VigenciaReferenciaMcmv);
+    }
+
+    [Fact]
+    public async Task SimularAsync_ComMcmv_ExpoeAVigenciaDeReferencia()
+    {
+        var resultado = await _sut.SimularAsync(Pedido(
+            minhaCasaMinhaVida: true, valorImovel: 200000m, entrada: 20000m, rendaMensal: 3000m));
+
+        Assert.Equal("2026-01", resultado.VigenciaReferenciaMcmv);
+    }
+
+    [Fact]
+    public async Task SimularAsync_ComMcmvEViolacoesDoPrograma_NaoLanca()
+    {
+        // Entrada abaixo do mínimo, prazo acima do máximo, imóvel acima do teto —
+        // nada disso pode derrubar a simulação.
+        var resultado = await _sut.SimularAsync(Pedido(
+            minhaCasaMinhaVida: true, valorImovel: 900000m, entrada: 9000m, rendaMensal: 3000m,
+            taxaMensal: 0.4m, numParcelas: 421));
+
+        Assert.True(resultado.Sac.TotalJuros > 0);
+        Assert.NotEmpty(resultado.Avisos);
+    }
+
     // ---------- Comparação entre sistemas ----------
 
     [Fact]
@@ -297,5 +522,140 @@ public class FinanciamentoServiceTests
 
         Assert.Equal(0m, resultado.DiferencaTotalJuros);
         Assert.Equal(SistemaAmortizacao.Price, resultado.SistemaMaisBarato);
+    }
+
+    // ---------- Amortizar vs investir ----------
+
+    private static AmortizarVsInvestirRequestDto PedidoAmortizarVsInvestir(
+        decimal valorFinanciado = 200000m,
+        decimal taxaMensal = 0.8m,
+        int numParcelas = 240,
+        SistemaAmortizacao sistema = SistemaAmortizacao.Sac,
+        decimal valorDisponivelMensal = 1000m,
+        decimal? taxaInvestimentoAnual = 12m,
+        TipoAtivoCalculadora tipoAtivo = TipoAtivoCalculadora.TesouroSelic) => new()
+    {
+        ValorFinanciado = valorFinanciado,
+        TaxaJurosMensalPercentual = taxaMensal,
+        NumParcelas = numParcelas,
+        Sistema = sistema,
+        ValorDisponivelMensal = valorDisponivelMensal,
+        FonteTaxaJurosInvestimento = FonteTaxaJuros.Manual,
+        TaxaJurosAnualInvestimentoPercentual = taxaInvestimentoAnual,
+        TipoAtivoInvestimento = tipoAtivo
+    };
+
+    private void ConfigurarProjecao(decimal valorFinalLiquido) =>
+        _projecaoService
+            .Setup(p => p.CalcularProjecaoAsync(It.IsAny<CalcularProjecaoRequestDto>()))
+            .ReturnsAsync(new ProjecaoInvestimentoResponseDto { ValorFinalLiquido = valorFinalLiquido });
+
+    [Fact]
+    public async Task AmortizarVsInvestirAsync_ChamaAProjecaoUmaUnicaVez()
+    {
+        ConfigurarProjecao(50000m);
+
+        await _sut.AmortizarVsInvestirAsync(PedidoAmortizarVsInvestir());
+
+        _projecaoService.Verify(p => p.CalcularProjecaoAsync(It.IsAny<CalcularProjecaoRequestDto>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task AmortizarVsInvestirAsync_QuandoInvestirRendeMaisQueAEconomiaDeJuros_RecomendaInvestir()
+    {
+        ConfigurarProjecao(1_000_000m);
+
+        var resultado = await _sut.AmortizarVsInvestirAsync(PedidoAmortizarVsInvestir());
+
+        Assert.Equal(RecomendacaoFinanceira.Investir, resultado.Recomendacao);
+        Assert.True(resultado.Diferenca > 0);
+    }
+
+    [Fact]
+    public async Task AmortizarVsInvestirAsync_QuandoInvestirRendeMenosQueAEconomiaDeJuros_RecomendaAmortizar()
+    {
+        ConfigurarProjecao(1m);
+
+        var resultado = await _sut.AmortizarVsInvestirAsync(PedidoAmortizarVsInvestir());
+
+        Assert.Equal(RecomendacaoFinanceira.Amortizar, resultado.Recomendacao);
+        Assert.True(resultado.Diferenca < 0);
+    }
+
+    [Fact]
+    public async Task AmortizarVsInvestirAsync_PassaOValorDisponivelComoAporteMensalNaProjecao()
+    {
+        CalcularProjecaoRequestDto? capturado = null;
+        _projecaoService
+            .Setup(p => p.CalcularProjecaoAsync(It.IsAny<CalcularProjecaoRequestDto>()))
+            .Callback<CalcularProjecaoRequestDto>(r => capturado = r)
+            .ReturnsAsync(new ProjecaoInvestimentoResponseDto { ValorFinalLiquido = 0m });
+
+        await _sut.AmortizarVsInvestirAsync(
+            PedidoAmortizarVsInvestir(valorDisponivelMensal: 1500m, numParcelas: 180));
+
+        Assert.NotNull(capturado);
+        Assert.Equal(1500m, capturado!.AporteMensal);
+        Assert.Equal(0m, capturado.AporteInicial);
+        Assert.Equal(180, capturado.PrazoMeses);
+    }
+
+    [Fact]
+    public async Task AmortizarVsInvestirAsync_EconomiaDeJurosBateComADiferencaEntreComESemExtra()
+    {
+        ConfigurarProjecao(0m);
+
+        var semExtra = FinanciamentoSacCalculator.Calcular(200000m, 0.8m, 240);
+        var comExtra = FinanciamentoSacCalculator.Calcular(
+            200000m, 0.8m, 240, new AmortizacaoExtra(1000m, null, ModoAmortizacaoExtra.ReduzirPrazo));
+        var economiaEsperada = Math.Round(semExtra.TotalJuros - comExtra.TotalJuros, 2);
+
+        var resultado = await _sut.AmortizarVsInvestirAsync(PedidoAmortizarVsInvestir());
+
+        Assert.Equal(economiaEsperada, resultado.EconomiaJurosAmortizando);
+    }
+
+    [Fact]
+    public async Task AmortizarVsInvestirAsync_ComSistemaPrice_UsaOCalculadorPrice()
+    {
+        ConfigurarProjecao(0m);
+
+        var resultado = await _sut.AmortizarVsInvestirAsync(
+            PedidoAmortizarVsInvestir(sistema: SistemaAmortizacao.Price));
+
+        var semExtra = FinanciamentoPriceCalculator.Calcular(200000m, 0.8m, 240);
+        var comExtra = FinanciamentoPriceCalculator.Calcular(
+            200000m, 0.8m, 240, new AmortizacaoExtra(1000m, null, ModoAmortizacaoExtra.ReduzirPrazo));
+        var economiaEsperada = Math.Round(semExtra.TotalJuros - comExtra.TotalJuros, 2);
+
+        Assert.Equal(economiaEsperada, resultado.EconomiaJurosAmortizando);
+    }
+
+    [Fact]
+    public async Task AmortizarVsInvestirAsync_ComValorDisponivelZero_ThrowsArgumentException()
+    {
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            _sut.AmortizarVsInvestirAsync(PedidoAmortizarVsInvestir(valorDisponivelMensal: 0m)));
+    }
+
+    [Fact]
+    public async Task AmortizarVsInvestirAsync_ComValorDisponivelNegativo_ThrowsArgumentException()
+    {
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            _sut.AmortizarVsInvestirAsync(PedidoAmortizarVsInvestir(valorDisponivelMensal: -100m)));
+    }
+
+    [Fact]
+    public async Task AmortizarVsInvestirAsync_DevolveAProjecaoCompletaParaODetalhamento()
+    {
+        var projecaoEsperada = new ProjecaoInvestimentoResponseDto { ValorFinalLiquido = 123m, TotalJuros = 45m };
+        _projecaoService
+            .Setup(p => p.CalcularProjecaoAsync(It.IsAny<CalcularProjecaoRequestDto>()))
+            .ReturnsAsync(projecaoEsperada);
+
+        var resultado = await _sut.AmortizarVsInvestirAsync(PedidoAmortizarVsInvestir());
+
+        Assert.Same(projecaoEsperada, resultado.ProjecaoInvestindo);
+        Assert.Equal(123m, resultado.ValorFinalLiquidoInvestindo);
     }
 }

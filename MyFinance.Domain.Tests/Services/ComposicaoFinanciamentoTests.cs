@@ -71,4 +71,77 @@ public class ComposicaoFinanciamentoTests
     {
         Assert.Throws<ArgumentException>(() => ComposicaoFinanciamento.Resolver(300000m, null, percentual));
     }
+
+    [Fact]
+    public void Resolver_WithoutAcquisitionCosts_DesembolsoInicialIsJustTheEntrada()
+    {
+        var composicao = ComposicaoFinanciamento.Resolver(500000m, 100000m, null);
+
+        Assert.Equal(100000m, composicao.DesembolsoInicial);
+    }
+
+    [Fact]
+    public void Resolver_WithItbiAndCustosCartorio_DesembolsoInicialSumsEntradaAndAcquisitionCosts()
+    {
+        var composicao = ComposicaoFinanciamento.Resolver(500000m, 100000m, null, itbi: 15000m, custosCartorio: 4000m);
+
+        Assert.Equal(15000m, composicao.Itbi);
+        Assert.Equal(4000m, composicao.CustosCartorio);
+        Assert.Equal(119000m, composicao.DesembolsoInicial);
+        // Custos de fechamento não entram no financiado — só a entrada abate o imóvel.
+        Assert.Equal(400000m, composicao.ValorFinanciado);
+    }
+
+    [Fact]
+    public void Resolver_WithNegativeItbi_ThrowsArgumentException()
+    {
+        Assert.Throws<ArgumentException>(() => ComposicaoFinanciamento.Resolver(300000m, null, null, itbi: -1m));
+    }
+
+    [Fact]
+    public void Resolver_WithNegativeCustosCartorio_ThrowsArgumentException()
+    {
+        Assert.Throws<ArgumentException>(() =>
+            ComposicaoFinanciamento.Resolver(300000m, null, null, custosCartorio: -1m));
+    }
+
+    [Fact]
+    public void Resolver_WithSubsidio_SubtractsItFromFinanciadoLikeAnEntrada()
+    {
+        var composicao = ComposicaoFinanciamento.Resolver(500000m, 50000m, null, subsidio: 40000m);
+
+        Assert.Equal(40000m, composicao.Subsidio);
+        Assert.Equal(410000m, composicao.ValorFinanciado);
+    }
+
+    [Fact]
+    public void Resolver_WithSubsidio_DoesNotChangeEntradaPercentual()
+    {
+        // O subsídio é do governo, não do comprador — não conta como parte da entrada dele.
+        var composicao = ComposicaoFinanciamento.Resolver(500000m, 50000m, null, subsidio: 40000m);
+
+        Assert.Equal(10m, composicao.EntradaPercentual);
+    }
+
+    [Fact]
+    public void Resolver_WithSubsidio_DoesNotAffectDesembolsoInicial()
+    {
+        var composicao = ComposicaoFinanciamento.Resolver(500000m, 50000m, null, subsidio: 40000m);
+
+        Assert.Equal(50000m, composicao.DesembolsoInicial);
+    }
+
+    [Fact]
+    public void Resolver_WithNegativeSubsidio_ThrowsArgumentException()
+    {
+        Assert.Throws<ArgumentException>(() =>
+            ComposicaoFinanciamento.Resolver(300000m, null, null, subsidio: -1m));
+    }
+
+    [Fact]
+    public void Resolver_WithEntradaAndSubsidioCoveringTheWholeProperty_ThrowsArgumentException()
+    {
+        Assert.Throws<ArgumentException>(() =>
+            ComposicaoFinanciamento.Resolver(300000m, 150000m, null, subsidio: 150000m));
+    }
 }

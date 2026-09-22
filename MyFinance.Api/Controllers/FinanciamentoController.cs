@@ -51,4 +51,19 @@ public class FinanciamentoController : ControllerBase
             return BadRequest(new { message = ex.Message });
         }
     }
+
+    /// <summary>Compara amortizar uma dívida a mais contra investir o mesmo dinheiro pelo mesmo prazo.</summary>
+    [HttpPost("amortizar-vs-investir")]
+    public async Task<IActionResult> AmortizarVsInvestir([FromBody] AmortizarVsInvestirRequestDto request)
+    {
+        try
+        {
+            var result = await _financiamentoService.AmortizarVsInvestirAsync(request);
+            return Ok(result);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
 }

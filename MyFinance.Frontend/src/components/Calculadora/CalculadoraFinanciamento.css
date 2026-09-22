@@ -213,3 +213,117 @@
         z-index: 3;
     }
 }
+
+/* ── Toggle do Minha Casa Minha Vida ──────────────────────────────────────
+   Não é um Colapsavel porque não esconde conteúdo secundário — é a decisão
+   que muda a obrigatoriedade de outro campo (a taxa), então precisa estar
+   sempre visível, não atrás de um clique. */
+.fin-mcmv-toggle {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-6) var(--space-8);
+    background: var(--color-surface-subtle);
+}
+
+.fin-mcmv-toggle-label {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    font-weight: var(--weight-semibold);
+    cursor: pointer;
+}
+
+.fin-mcmv-toggle-label input[type='checkbox'] {
+    width: 20px;
+    height: 20px;
+    accent-color: var(--color-primary);
+    cursor: pointer;
+}
+
+.fin-mcmv-conteudo {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+    margin-top: var(--space-8);
+}
+
+/* ── Resumo da faixa resolvida, nos resultados ────────────────────────── */
+.fin-mcmv-faixa {
+    border: 1px solid var(--color-primary-tint);
+    background: var(--color-primary-tint-soft);
+    border-radius: var(--radius-lg);
+    padding: var(--space-6) var(--space-8);
+}
+
+.fin-mcmv-faixa-titulo {
+    font-weight: var(--weight-semibold);
+    margin: 0 0 var(--space-3);
+}
+
+.fin-mcmv-faixa-detalhes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3) var(--space-8);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+}
+
+.fin-mcmv-vigencia {
+    font-size: var(--text-2xs);
+    color: var(--color-text-muted);
+    margin-top: var(--space-4);
+}
+
+/* ── Amortizar vs investir ─────────────────────────────────────────────
+   Vive dentro do Colapsavel de amortização extra, não em um Colapsavel
+   próprio: só aparece depois que o usuário já preencheu o valor extra
+   mensal, então esconder atrás de mais um clique só atrapalharia. */
+.fin-vs-investir {
+    border-top: 1px dashed var(--color-border);
+    margin-top: var(--space-8);
+    padding-top: var(--space-8);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+}
+
+.fin-vs-investir-titulo {
+    font-weight: var(--weight-semibold);
+    margin: 0;
+}
+
+.fin-vs-investir-resultado {
+    border-radius: var(--radius-lg);
+    border: 1px solid;
+    padding: var(--space-8);
+}
+
+.fin-vs-investir-resultado--investir {
+    background: var(--color-success-tint);
+    border-color: var(--color-success-border);
+}
+
+.fin-vs-investir-resultado--amortizar {
+    background: var(--color-primary-tint-soft);
+    border-color: var(--color-primary-tint);
+}
+
+.fin-vs-investir-recomendacao {
+    font-weight: var(--weight-semibold);
+    font-size: var(--text-base);
+    margin: 0 0 var(--space-4);
+}
+
+.fin-vs-investir-detalhes {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+}

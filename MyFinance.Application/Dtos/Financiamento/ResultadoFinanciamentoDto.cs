@@ -55,5 +55,11 @@ namespace MyFinance.Application.Dtos.Financiamento
 
         /// <summary>Falso quando a TIR não convergiu. O front deve exibir "—", nunca 0%.</summary>
         public bool CetConvergiu { get; set; }
+
+        /// <summary>
+        /// Quanto o primeiro boleto (já com encargos) representa da renda mensal
+        /// informada. Zero quando a renda não foi informada.
+        /// </summary>
+        public decimal ComprometimentoRendaPercentual { get; set; }
     }
 }
