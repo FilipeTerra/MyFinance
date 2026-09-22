@@ -7,5 +7,6 @@ namespace MyFinance.Application.Interfaces.Services
     {
         Task<FinanciamentoResponseDto> SimularAsync(FinanciamentoRequestDto request);
         Task<TaxaEfetivaResponseDto> CalcularTaxaEfetivaAsync(TaxaEfetivaRequestDto request);
+        Task<AmortizarVsInvestirResponseDto> AmortizarVsInvestirAsync(AmortizarVsInvestirRequestDto request);
     }
 }
