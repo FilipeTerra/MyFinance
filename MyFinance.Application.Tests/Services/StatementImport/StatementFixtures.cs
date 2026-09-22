@@ -9,6 +9,9 @@ internal static class StatementFixtures
     public static StatementFile InterCsv() =>
         FromFile("fatura-inter.csv", "text/csv");
 
+    public static StatementFile InterExtratoCsv() =>
+        FromFile("extrato-inter.csv", "text/csv");
+
     public static StatementFile FromText(string content, string fileName = "extrato.csv") =>
         new(fileName, "text/csv", Encoding.UTF8.GetBytes(content));
 
