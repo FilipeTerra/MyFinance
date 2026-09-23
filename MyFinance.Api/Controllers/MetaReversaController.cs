@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MyFinance.Application.Dtos.Investimentos;
+using MyFinance.Application.Dtos.Sugestao;
 using MyFinance.Application.Interfaces.Services;
 
 namespace MyFinance.Api.Controllers;
@@ -18,10 +19,19 @@ namespace MyFinance.Api.Controllers;
 public class MetaReversaController : ControllerBase
 {
     private readonly IMetaReversaService _metaReversaService;
+    private readonly ISugestaoAporteService _sugestaoAporteService;
 
-    public MetaReversaController(IMetaReversaService metaReversaService)
+    /// <summary>
+    /// Inicializa o controller com os serviços de meta reversa e de sugestão de aporte.
+    /// </summary>
+    /// <param name="metaReversaService">Resolve aporte e prazo necessários para um valor-alvo.</param>
+    /// <param name="sugestaoAporteService">Confronta o aporte necessário com o orçamento real do usuário.</param>
+    public MetaReversaController(
+        IMetaReversaService metaReversaService,
+        ISugestaoAporteService sugestaoAporteService)
     {
         _metaReversaService = metaReversaService;
+        _sugestaoAporteService = sugestaoAporteService;
     }
 
     private Guid GetUserIdFromToken()
@@ -96,5 +106,26 @@ public class MetaReversaController : ControllerBase
         {
             return BadRequest(new { message = ex.Message });
         }
+    }
+
+    /// <summary>
+    /// Sugere como o usuário precisaria se comportar financeiramente para bancar o
+    /// aporte de uma meta reversa: se ele cabe na sobra mensal, quanto falta, de quais
+    /// categorias o corte sairia e que prazo ou alvo tornariam a meta viável.
+    /// </summary>
+    /// <param name="request">Parâmetros da meta reversa já calculada.</param>
+    [HttpPost("sugestao")]
+    public async Task<IActionResult> ObterSugestao([FromBody] SugestaoAporteRequestDto request)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
+        var userId = GetUserIdFromToken();
+        var response = await _sugestaoAporteService.ObterSugestaoAsync(userId, request);
+
+        if (!response.Success)
+            return BadRequest(new { message = response.ErrorMessage });
+
+        return Ok(response.Data);
     }
 }

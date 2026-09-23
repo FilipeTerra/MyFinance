@@ -32,11 +32,12 @@ public class AnalyticsRepository : IAnalyticsRepository
     {
         return await BaseQuery(userId, start, end, accountId)
             .Where(t => t.Type == TransactionType.Expense)
-            .GroupBy(t => new { t.CategoryId, t.Category.Name })
+            .GroupBy(t => new { t.CategoryId, t.Category.Name, t.Category.Nature })
             .Select(g => new CategoryExpenseDto
             {
                 CategoryId = g.Key.CategoryId,
                 CategoryName = g.Key.Name,
+                Nature = g.Key.Nature,
                 Total = g.Sum(t => Math.Abs(t.Amount)),
                 TransactionCount = g.Count(),
             })
@@ -83,13 +84,14 @@ public class AnalyticsRepository : IAnalyticsRepository
     {
         return await BaseQuery(userId, start, end, accountId)
             .Where(t => t.Type == TransactionType.Expense)
-            .GroupBy(t => new { t.Date.Year, t.Date.Month, t.CategoryId, t.Category.Name })
+            .GroupBy(t => new { t.Date.Year, t.Date.Month, t.CategoryId, t.Category.Name, t.Category.Nature })
             .Select(g => new MonthlyCategoryTotalDto
             {
                 Year = g.Key.Year,
                 Month = g.Key.Month,
                 CategoryId = g.Key.CategoryId,
                 CategoryName = g.Key.Name,
+                Nature = g.Key.Nature,
                 Total = g.Sum(t => Math.Abs(t.Amount)),
                 TransactionCount = g.Count(),
             })
@@ -116,5 +118,22 @@ public class AnalyticsRepository : IAnalyticsRepository
                 TotalIncome = g.Where(r => r.Type == TransactionType.Income).Sum(r => r.Total),
             })
             .ToList();
+    }
+
+    public async Task<IEnumerable<MonthlyInvestmentTotalDto>> GetMonthlyInvestmentTotalsAsync(Guid userId, DateTime start, DateTime end, Guid? accountId)
+    {
+        // Aporte não é despesa (fica de fora de GetPeriodTotalsAsync), mas sai da mesma
+        // sobra mensal — a sugestão de aporte precisa dele para não tratar como livre
+        // um dinheiro que o usuário já guarda.
+        return await BaseQuery(userId, start, end, accountId)
+            .Where(t => t.Type == TransactionType.Investment)
+            .GroupBy(t => new { t.Date.Year, t.Date.Month })
+            .Select(g => new MonthlyInvestmentTotalDto
+            {
+                Year = g.Key.Year,
+                Month = g.Key.Month,
+                Total = g.Sum(t => Math.Abs(t.Amount)),
+            })
+            .ToListAsync();
     }
 }

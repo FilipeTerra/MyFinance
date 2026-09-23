@@ -27,4 +27,14 @@ public interface ICategoryService
     /// Exclui uma categoria do usuário (se não houver transações).
     /// </summary>
     Task<ServiceResponse<bool>> DeleteCategoryAsync(Guid categoryId, Guid userId);
+
+    /// <summary>
+    /// Classifica várias categorias de uma vez como essenciais ou discricionárias.
+    /// Operação tudo-ou-nada: o lote inteiro é validado antes de qualquer gravação, e
+    /// um id inexistente ou de outro usuário reprova o lote sem alterar nada.
+    /// </summary>
+    /// <param name="dto">Pares categoria/natureza escolhidos pelo usuário.</param>
+    /// <param name="userId">Usuário autenticado, dono das categorias.</param>
+    Task<ServiceResponse<IEnumerable<CategoryResponseDto>>> UpdateCategoryNaturesAsync(
+        UpdateCategoryNaturesRequestDto dto, Guid userId);
 }

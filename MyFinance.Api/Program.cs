@@ -103,6 +103,7 @@ builder.Services.AddScoped<IInvestimentoRepository, InvestimentoRepository>();
 builder.Services.AddScoped<IInvestimentoService, InvestimentoService>();
 builder.Services.AddScoped<IProjecaoInvestimentoService, ProjecaoInvestimentoService>();
 builder.Services.AddScoped<IMetaReversaService, MetaReversaService>();
+builder.Services.AddScoped<ISugestaoAporteService, SugestaoAporteService>();
 builder.Services.AddScoped<IRetiradaService, RetiradaService>();
 builder.Services.AddScoped<IFinanciamentoService, FinanciamentoService>();
 builder.Services.AddScoped<ICotacaoHistoricoRepository, CotacaoHistoricoRepository>();

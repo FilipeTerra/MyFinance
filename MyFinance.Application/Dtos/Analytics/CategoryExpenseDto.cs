@@ -1,4 +1,5 @@
 using System;
+using MyFinance.Domain.Enums;
 
 namespace MyFinance.Application.Dtos.Analytics;
 
@@ -21,4 +22,10 @@ public class CategoryExpenseDto
     public decimal Percentage { get; set; }
 
     public int TransactionCount { get; set; }
+
+    /// <summary>
+    /// Classificação de cortabilidade dada pelo usuário à categoria. Usada pela sugestão
+    /// de aporte para decidir o que pode entrar em um plano de corte.
+    /// </summary>
+    public ExpenseNature Nature { get; set; }
 }

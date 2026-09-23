@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MyFinance.Application.Dtos;
 using MyFinance.Application.Dtos.StatementImport;
+using MyFinance.Application.Dtos.Sugestao;
 using MyFinance.Application.Interfaces.Services;
 using MyFinance.Infrastructure.Integrations.AiAgent.Contracts;
 
@@ -127,6 +128,37 @@ namespace MyFinance.Infrastructure.Integrations.AiAgent
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Falha ao chamar o agente de IA para sugerir categorias.");
+                return null;
+            }
+        }
+
+        public async Task<string?> NarrateSuggestionAsync(SuggestionFactsDto facts)
+        {
+            try
+            {
+                // Mesmo timeout curto da sugestão de categoria: é enriquecimento de texto,
+                // e o diagnóstico numérico já está pronto para ser exibido sem ele.
+                using var cts = new CancellationTokenSource(
+                    TimeSpan.FromSeconds(_options.SuggestionTimeoutSeconds));
+
+                var response = await _httpClient.PostAsJsonAsync("api/ai/suggestion/narrate", facts, cts.Token);
+                if (!response.IsSuccessStatusCode)
+                {
+                    await LogFailureAsync(response, "redigir a sugestão de aporte");
+                    return null;
+                }
+
+                var json = await response.Content.ReadAsStringAsync(cts.Token);
+                var result = JsonSerializer.Deserialize<NarrateSuggestionResponse>(json, JsonOptions);
+
+                if (result is null || !result.Success || string.IsNullOrWhiteSpace(result.Texto))
+                    return null;
+
+                return result.Texto.Trim();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Falha ao chamar o agente de IA para redigir a sugestão de aporte.");
                 return null;
             }
         }

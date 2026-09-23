@@ -147,4 +147,30 @@ public class CategoriesController : ControllerBase
 
         return NoContent();
     }
+
+    /// <summary>
+    /// Classifica em lote as categorias do usuário autenticado como essenciais ou
+    /// discricionárias. Operação tudo-ou-nada: se qualquer item do lote for inválido,
+    /// nada é gravado.
+    /// </summary>
+    /// <param name="requestDto">Pares categoria/natureza a aplicar</param>
+    /// <returns>200 (OK) com as categorias atualizadas, ou 400 (BadRequest) apontando o item que reprovou o lote</returns>
+    [HttpPut("natures")]
+    public async Task<IActionResult> UpdateCategoryNatures([FromBody] UpdateCategoryNaturesRequestDto requestDto)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        var userId = GetUserIdFromToken();
+        var response = await _categoryService.UpdateCategoryNaturesAsync(requestDto, userId);
+
+        if (!response.Success)
+        {
+            return BadRequest(new { message = response.ErrorMessage });
+        }
+
+        return Ok(response.Data);
+    }
 }
