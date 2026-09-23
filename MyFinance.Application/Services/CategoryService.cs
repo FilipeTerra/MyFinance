@@ -2,6 +2,7 @@ using MyFinance.Application.Dtos;
 using MyFinance.Application.Interfaces.Repositories;
 using MyFinance.Application.Interfaces.Services;
 using MyFinance.Domain.Entities;
+using MyFinance.Domain.Enums;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -82,12 +83,84 @@ public class CategoryService : ICategoryService
         return new ServiceResponse<bool> { Data = true };
     }
 
+    /// <summary>
+    /// Classifica um lote de categorias. Valida o lote inteiro antes de gravar qualquer
+    /// linha: uma categoria de outro usuário no meio da lista reprova tudo, em vez de
+    /// deixar metade classificada.
+    /// </summary>
+    public async Task<ServiceResponse<IEnumerable<CategoryResponseDto>>> UpdateCategoryNaturesAsync(
+        UpdateCategoryNaturesRequestDto dto, Guid userId)
+    {
+        var itens = dto?.Items ?? new List<CategoryNatureItemDto>();
+        if (itens.Count == 0)
+        {
+            return new ServiceResponse<IEnumerable<CategoryResponseDto>>
+            {
+                Success = false,
+                ErrorMessage = "Informe ao menos uma categoria para classificar."
+            };
+        }
+
+        var duplicada = itens.GroupBy(i => i.CategoryId).FirstOrDefault(g => g.Count() > 1);
+        if (duplicada is not null)
+        {
+            return new ServiceResponse<IEnumerable<CategoryResponseDto>>
+            {
+                Success = false,
+                ErrorMessage = $"A categoria {duplicada.Key} aparece mais de uma vez no lote."
+            };
+        }
+
+        // Uma leitura só para o lote inteiro: buscar categoria por categoria seria uma
+        // ida ao banco por item de uma coleção que cabe numa consulta.
+        var categoriasDoUsuario = (await _categoryRepository.GetAllByUserIdAsync(userId))
+            .ToDictionary(c => c.Id);
+
+        foreach (var item in itens)
+        {
+            if (!categoriasDoUsuario.ContainsKey(item.CategoryId))
+            {
+                return new ServiceResponse<IEnumerable<CategoryResponseDto>>
+                {
+                    Success = false,
+                    ErrorMessage = $"A categoria {item.CategoryId} não existe ou não pertence ao usuário."
+                };
+            }
+
+            if (!Enum.IsDefined(typeof(ExpenseNature), item.Nature))
+            {
+                return new ServiceResponse<IEnumerable<CategoryResponseDto>>
+                {
+                    Success = false,
+                    ErrorMessage = $"Classificação inválida para a categoria {item.CategoryId}."
+                };
+            }
+        }
+
+        var atualizadas = new List<Category>(itens.Count);
+        foreach (var item in itens)
+        {
+            var categoria = categoriasDoUsuario[item.CategoryId];
+            categoria.Reclassify(item.Nature);
+            _categoryRepository.Update(categoria);
+            atualizadas.Add(categoria);
+        }
+
+        await _categoryRepository.SaveChangesAsync();
+
+        return new ServiceResponse<IEnumerable<CategoryResponseDto>>
+        {
+            Data = atualizadas.Select(MapCategoryToResponseDto).ToList()
+        };
+    }
+
     private CategoryResponseDto MapCategoryToResponseDto(Category category)
     {
         return new CategoryResponseDto
         {
             Id = category.Id,
-            Name = category.Name
+            Name = category.Name,
+            Nature = category.Nature
         };
     }
 }

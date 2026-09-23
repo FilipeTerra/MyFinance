@@ -7,6 +7,7 @@ export { Colapsavel } from './Colapsavel';
 export { EstadoVazio } from './EstadoVazio';
 export { Skeleton } from './Skeleton';
 export { Alerta } from './Alerta';
+export { Switch } from './Switch';
 export { Modal } from './Modal';
 export { FeedbackModal } from './FeedbackModal';
 export type { FeedbackModalProps, VarianteFeedback } from './FeedbackModal';

@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { useTransactionFormLogic } from '../../hooks/useTransactionFormLogic';
+import type { CategoryResponseDto } from '../../types/CategoryResponseDto';
 
-export interface CategoryDto {
-    id: string;
-    name: string;
-}
+/**
+ * A lista sempre vem da API, então o campo usa o próprio DTO de resposta em vez
+ * de manter uma cópia estrutural que sai de sincronia a cada campo novo.
+ */
+export type CategoryDto = CategoryResponseDto;
 
 interface CategorySelectFieldProps {
     categories: CategoryDto[];

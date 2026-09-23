@@ -1,5 +1,6 @@
 using MyFinance.Application.Dtos;
 using MyFinance.Application.Dtos.StatementImport;
+using MyFinance.Application.Dtos.Sugestao;
 
 namespace MyFinance.Application.Interfaces.Services
 {
@@ -27,6 +28,13 @@ namespace MyFinance.Application.Interfaces.Services
         /// </summary>
         Task<IReadOnlyDictionary<string, string>?> SuggestCategoriesAsync(
             IReadOnlyList<string> descriptions, IReadOnlyList<string> categoryNames);
+
+        /// <summary>
+        /// Pede ao agente que redija o texto consultivo da sugestão de aporte a partir
+        /// de números já calculados. Devolve <c>null</c> quando o agente não respondeu —
+        /// a sugestão tem texto de template e continua completa sem IA.
+        /// </summary>
+        Task<string?> NarrateSuggestionAsync(SuggestionFactsDto facts);
 
         Task<ProactiveInsightResponseDto> GetEmergencyReserveInsightAsync(string jwtToken);
 

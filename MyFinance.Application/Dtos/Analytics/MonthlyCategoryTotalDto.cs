@@ -1,4 +1,5 @@
 using System;
+using MyFinance.Domain.Enums;
 
 namespace MyFinance.Application.Dtos.Analytics;
 
@@ -14,4 +15,7 @@ public class MonthlyCategoryTotalDto
     public string CategoryName { get; set; } = string.Empty;
     public decimal Total { get; set; }
     public int TransactionCount { get; set; }
+
+    /// <summary>Classificação de cortabilidade dada pelo usuário à categoria.</summary>
+    public ExpenseNature Nature { get; set; }
 }
