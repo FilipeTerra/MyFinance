@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 namespace MyFinance.Application.Interfaces.Services;
 
 // Reutilizaremos a classe ServiceResponse<T> definida em IAccount.Service.cs
-// Se preferir, pode movê-la para um arquivo pr�prio (ex: ServiceResponse.cs)
+// Se preferir, pode movê-la para um arquivo próprio (ex: ServiceResponse.cs)
 
 public interface ITransactionService
 {

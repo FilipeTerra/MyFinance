@@ -6,27 +6,27 @@ namespace MyFinance.Application.Dtos;
 
 public class CreateTransactionRequestDto
 {
-    [Required(ErrorMessage = "A Descri��o � obrigat�ria.")]
-    [StringLength(150, MinimumLength = 2, ErrorMessage = "A Descri��o deve ter entre 2 e 150 caracteres.")]
+    [Required(ErrorMessage = "A Descrição é obrigatória.")]
+    [StringLength(150, MinimumLength = 2, ErrorMessage = "A Descrição deve ter entre 2 e 150 caracteres.")]
     public string Description { get; set; } = string.Empty;
 
-    [Required(ErrorMessage = "O Valor � obrigat�rio.")]
+    [Required(ErrorMessage = "O Valor é obrigatório.")]
     [DataType(DataType.Currency)]
-    [Range(0.01, 10000000.00, ErrorMessage = "O Valor deve ser maior que zero.")] // Valor n�o pode ser zero ou negativo
+    [Range(0.01, 10000000.00, ErrorMessage = "O Valor deve ser maior que zero.")] // Valor não pode ser zero ou negativo
     public decimal Amount { get; set; }
 
-    [Required(ErrorMessage = "O Tipo da transa��o � obrigat�rio (Income ou Expense).")]
-    [EnumDataType(typeof(TransactionType), ErrorMessage = "O Tipo de transa��o � inv�lido.")]
+    [Required(ErrorMessage = "O Tipo da transação é obrigatório (Income ou Expense).")]
+    [EnumDataType(typeof(TransactionType), ErrorMessage = "O Tipo de transação é inválido.")]
     public TransactionType Type { get; set; }
 
-    [Required(ErrorMessage = "A Data da transa��o � obrigat�ria.")]
-    [DataType(DataType.Date)] // Apenas a data � relevante para o usu�rio informar
+    [Required(ErrorMessage = "A Data da transação é obrigatória.")]
+    [DataType(DataType.Date)] // Apenas a data é relevante para o usuário informar
     public DateTime Date { get; set; }
 
-    [Required(ErrorMessage = "A Conta � obrigat�ria.")]
+    [Required(ErrorMessage = "A Conta é obrigatória.")]
     public Guid AccountId { get; set; }
 
-    [Required(ErrorMessage = "A Categoria � obrigat�ria.")]
+    [Required(ErrorMessage = "A Categoria é obrigatória.")]
     public Guid CategoryId { get; set; }
 
     public Guid? FinancialGoalId { get; set; }

@@ -96,7 +96,7 @@ public class TransactionRepository : ITransactionRepository
         query = query.OrderByDescending(t => t.Date)
                      .ThenByDescending(t => t.CreatedAt);
 
-        // Pagina��o (Opcional, mas recomendado. O DTO j� suporta)
+        // Paginação (Opcional, mas recomendado. O DTO já suporta)
         query = query.Skip((filters.Page - 1) * filters.PageSize)
                      .Take(filters.PageSize);
 

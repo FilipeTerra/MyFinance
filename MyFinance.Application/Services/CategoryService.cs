@@ -45,7 +45,7 @@ public class CategoryService : ICategoryService
             return new ServiceResponse<CategoryResponseDto>
             {
                 Success = false,
-                ErrorMessage = "Categoria n�o encontrada ou n�o pertence ao usu�rio."
+                ErrorMessage = "Categoria não encontrada ou não pertence ao usuário."
             };
         }
 
@@ -66,14 +66,14 @@ public class CategoryService : ICategoryService
             return new ServiceResponse<bool>
             {
                 Success = false,
-                ErrorMessage = "Categoria n�o encontrada ou n�o pertence ao usu�rio."
+                ErrorMessage = "Categoria não encontrada ou não pertence ao usuário."
             };
         }
 
-        // REGRA DE NEG�CIO: N�o excluir categoria com transa��es
+        // REGRA DE NEGÓCIO: Não excluir categoria com transações
         if (await _categoryRepository.HasTransactionsAsync(categoryId))
         {
-            return new ServiceResponse<bool> { Success = false, ErrorMessage = "N�o � poss�vel excluir categorias com transa��es associadas." };
+            return new ServiceResponse<bool> { Success = false, ErrorMessage = "Não é possível excluir categorias com transações associadas." };
         }
 
         _categoryRepository.Delete(category);

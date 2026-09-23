@@ -1,17 +1,17 @@
 namespace MyFinance.Domain.Enums;
 
 /// <summary>
-/// Define os tipos de transa��es financeiras (Entrada ou Sa�da).
+/// Define os tipos de transações financeiras (Entrada ou Saída).
 /// </summary>
 public enum TransactionType
 {
     /// <summary>
-    /// Representa uma entrada de dinheiro (ex: Sal�rio, Venda).
+    /// Representa uma entrada de dinheiro (ex: Salário, Venda).
     /// </summary>
     Income = 1, // Receita
 
     /// <summary>
-    /// Representa uma sa�da de dinheiro (ex: Almo�o, Compra).
+    /// Representa uma saída de dinheiro (ex: Almoço, Compra).
     /// </summary>
     Expense = 2, // Despesa
 

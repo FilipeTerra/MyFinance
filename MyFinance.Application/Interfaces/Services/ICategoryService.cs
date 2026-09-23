@@ -9,22 +9,22 @@ namespace MyFinance.Application.Interfaces.Services;
 public interface ICategoryService
 {
     /// <summary>
-    /// Cria uma nova categoria para o usu·rio.
+    /// Cria uma nova categoria para o usu√°rio.
     /// </summary>
     Task<ServiceResponse<CategoryResponseDto>> CreateCategoryAsync(CategoryRequestDto dto, Guid userId);
 
     /// <summary>
-    /// Lista todas as categorias do usu·rio.
+    /// Lista todas as categorias do usu√°rio.
     /// </summary>
     Task<ServiceResponse<IEnumerable<CategoryResponseDto>>> GetAllCategoriesAsync(Guid userId);
 
     /// <summary>
-    /// Atualiza uma categoria existente do usu·rio.
+    /// Atualiza uma categoria existente do usu√°rio.
     /// </summary>
     Task<ServiceResponse<CategoryResponseDto>> UpdateCategoryAsync(Guid categoryId, CategoryRequestDto dto, Guid userId);
 
     /// <summary>
-    /// Exclui uma categoria do usu·rio (se n„o houver transaÁıes).
+    /// Exclui uma categoria do usu√°rio (se n√£o houver transa√ß√µes).
     /// </summary>
     Task<ServiceResponse<bool>> DeleteCategoryAsync(Guid categoryId, Guid userId);
 }
