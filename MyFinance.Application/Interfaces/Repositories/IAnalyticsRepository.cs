@@ -38,4 +38,11 @@ public interface IAnalyticsRepository
     /// Receitas e despesas totais agrupadas por (ano, mês) no período.
     /// </summary>
     Task<IEnumerable<MonthlyFlowDto>> GetMonthlyFlowAsync(Guid userId, DateTime start, DateTime end, Guid? accountId);
+
+    /// <summary>
+    /// Total aportado (<see cref="MyFinance.Domain.Enums.TransactionType.Investment"/>) por mês.
+    /// Aporte não entra em <see cref="GetPeriodTotalsAsync"/> por não ser despesa, mas consome
+    /// a mesma sobra mensal — quem analisa capacidade de poupança precisa dele separado.
+    /// </summary>
+    Task<IEnumerable<MonthlyInvestmentTotalDto>> GetMonthlyInvestmentTotalsAsync(Guid userId, DateTime start, DateTime end, Guid? accountId);
 }

@@ -22,7 +22,7 @@ public class UserRepository : IUserRepository
 
     public async Task<bool> CheckEmailExistsAsync(string email)
     {
-        // Verifica eficientemente se algum usu�rio com o email existe
+        // Verifica eficientemente se algum usuário com o email existe
         return await _context.Users.AnyAsync(u => u.Email.ToLower() == email.ToLower());
     }
 

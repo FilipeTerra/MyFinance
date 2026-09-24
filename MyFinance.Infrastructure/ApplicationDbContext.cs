@@ -149,6 +149,18 @@ namespace MyFinance.Infrastructure
                                 .HasForeignKey(r => r.CategoryId)
                                 .OnDelete(DeleteBehavior.Cascade);
                   });
+
+                  modelBuilder.Entity<Category>(entity =>
+                  {
+                        // Gravada como string, igual aos demais enums do modelo: o valor
+                        // fica legível direto no banco e não quebra se a ordem mudar.
+                        entity.Property(c => c.Nature)
+                              .HasConversion(
+                                  v => v.ToString(),
+                                  v => (ExpenseNature)Enum.Parse(typeof(ExpenseNature), v))
+                              .HasMaxLength(20)
+                              .HasDefaultValue(ExpenseNature.NaoClassificado);
+                  });
             }
     }
 }

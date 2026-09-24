@@ -68,6 +68,13 @@ namespace MyFinance.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("Nature")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("NaoClassificado");
+
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
 

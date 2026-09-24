@@ -1,18 +1,20 @@
 import { useState } from 'react';
 import { metaReversaService, AxiosError, type ApiErrorResponse } from '../../services/Api';
 import type { AporteNecessarioResponseDto, PrazoNecessarioResponseDto } from '../../types/MetaReversa';
+import type { SugestaoAporteRequestDto } from '../../types/SugestaoAporte';
 import { TipoAtivoCalculadora } from '../../types/TipoAtivoCalculadora';
 import { formatCurrency, parseCurrency } from './calculadoraUtils';
 import { prazoParaMeses, validarPrazo, validarTaxaRendimento, parametrosTaxa, formatPrazo } from './calculadoraValidacao';
 import type { PrazoValue, TaxaRendimentoValue } from './calculadoraTypes';
 import { ResultadoProjecaoDetalhado } from './ResultadoProjecaoDetalhado';
+import { SugestaoAporte } from './SugestaoAporte';
 import { CampoMoeda } from './campos/CampoMoeda';
 import { CampoPrazo } from './campos/CampoPrazo';
 import { CampoTaxaRendimento } from './campos/CampoTaxaRendimento';
 import { CampoTipoAtivo } from './campos/CampoTipoAtivo';
 import { FormFooterCalculadora } from './campos/FormFooterCalculadora';
 import { ResultadoSecao } from './campos/ResultadoSecao';
-import { SegmentedControl, Alerta } from '../Shared/ui';
+import { SegmentedControl, Alerta, Switch } from '../Shared/ui';
 import { useResultadoFoco } from '../../hooks/useResultadoFoco';
 import { useErrosFormulario } from '../../hooks/useErrosFormulario';
 
@@ -37,6 +39,10 @@ export function MetaReversaCalculadora() {
     const [isLoading, setIsLoading] = useState(false);
     const [resultadoAporte, setResultadoAporte] = useState<AporteNecessarioResponseDto | null>(null);
     const [resultadoPrazo, setResultadoPrazo] = useState<PrazoNecessarioResponseDto | null>(null);
+    const [mostrarSugestao, setMostrarSugestao] = useState(false);
+    // Congelado no momento do cálculo: editar um campo depois não pode fazer a
+    // sugestão misturar valores novos com o aporte que está na tela.
+    const [requestSugestao, setRequestSugestao] = useState<SugestaoAporteRequestDto | null>(null);
     const { erros, erroGeral, limpar, limparTudo, setErroGeral, definirEFocar } = useErrosFormulario<CampoErro>();
     const resultadoRef = useResultadoFoco(resultadoAporte ?? resultadoPrazo);
 
@@ -47,6 +53,10 @@ export function MetaReversaCalculadora() {
         limparTudo();
         setResultadoAporte(null);
         setResultadoPrazo(null);
+        // A sugestão anterior é de outra meta: desliga para não exibir um diagnóstico
+        // que não corresponde mais ao que está na tela.
+        setMostrarSugestao(false);
+        setRequestSugestao(null);
 
         const novosErros: Partial<Record<CampoErro, string>> = {};
 
@@ -81,6 +91,13 @@ export function MetaReversaCalculadora() {
                     ...taxaConfig,
                 });
                 setResultadoAporte(data);
+                setRequestSugestao({
+                    aporteInicial: parseCurrency(aporteInicial),
+                    prazoMeses,
+                    valorAlvo: valorAlvoNumero,
+                    aporteMensalNecessario: data.aporteMensalNecessario,
+                    ...taxaConfig,
+                });
             } else {
                 const data = await metaReversaService.calcularPrazoNecessario({
                     aporteInicial: parseCurrency(aporteInicial),
@@ -169,6 +186,18 @@ export function MetaReversaCalculadora() {
                         </div>
                     </div>
                     <ResultadoProjecaoDetalhado resultado={resultadoAporte.projecao} prazoMeses={prazoMeses} />
+
+                    <div className="meta-sugestao-toggle">
+                        <Switch
+                            id="metaSugestao"
+                            checked={mostrarSugestao}
+                            onChange={setMostrarSugestao}
+                            label="Sugestão"
+                            descricao="Como se organizar para guardar esse valor, com base na sua renda e nos seus gastos."
+                        />
+                    </div>
+
+                    {mostrarSugestao && requestSugestao && <SugestaoAporte request={requestSugestao} />}
                 </ResultadoSecao>
             )}
 

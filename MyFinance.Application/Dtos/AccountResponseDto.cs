@@ -15,8 +15,8 @@ public class AccountResponseDto
     public decimal InitialBalance { get; set; }
 
     /// <summary>
-    /// O saldo calculado (InitialBalance + Transações).
-    /// Será preenchido pelo Serviço.
+    /// O saldo calculado (InitialBalance + TransaÃ§Ãµes).
+    /// SerÃ¡ preenchido pelo ServiÃ§o.
     /// </summary>
     public decimal CurrentBalance { get; set; }
 

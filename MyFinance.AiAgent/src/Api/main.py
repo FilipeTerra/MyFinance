@@ -22,6 +22,7 @@ import jwt
 from src.Application.Agents.chat_consultant_agent import invoke_chat
 from src.Application.Agents.proactive_analyzer_agent import invoke_proactive_analysis
 from src.Application.Agents.lifestyle_monitor_agent import invoke_lifestyle_monitor
+from src.Application.Agents.suggestion_narrator_agent import narrate_suggestion
 
 setup_logging()
 
@@ -88,6 +89,30 @@ class SuggestCategoriesRequest(BaseModel):
 
 class ProactiveInsightRequest(BaseModel):
     jwt_token: str
+
+
+class CorteFato(BaseModel):
+    categoria: str = ""
+    valorCorte: float = 0.0
+
+
+class NarrateSuggestionRequest(BaseModel):
+    """
+    Números já calculados pela API .NET. Não há JWT aqui de propósito: este endpoint
+    não lê dado nenhum do usuário — ele só redige texto sobre o que recebeu.
+    """
+    aporteMensalNecessario: float = 0.0
+    cabe: bool = False
+    rendaMensal: float = 0.0
+    despesaMensalMedia: float = 0.0
+    sobraLivre: float = 0.0
+    deficit: float = 0.0
+    folgaRestante: float = 0.0
+    percentualDaRenda: float = 0.0
+    cortes: List[CorteFato] = Field(default_factory=list)
+    reservaFaltante: float | None = None
+    prazoMesesAlternativo: int | None = None
+    valorAlvoAlternativo: float | None = None
 
 
 @app.get("/health")
@@ -179,6 +204,20 @@ async def proactive_lifestyle_inflation(request: ProactiveInsightRequest):
             "success": False,
             "erro": "Erro interno ao gerar o insight. Tente novamente em instantes.",
         }
+
+
+@app.post("/api/ai/suggestion/narrate")
+async def narrate_investment_suggestion(request: NarrateSuggestionRequest):
+    """
+    Redige o texto consultivo da sugestão de aporte a partir de números que a API
+    .NET já calculou. Enriquecimento opcional: a sugestão tem texto de template e
+    continua completa se este endpoint falhar.
+    """
+    try:
+        return await narrate_suggestion(request.model_dump())
+    except Exception:
+        _logger.exception("❌ [NARRADOR] Erro não tratado no endpoint /api/ai/suggestion/narrate")
+        return {"success": False, "erro": "Erro interno ao redigir a sugestão."}
 
 
 @app.post("/api/ai/extract-statement")

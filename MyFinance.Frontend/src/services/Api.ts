@@ -27,6 +27,7 @@ import type {
     SimularMetaRequestDto,
     SimularMetaResponseDto,
 } from '../types/MetaReversa';
+import type { SugestaoAporteRequestDto, SugestaoAporteResponseDto, UpdateCategoryNaturesRequestDto } from '../types/SugestaoAporte';
 import type {
     CalcularSaqueSustentavelRequestDto,
     CalcularDuracaoRetiradaRequestDto,
@@ -119,6 +120,11 @@ const categoryService = {
     },
     create: (data: CategoryRequestDto) => {
         return apiClient.post<CategoryResponseDto>('/categories', data);
+    },
+    /** Classifica várias categorias de uma vez. Tudo-ou-nada: um item inválido reprova o lote. */
+    atualizarNaturezas: async (data: UpdateCategoryNaturesRequestDto): Promise<CategoryResponseDto[]> => {
+        const response = await apiClient.put<CategoryResponseDto[]>('/categories/natures', data);
+        return response.data;
     }
 };
 
@@ -236,6 +242,10 @@ const metaReversaService = {
     },
     simularMeta: async (goalId: string, data: SimularMetaRequestDto): Promise<SimularMetaResponseDto> => {
         const response = await apiClient.post<SimularMetaResponseDto>(`/investimentos/meta-reversa/metas/${goalId}/simular`, data);
+        return response.data;
+    },
+    obterSugestao: async (data: SugestaoAporteRequestDto): Promise<SugestaoAporteResponseDto> => {
+        const response = await apiClient.post<SugestaoAporteResponseDto>('/investimentos/meta-reversa/sugestao', data);
         return response.data;
     },
 };

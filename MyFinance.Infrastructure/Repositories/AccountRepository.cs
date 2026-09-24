@@ -19,14 +19,14 @@ public class AccountRepository : IAccountRepository
 
     public async Task<Account?> GetByIdAsync(Guid id, Guid userId)
     {
-        // Busca a conta por ID, MAS garante que ela pertence ao usu�rio logado
+        // Busca a conta por ID, MAS garante que ela pertence ao usuário logado
         return await _context.Accounts
             .FirstOrDefaultAsync(a => a.Id == id && a.UserId == userId);
     }
 
     public async Task<IEnumerable<Account>> GetAllByUserIdAsync(Guid userId)
     {
-        // Busca todas as contas do usu�rio logado
+        // Busca todas as contas do usuário logado
         return await _context.Accounts
             .Where(a => a.UserId == userId)
             .OrderBy(a => a.Name)
@@ -57,7 +57,7 @@ public class AccountRepository : IAccountRepository
 
     public async Task<bool> SaveChangesAsync()
     {
-        // Salva todas as mudan�as (Add, Update, Delete) no banco
+        // Salva todas as mudanças (Add, Update, Delete) no banco
         // Retorna true se pelo menos 1 linha foi afetada
         return await _context.SaveChangesAsync() > 0;
     }

@@ -6,27 +6,27 @@ namespace MyFinance.Application.Dtos;
 
 public class UpdateTransactionRequestDto
 {
-	// As mesmas validações do Create DTO
-	[Required(ErrorMessage = "A Descrição é obrigatória.")]
-	[StringLength(150, MinimumLength = 2, ErrorMessage = "A Descrição deve ter entre 2 e 150 caracteres.")]
+	// As mesmas validaÃ§Ãµes do Create DTO
+	[Required(ErrorMessage = "A DescriÃ§Ã£o Ã© obrigatÃ³ria.")]
+	[StringLength(150, MinimumLength = 2, ErrorMessage = "A DescriÃ§Ã£o deve ter entre 2 e 150 caracteres.")]
 	public string Description { get; set; } = string.Empty;
 
-	[Required(ErrorMessage = "O Valor é obrigatório.")]
+	[Required(ErrorMessage = "O Valor Ã© obrigatÃ³rio.")]
 	[DataType(DataType.Currency)]
 	[Range(0.01, 10000000.00, ErrorMessage = "O Valor deve ser maior que zero.")]
 	public decimal Amount { get; set; }
 
-	[Required(ErrorMessage = "O Tipo da transação é obrigatório (Income ou Expense).")]
-	[EnumDataType(typeof(TransactionType), ErrorMessage = "O Tipo de transação é inválido.")]
+	[Required(ErrorMessage = "O Tipo da transaÃ§Ã£o Ã© obrigatÃ³rio (Income ou Expense).")]
+	[EnumDataType(typeof(TransactionType), ErrorMessage = "O Tipo de transaÃ§Ã£o Ã© invÃ¡lido.")]
 	public TransactionType Type { get; set; }
 
-	[Required(ErrorMessage = "A Data da transação é obrigatória.")]
+	[Required(ErrorMessage = "A Data da transaÃ§Ã£o Ã© obrigatÃ³ria.")]
 	[DataType(DataType.Date)]
 	public DateTime Date { get; set; }
 
-	[Required(ErrorMessage = "A Conta é obrigatória.")]
+	[Required(ErrorMessage = "A Conta Ã© obrigatÃ³ria.")]
 	public Guid AccountId { get; set; }
 
-	[Required(ErrorMessage = "A Categoria é obrigatória.")]
+	[Required(ErrorMessage = "A Categoria Ã© obrigatÃ³ria.")]
 	public Guid CategoryId { get; set; }
 }

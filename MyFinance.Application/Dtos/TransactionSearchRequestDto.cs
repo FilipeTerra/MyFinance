@@ -5,11 +5,11 @@ using MyFinance.Domain.Enums;
 namespace MyFinance.Application.Dtos;
 
 /// <summary>
-/// DTO para encapsular os par�metros da busca de transa��es.
+/// DTO para encapsular os parâmetros da busca de transações.
 /// </summary>
 public class TransactionSearchRequestDto
 {
-	[Required(ErrorMessage = "A Conta � obrigat�ria.")]
+	[Required(ErrorMessage = "A Conta é obrigatória.")]
 	public Guid AccountId { get; set; }
 
 	public string? SearchText { get; set; }
