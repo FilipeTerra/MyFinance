@@ -1,0 +1,86 @@
+# Blueprint do Render — fonte de verdade dos serviços de deploy do MyFinance.
+#
+# Setup (uma vez só):
+#   1. No dashboard do Render: New + → Blueprint → conecte este repositório.
+#   2. O Render lê este arquivo e propõe os 3 serviços abaixo.
+#   3. Preencha os envVars marcados "sync: false" (segredos — não vivem aqui).
+#   4. Deploy inicial roda na criação do Blueprint.
+#
+# Depois disso, autoDeploy fica ligado: todo merge na branch "main" (ex.: PR
+# aprovado) dispara um novo deploy automaticamente em cada serviço afetado —
+# não precisa reconectar nada a cada PR.
+services:
+  # API .NET — usa o Dockerfile na raiz do repo, já preparado para o Render
+  # (escuta em 0.0.0.0:8080, roda as migrations pendentes no startup).
+  - type: web
+    name: myfinance-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    branch: main
+    autoDeploy: true
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: PORT
+        value: 8080
+      # String de conexão do Postgres (Neon) já usado pelo projeto — cole a
+      # mesma que está em appsettings.Development.json/.env local.
+      - key: ConnectionStrings__DefaultConnection
+        sync: false
+      - key: JwtSettings__Secret
+        generateValue: true
+      - key: JwtSettings__Issuer
+        value: MyFinanceAPI
+      - key: JwtSettings__Audience
+        value: MyFinanceApp
+      - key: JwtSettings__ExpiryMinutes
+        value: "480"
+      - key: ExternalServices__AiAgent__BaseUrl
+        value: https://myfinance-aiagent.onrender.com/
+      - key: ExternalServices__Brapi__Token
+        sync: false
+
+  # AiAgent Python (FastAPI) — Dockerfile próprio em MyFinance.AiAgent/.
+  - type: web
+    name: myfinance-aiagent
+    runtime: docker
+    dockerfilePath: ./MyFinance.AiAgent/Dockerfile
+    dockerContext: ./MyFinance.AiAgent
+    plan: free
+    branch: main
+    autoDeploy: true
+    healthCheckPath: /health
+    envVars:
+      - key: API_URL
+        value: https://myfinance-api.onrender.com/api
+      - key: CORS_ALLOW_ORIGINS
+        value: '["https://myfinance-frontend.onrender.com"]'
+      # Sem essa chave o provedor remoto fica desativado e o agente cai para
+      # Ollama local (inexistente no Render) — a IA degrada, nada quebra (ver
+      # CLAUDE.md), mas os recursos de IA ficam fora do ar até configurar.
+      - key: REMOTE_OLLAMA_API_KEY
+        sync: false
+      - key: REMOTE_OLLAMA_URL
+        sync: false
+      - key: MYFINANCE_DEBUG
+        value: "false"
+
+  # Frontend React/Vite — site estático.
+  - type: web
+    name: myfinance-frontend
+    runtime: static
+    rootDir: MyFinance.Frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    branch: main
+    autoDeploy: true
+    envVars:
+      - key: VITE_API_BASE_URL
+        value: https://myfinance-api.onrender.com/api
+    routes:
+      # SPA com react-router-dom: qualquer rota cai no index.html.
+      - type: rewrite
+        source: /*
+        destination: /index.html

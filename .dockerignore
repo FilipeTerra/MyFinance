@@ -1,0 +1,9 @@
+.git/
+MyFinance.Frontend/
+MyFinance.AiAgent/
+**/bin/
+**/obj/
+**/node_modules/
+**/venv/
+**/.venv/
+**/__pycache__/
