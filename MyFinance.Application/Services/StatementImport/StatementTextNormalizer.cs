@@ -24,9 +24,6 @@ public static partial class StatementTextNormalizer
     private static readonly HashSet<string> NoiseTokens =
         new(StringComparer.Ordinal) { "LTDA", "ME", "EPP", "SA", "EIRELI" };
 
-    [GeneratedRegex(@"\(PARCELA\s+\d+\s+DE\s+\d+\)|\bPARCELA\s+\d+\s*[/DE]+\s*\d+\b", RegexOptions.IgnoreCase)]
-    private static partial Regex InstallmentSuffixRegex();
-
     [GeneratedRegex(@"[^A-Z0-9 ]")]
     private static partial Regex NonAlphanumericRegex();
 
@@ -45,7 +42,10 @@ public static partial class StatementTextNormalizer
             return string.Empty;
 
         var text = RemoveDiacritics(description).ToUpperInvariant();
-        text = InstallmentSuffixRegex().Replace(text, " ");
+
+        // Sem isto, "LOJA X (Parcela 1 de 6)" e "LOJA X (Parcela 2 de 6)" seriam
+        // comerciantes diferentes e o usuário teria que categorizar cada parcela.
+        text = InstallmentParser.RemoveFrom(text);
         text = NonAlphanumericRegex().Replace(text, " ");
         text = ExtraSpacesRegex().Replace(text, " ").Trim();
 

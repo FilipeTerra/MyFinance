@@ -110,6 +110,7 @@ builder.Services.AddScoped<ICotacaoHistoricoRepository, CotacaoHistoricoReposito
 builder.Services.AddScoped<IMarketSyncService, MarketSyncService>();
 builder.Services.AddScoped<IAnalyticsRepository, AnalyticsRepository>();
 builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
+builder.Services.AddScoped<ICommittedService, CommittedService>();
 builder.Services.AddScoped<ICategoryRuleRepository, CategoryRuleRepository>();
 
 // Importação de extrato: os parsers determinísticos são tentados na ordem de

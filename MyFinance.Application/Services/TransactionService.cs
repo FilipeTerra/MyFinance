@@ -334,7 +334,9 @@ public class TransactionService : ITransactionService
                     dto.Amount >= 0 ? TransactionType.Income : TransactionType.Expense,
                     dto.Date,
                     dto.AccountId,
-                    finalCategoryId
+                    finalCategoryId,
+                    installmentNumber: dto.InstallmentNumber,
+                    installmentTotal: dto.InstallmentTotal
                 );
 
                 transactionsToSave.Add(transaction);
@@ -427,6 +429,16 @@ public class TransactionService : ITransactionService
                 continue;
             }
 
+            // O parcelamento não é editável na tela, mas chega pelo mesmo corpo de
+            // requisição que tudo o mais: checar aqui é o que garante o erro por linha
+            // em vez de uma exceção do Domain derrubando o lote inteiro sem dizer qual.
+            var installmentError = ValidateInstallment(dto);
+            if (installmentError is not null)
+            {
+                errors.Add(BuildError(index, dto, installmentError));
+                continue;
+            }
+
             if (dto.IsNewCategory)
             {
                 if (string.IsNullOrWhiteSpace(dto.NewCategoryName))
@@ -446,6 +458,27 @@ public class TransactionService : ITransactionService
             if (!userCategoryIds.Contains(dto.CategoryId.Value))
                 errors.Add(BuildError(index, dto, "A categoria escolhida não existe mais. Selecione outra."));
         }
+    }
+
+    /// <summary>
+    /// Confere o parcelamento vindo do cliente. Devolve a mensagem do problema, ou nulo
+    /// quando a linha está válida — inclusive quando não é parcelada, que é o normal.
+    /// </summary>
+    private static string? ValidateInstallment(SaveBatchTransactionRequestDto dto)
+    {
+        if (dto.InstallmentNumber is null && dto.InstallmentTotal is null)
+            return null;
+
+        if (dto.InstallmentNumber is null || dto.InstallmentTotal is null)
+            return "Informe o número e o total de parcelas juntos, ou nenhum dos dois.";
+
+        if (dto.InstallmentTotal < 1 || dto.InstallmentTotal > Transaction.MaxInstallments)
+            return $"O total de parcelas precisa estar entre 1 e {Transaction.MaxInstallments}.";
+
+        if (dto.InstallmentNumber < 1 || dto.InstallmentNumber > dto.InstallmentTotal)
+            return $"A parcela {dto.InstallmentNumber} não existe numa compra de {dto.InstallmentTotal} parcelas.";
+
+        return null;
     }
 
     private static void AddLineErrors(

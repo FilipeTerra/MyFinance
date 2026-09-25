@@ -26,7 +26,9 @@ public static class CategoryResolver
                 Date = entry.Date,
                 Description = entry.Description,
                 Amount = entry.Amount,
-                AccountId = accountId
+                AccountId = accountId,
+                InstallmentNumber = entry.InstallmentNumber,
+                InstallmentTotal = entry.InstallmentTotal
             };
 
             Apply(dto, entry, context);

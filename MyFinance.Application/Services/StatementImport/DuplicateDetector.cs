@@ -30,7 +30,8 @@ public static class DuplicateDetector
         var remaining = new Dictionary<TransactionFingerprint, int>();
         foreach (var digest in existing)
         {
-            var fingerprint = TransactionFingerprint.For(digest.Date, digest.Amount, digest.Description);
+            var fingerprint = TransactionFingerprint.For(
+                digest.Date, digest.Amount, digest.Description, digest.InstallmentNumber);
             remaining[fingerprint] = remaining.GetValueOrDefault(fingerprint) + 1;
         }
 
@@ -38,7 +39,7 @@ public static class DuplicateDetector
         foreach (var transaction in transactions)
         {
             var fingerprint = TransactionFingerprint.For(
-                transaction.Date, transaction.Amount, transaction.Description);
+                transaction.Date, transaction.Amount, transaction.Description, transaction.InstallmentNumber);
 
             if (remaining.GetValueOrDefault(fingerprint) <= 0)
                 continue;

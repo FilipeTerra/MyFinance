@@ -45,4 +45,16 @@ public interface IAnalyticsRepository
     /// a mesma sobra mensal — quem analisa capacidade de poupança precisa dele separado.
     /// </summary>
     Task<IEnumerable<MonthlyInvestmentTotalDto>> GetMonthlyInvestmentTotalsAsync(Guid userId, DateTime start, DateTime end, Guid? accountId);
+
+    /// <summary>
+    /// Parcelas já lançadas de compras parceladas no cartão. Diferente das demais consultas,
+    /// não recebe período: o compromisso é sempre "a partir de hoje", e limitá-lo a uma janela
+    /// esconderia justamente o parcelamento longo que mais pesa.
+    /// </summary>
+    /// <param name="notOlderThan">
+    /// Corte inferior de sanidade. Uma compra cuja parcela mais recente é muito antiga não tem
+    /// fatura nova há meses: o extrato do usuário está desatualizado, e projetar a partir dela
+    /// inventaria dívida.
+    /// </param>
+    Task<IEnumerable<InstallmentRowDto>> GetInstallmentsAsync(Guid userId, Guid? accountId, DateTime notOlderThan);
 }

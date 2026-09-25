@@ -133,6 +133,46 @@ public class StatementImportServiceTests
         Assert.Empty(result.Transactions);
     }
 
+    // ---------- Parcelamento ----------
+
+    [Fact]
+    public async Task ImportAsync_ExtraiAParcelaDaDescricaoDoPdf()
+    {
+        AgenteForaDoAr();
+
+        var result = await BuildSut().ImportAsync(StatementFixtures.Pdf(), _accountId, _userId);
+
+        var parcelada = result.Transactions.Single(t => t.Description.StartsWith("CP PARC DUO"));
+        Assert.Equal(6, parcelada.InstallmentNumber);
+        Assert.Equal(9, parcelada.InstallmentTotal);
+    }
+
+    [Fact]
+    public async Task ImportAsync_CompraAVistaNoPdfNaoRecebeParcela()
+    {
+        AgenteForaDoAr();
+
+        var result = await BuildSut().ImportAsync(StatementFixtures.Pdf(), _accountId, _userId);
+
+        var aVista = result.Transactions.Single(t => t.Description == "DL*UberRides");
+        Assert.Null(aVista.InstallmentNumber);
+        Assert.Null(aVista.InstallmentTotal);
+    }
+
+    [Fact]
+    public async Task ImportAsync_ParcelaVindaDeColunaDedicadaSobrevive()
+    {
+        // No CSV do Inter a parcela está em "Tipo", não na descrição — o preenchimento
+        // central não pode sobrescrever o que o parser já resolveu.
+        AgenteForaDoAr();
+
+        var result = await BuildSut().ImportAsync(StatementFixtures.InterCsv(), _accountId, _userId);
+
+        var parcelada = result.Transactions.Single(t => t.Description.StartsWith("LATAM AIR"));
+        Assert.Equal(2, parcelada.InstallmentNumber);
+        Assert.Equal(3, parcelada.InstallmentTotal);
+    }
+
     // ---------- Duplicatas ----------
 
     [Fact]
@@ -151,7 +191,7 @@ public class StatementImportServiceTests
     {
         AgenteForaDoAr();
         var jaSalvas = (await ImportarUmaVez()).Transactions
-            .Select(t => new TransactionDigest(t.Date, t.Amount, t.Description))
+            .Select(t => new TransactionDigest(t.Date, t.Amount, t.Description, t.InstallmentNumber))
             .ToList();
 
         _transactionRepository.Setup(r => r.GetDigestsForDuplicateCheckAsync(

@@ -23,5 +23,11 @@ namespace MyFinance.Application.Dtos
         /// arquivos distintos vieram no resultado.
         /// </summary>
         public string? SourceFileName { get; set; }
+
+        /// <summary>Número desta parcela, quando o extrato informou o parcelamento.</summary>
+        public int? InstallmentNumber { get; set; }
+
+        /// <summary>Total de parcelas da compra, quando o extrato informou o parcelamento.</summary>
+        public int? InstallmentTotal { get; set; }
     }
 }

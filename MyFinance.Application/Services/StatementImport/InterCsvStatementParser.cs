@@ -65,15 +65,24 @@ public sealed class InterCsvStatementParser : IStatementParser
             if (!StatementValueParser.TryParseAmount(rawAmount, out var amount, out var isNegative))
                 continue;
 
+            var rawType = Field(row, columns, ColumnType);
+
             // Numa fatura de cartão, valor negativo é dinheiro voltando (pagamento
             // da fatura, estorno). O sinal tem prioridade sobre o campo "Tipo".
-            var isCredit = isNegative || StatementValueParser.IsCreditType(Field(row, columns, ColumnType));
+            var isCredit = isNegative || StatementValueParser.IsCreditType(rawType);
+
+            // Neste CSV a parcela vem na coluna "Tipo" ("Parcela 2/3"), não na
+            // descrição como no PDF. Quem não achar aqui ainda é tentado pela
+            // descrição, centralmente, no StatementImportService.
+            var hasInstallment = InstallmentParser.TryParse(rawType, out var number, out var total);
 
             entries.Add(new ParsedStatementEntry(
                 date,
                 description.Trim(),
                 isCredit ? amount : -amount,
-                ResolveFileCategory(Field(row, columns, ColumnCategory))));
+                ResolveFileCategory(Field(row, columns, ColumnCategory)),
+                hasInstallment ? number : null,
+                hasInstallment ? total : null));
         }
 
         return entries;

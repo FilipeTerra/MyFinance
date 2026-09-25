@@ -153,7 +153,8 @@ public class StatementImportService : IStatementImportService
         {
             var entries = ParseDeterministically(file, out var parserName);
             if (entries.Count > 0)
-                return new FileParseOutcome(file, entries, parserName, AiUsed: false, AiUnavailable: false, ErrorMessage: null);
+                return new FileParseOutcome(
+                    file, FillInstallments(entries), parserName, AiUsed: false, AiUnavailable: false, ErrorMessage: null);
 
             if (!await aiAvailability.Value)
                 return Unreadable(file, aiUnavailable: true);
@@ -167,7 +168,8 @@ public class StatementImportService : IStatementImportService
             if (aiEntries.Count == 0)
                 return Unreadable(file, aiUnavailable: false);
 
-            return new FileParseOutcome(file, aiEntries.ToList(), AiParserName, AiUsed: true, AiUnavailable: false, ErrorMessage: null);
+            return new FileParseOutcome(
+                file, FillInstallments(aiEntries), AiParserName, AiUsed: true, AiUnavailable: false, ErrorMessage: null);
         }
         catch (OperationCanceledException)
         {
@@ -179,6 +181,23 @@ public class StatementImportService : IStatementImportService
             return Unreadable(file, aiUnavailable: false);
         }
     }
+
+    /// <summary>
+    /// Completa o parcelamento a partir da própria descrição ("(Parcela 06 de 09)"),
+    /// para toda entrada que não o trouxe de uma coluna dedicada.
+    ///
+    /// Fica aqui, e não em cada parser, porque a marcação vem na descrição em todos os
+    /// formatos menos um: o PDF do Inter, o CSV genérico e o que a IA extrai passam a
+    /// ser cobertos sem que nenhum deles precise conhecer o assunto.
+    /// </summary>
+    private static List<ParsedStatementEntry> FillInstallments(IReadOnlyList<ParsedStatementEntry> entries) =>
+        entries
+            .Select(entry =>
+                entry.InstallmentTotal is null
+                && InstallmentParser.TryParse(entry.Description, out var number, out var total)
+                    ? entry with { InstallmentNumber = number, InstallmentTotal = total }
+                    : entry)
+            .ToList();
 
     /// <summary>
     /// Tenta os parsers na ordem de prioridade. Um parser que estoure não derruba

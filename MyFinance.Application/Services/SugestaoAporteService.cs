@@ -50,6 +50,7 @@ public class SugestaoAporteService : ISugestaoAporteService
     private readonly IMetaReversaService _metaReversaService;
     private readonly IProjecaoInvestimentoService _projecaoService;
     private readonly IAiIntegrationService _aiIntegrationService;
+    private readonly ICommittedService _committedService;
 
     public SugestaoAporteService(
         IUserRepository userRepository,
@@ -58,7 +59,8 @@ public class SugestaoAporteService : ISugestaoAporteService
         IInvestimentoRepository investimentoRepository,
         IMetaReversaService metaReversaService,
         IProjecaoInvestimentoService projecaoService,
-        IAiIntegrationService aiIntegrationService)
+        IAiIntegrationService aiIntegrationService,
+        ICommittedService committedService)
     {
         _userRepository = userRepository;
         _analyticsRepository = analyticsRepository;
@@ -67,6 +69,7 @@ public class SugestaoAporteService : ISugestaoAporteService
         _metaReversaService = metaReversaService;
         _projecaoService = projecaoService;
         _aiIntegrationService = aiIntegrationService;
+        _committedService = committedService;
     }
 
     public async Task<ServiceResponse<SugestaoAporteResponseDto>> ObterSugestaoAsync(
@@ -114,7 +117,12 @@ public class SugestaoAporteService : ISugestaoAporteService
             ?? (await _metaReversaService.CalcularAporteNecessarioAsync(ParaMetaReversa(request)))
                 .AporteMensalNecessario;
 
-        var perfil = new SugestaoAporteCalculator.PerfilFinanceiroMensal(rendaMensal, gastos, aportesMedios);
+        // Uma leitura só para a requisição inteira: o comprometido não muda por categoria
+        // nem por cenário alternativo.
+        var comprometido = await _committedService.GetSummaryAsync(userId, null);
+
+        var perfil = new SugestaoAporteCalculator.PerfilFinanceiroMensal(
+            rendaMensal, gastos, aportesMedios, ParaLiberacoes(comprometido));
         var diagnostico = SugestaoAporteCalculator.Calcular(perfil, aporteNecessario);
 
         var reserva = await CalcularReservaAsync(userId, rendaMensal);
@@ -153,6 +161,7 @@ public class SugestaoAporteService : ISugestaoAporteService
                 .ToList(),
             Reserva = reserva,
             Cenarios = cenarios,
+            Compromisso = MontarCompromisso(comprometido, diagnostico),
             InicioAnalise = inicio,
             FimAnalise = fim,
             MesesAnalisados = mesesAnalisados,
@@ -163,6 +172,45 @@ public class SugestaoAporteService : ISugestaoAporteService
 
         return new ServiceResponse<SugestaoAporteResponseDto> { Data = resposta };
     }
+
+    /// <summary>
+    /// Converte o cronograma de parcelas em liberações de orçamento. O calculador não
+    /// precisa saber o que vence: só quanto deixa de vencer, e quando.
+    /// </summary>
+    private static IReadOnlyList<SugestaoAporteCalculator.Liberacao> ParaLiberacoes(
+        CommittedInstallmentsCalculator.CommittedSummary comprometido) =>
+        comprometido.Schedule
+            .Select(m => new SugestaoAporteCalculator.Liberacao(m.Year, m.Month, m.ReleasedVsNextMonth))
+            .ToList();
+
+    private static CompromissoDto? MontarCompromisso(
+        CommittedInstallmentsCalculator.CommittedSummary comprometido,
+        SugestaoAporteCalculator.ResultadoSugestao diagnostico)
+    {
+        if (comprometido.PurchaseCount == 0)
+            return null;
+
+        return new CompromissoDto
+        {
+            TotalComprometido = comprometido.TotalCommitted,
+            ParcelaDoProximoMes = comprometido.NextMonthAmount,
+            QuantidadeDeCompras = comprometido.PurchaseCount,
+            MesEmQueCabe = diagnostico.MesEmQueCabe is null
+                ? null
+                : FormatarMes(diagnostico.MesEmQueCabe.Year, diagnostico.MesEmQueCabe.Month),
+            Projecao = (diagnostico.Projecao ?? Array.Empty<SugestaoAporteCalculator.SobraProjetada>())
+                .Select(p => new SobraProjetadaDto
+                {
+                    Mes = FormatarMes(p.Year, p.Month),
+                    SobraLivre = p.SobraLivre,
+                    ValorLiberado = p.LiberadoAcumulado,
+                })
+                .ToList(),
+        };
+    }
+
+    private static string FormatarMes(int year, int month) =>
+        string.Create(CultureInfo.InvariantCulture, $"{year:D4}-{month:D2}");
 
     /// <summary>
     /// Últimos <see cref="MesesDeHistorico"/> meses completos. O mês corrente fica de
@@ -336,7 +384,18 @@ public class SugestaoAporteService : ISugestaoAporteService
         ReservaFaltante = r.Reserva is { Adequada: false } ? r.Reserva.ValorFaltante : null,
         PrazoMesesAlternativo = r.Cenarios?.PrazoMesesAlternativo,
         ValorAlvoAlternativo = r.Cenarios?.ValorAlvoAlternativo,
+        TotalComprometido = r.Compromisso?.TotalComprometido,
+        ParcelaDoProximoMes = r.Compromisso?.ParcelaDoProximoMes,
+        MesEmQueCabe = r.Compromisso?.MesEmQueCabe,
+        SobraLivreNoMesEmQueCabe = SobraNoMesEmQueCabe(r.Compromisso),
     };
+
+    /// <summary>Sobra livre projetada para o mês em que o aporte passa a caber.</summary>
+    private static decimal? SobraNoMesEmQueCabe(CompromissoDto? compromisso) =>
+        compromisso?.MesEmQueCabe is null
+            ? null
+            : compromisso.Projecao
+                .FirstOrDefault(p => p.Mes == compromisso.MesEmQueCabe)?.SobraLivre;
 
     /// <summary>Todo valor em reais que o agente tem permissão para citar.</summary>
     private static IReadOnlyCollection<decimal> ValoresPermitidos(SugestaoAporteResponseDto r)
@@ -360,6 +419,14 @@ public class SugestaoAporteService : ISugestaoAporteService
             valores.Add(r.Cenarios.AporteSustentavel);
             if (r.Cenarios.ValorAlvoAlternativo.HasValue)
                 valores.Add(r.Cenarios.ValorAlvoAlternativo.Value);
+        }
+
+        if (r.Compromisso is not null)
+        {
+            valores.Add(r.Compromisso.TotalComprometido);
+            valores.Add(r.Compromisso.ParcelaDoProximoMes);
+            valores.AddRange(r.Compromisso.Projecao.Select(p => p.SobraLivre));
+            valores.AddRange(r.Compromisso.Projecao.Select(p => p.ValorLiberado));
         }
 
         return valores.Select(v => Math.Round(v, 2)).ToHashSet();
@@ -410,6 +477,15 @@ public class SugestaoAporteService : ISugestaoAporteService
             texto.Append("Vale rever o prazo ou o valor-alvo — veja os cenários abaixo.");
         }
 
+        // Quando o aperto é só de prazo — parcelas que vão acabar —, esperar é conselho
+        // melhor que cortar, e vem antes das demais ressalvas.
+        if (!r.Cabe && r.Compromisso?.MesEmQueCabe is not null)
+        {
+            texto.Append($" Boa parte do aperto é temporária: você tem {Moeda(r.Compromisso.ParcelaDoProximoMes)} ");
+            texto.Append($"por mês em compras parceladas. Sem cortar nada, o aporte passa a caber em ");
+            texto.Append($"{MesPorExtenso(r.Compromisso.MesEmQueCabe)}, quando esses parcelamentos terminarem.");
+        }
+
         if (r.Reserva is { Adequada: false })
         {
             texto.Append($" Antes da meta, considere completar a reserva de emergência: faltam {Moeda(r.Reserva.ValorFaltante)}.");
@@ -425,6 +501,18 @@ public class SugestaoAporteService : ISugestaoAporteService
     }
 
     private static string Moeda(decimal valor) => valor.ToString("C2", CulturaBrasil);
+
+    /// <summary>"2027-03" vira "março de 2027".</summary>
+    private static string MesPorExtenso(string mes)
+    {
+        var partes = mes.Split('-');
+        if (partes.Length != 2
+            || !int.TryParse(partes[0], out var ano)
+            || !int.TryParse(partes[1], out var numeroDoMes))
+            return mes;
+
+        return $"{CulturaBrasil.DateTimeFormat.GetMonthName(numeroDoMes)} de {ano}";
+    }
 
     private static ServiceResponse<SugestaoAporteResponseDto> Falha(string mensagem) => new()
     {

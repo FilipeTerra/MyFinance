@@ -30,6 +30,20 @@ public record SuggestionFactsDto
 
     /// <summary>Alvo alcançável no prazo original, quando a meta não cabe.</summary>
     public decimal? ValorAlvoAlternativo { get; init; }
+
+    /// <summary>Total ainda devido em compras parceladas, quando houver alguma em aberto.</summary>
+    public decimal? TotalComprometido { get; init; }
+
+    /// <summary>Quanto de parcela vence no próximo mês.</summary>
+    public decimal? ParcelaDoProximoMes { get; init; }
+
+    /// <summary>
+    /// Mês ("aaaa-MM") em que o aporte passa a caber só esperando os parcelamentos acabarem.
+    /// </summary>
+    public string? MesEmQueCabe { get; init; }
+
+    /// <summary>Sobra livre projetada para <see cref="MesEmQueCabe"/>.</summary>
+    public decimal? SobraLivreNoMesEmQueCabe { get; init; }
 }
 
 /// <summary>Um corte sugerido, reduzido ao que o texto precisa citar.</summary>

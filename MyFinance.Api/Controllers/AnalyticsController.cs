@@ -15,14 +15,17 @@ namespace MyFinance.Api.Controllers;
 public class AnalyticsController : ControllerBase
 {
     private readonly IAnalyticsService _analyticsService;
+    private readonly ICommittedService _committedService;
 
     /// <summary>
-    /// Inicializa uma nova instância do controlador de análise de gastos com o serviço injetado.
+    /// Inicializa uma nova instância do controlador de análise de gastos com os serviços injetados.
     /// </summary>
     /// <param name="analyticsService">Serviço responsável pela lógica de análise de gastos</param>
-    public AnalyticsController(IAnalyticsService analyticsService)
+    /// <param name="committedService">Serviço responsável pelo comprometido com compras parceladas</param>
+    public AnalyticsController(IAnalyticsService analyticsService, ICommittedService committedService)
     {
         _analyticsService = analyticsService;
+        _committedService = committedService;
     }
 
     /// <summary>
@@ -81,6 +84,27 @@ public class AnalyticsController : ControllerBase
 
         var userId = GetUserIdFromToken();
         var response = await _analyticsService.GetExpenseTimelineAsync(userId, filters);
+
+        if (!response.Success)
+        {
+            return BadRequest(new { message = response.ErrorMessage });
+        }
+
+        return Ok(response.Data);
+    }
+
+    /// <summary>
+    /// Retorna o comprometido: o que o usuário já deve dos próximos meses por compras
+    /// parceladas no cartão, com a lista de compras em aberto e o cronograma mês a mês.
+    /// Não recebe período — o compromisso é sempre a partir de hoje.
+    /// </summary>
+    /// <param name="accountId">Conta a analisar. Omitido, considera todas as contas do usuário.</param>
+    /// <returns>Retorna 200 (OK) com o comprometido, ou 400 (BadRequest) em caso de falha</returns>
+    [HttpGet("expenses/committed")]
+    public async Task<IActionResult> GetCommitted([FromQuery] Guid? accountId)
+    {
+        var userId = GetUserIdFromToken();
+        var response = await _committedService.GetCommittedAsync(userId, accountId);
 
         if (!response.Success)
         {
