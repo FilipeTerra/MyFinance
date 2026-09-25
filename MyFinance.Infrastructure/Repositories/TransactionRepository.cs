@@ -144,7 +144,7 @@ public class TransactionRepository : ITransactionRepository
                         && t.Account.UserId == userId
                         && t.Date >= from
                         && t.Date <= to)
-            .Select(t => new TransactionDigest(t.Date, t.Amount, t.Description))
+            .Select(t => new TransactionDigest(t.Date, t.Amount, t.Description, t.InstallmentNumber))
             .ToListAsync();
     }
 

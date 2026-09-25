@@ -6,6 +6,7 @@ using MyFinance.Application.Interfaces.Services;
 using MyFinance.Application.Services;
 using MyFinance.Domain.Entities;
 using MyFinance.Domain.Enums;
+using MyFinance.Domain.Services;
 
 namespace MyFinance.Application.Tests.Services;
 
@@ -17,6 +18,7 @@ public class SugestaoAporteServiceTests
     private readonly Mock<IInvestimentoRepository> _investimentoRepository = new();
     private readonly Mock<ITaxasReferenciaIntegrationService> _taxasReferenciaService = new();
     private readonly Mock<IAiIntegrationService> _aiIntegrationService = new();
+    private readonly Mock<ICommittedService> _committedService = new();
     private readonly SugestaoAporteService _sut;
     private readonly Guid _userId = Guid.NewGuid();
 
@@ -40,6 +42,11 @@ public class SugestaoAporteServiceTests
         _aiIntegrationService.Setup(a => a.NarrateSuggestionAsync(It.IsAny<SuggestionFactsDto>()))
             .ReturnsAsync((string?)null);
 
+        // Por padrão não há comprometido no cartão: preserva o comportamento dos testes
+        // que não são sobre essa interação.
+        _committedService.Setup(c => c.GetSummaryAsync(_userId, null))
+            .ReturnsAsync(CommittedInstallmentsCalculator.CommittedSummary.Empty);
+
         _sut = new SugestaoAporteService(
             _userRepository.Object,
             _analyticsRepository.Object,
@@ -47,7 +54,8 @@ public class SugestaoAporteServiceTests
             _investimentoRepository.Object,
             metaReversaService,
             projecaoService,
-            _aiIntegrationService.Object);
+            _aiIntegrationService.Object,
+            _committedService.Object);
     }
 
     private void SetAnalytics(

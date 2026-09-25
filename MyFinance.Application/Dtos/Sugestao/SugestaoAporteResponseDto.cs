@@ -56,6 +56,12 @@ public class SugestaoAporteResponseDto
     /// <summary>Alternativas de prazo e de alvo. Preenchido apenas quando o aporte não cabe.</summary>
     public CenariosAlternativosDto? Cenarios { get; set; }
 
+    /// <summary>
+    /// O que o usuário já deve dos próximos meses em compras parceladas. Nulo quando
+    /// não há parcelamento em aberto.
+    /// </summary>
+    public CompromissoDto? Compromisso { get; set; }
+
     /// <summary>Período efetivamente analisado.</summary>
     public DateTime InicioAnalise { get; set; }
 

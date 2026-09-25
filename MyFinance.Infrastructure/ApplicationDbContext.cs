@@ -76,6 +76,16 @@ namespace MyFinance.Infrastructure
                       .WithMany()
                       .HasForeignKey(t => t.InvestimentoId)
                       .OnDelete(DeleteBehavior.SetNull);
+
+                entity.Ignore(t => t.InstallmentsRemaining);
+
+                // Índice parcial: a consulta do "comprometido" só olha linhas parceladas,
+                // que são minoria — indexar a tabela inteira custaria escrita à toa.
+                // Uma coluna só, de propósito: um índice composto começando por AccountId
+                // faria o EF considerar o índice da FK redundante e derrubá-lo, mas o filtro
+                // aqui impede que ele sirva às demais consultas por conta.
+                entity.HasIndex(t => t.InstallmentTotal)
+                      .HasFilter("\"InstallmentTotal\" IS NOT NULL");
             });
                   modelBuilder.Entity<FinancialGoal>(entity =>
                   {

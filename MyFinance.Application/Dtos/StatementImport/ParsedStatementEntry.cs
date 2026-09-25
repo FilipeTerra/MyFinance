@@ -13,8 +13,12 @@ namespace MyFinance.Application.Dtos.StatementImport;
 /// Categoria informada pelo próprio documento (o extrato do Inter traz uma
 /// coluna "Categoria"), quando existir e não for genérica.
 /// </param>
+/// <param name="InstallmentNumber">Número desta parcela, quando o documento informa.</param>
+/// <param name="InstallmentTotal">Total de parcelas da compra, quando o documento informa.</param>
 public sealed record ParsedStatementEntry(
     DateTime Date,
     string Description,
     decimal Amount,
-    string? FileCategoryName = null);
+    string? FileCategoryName = null,
+    int? InstallmentNumber = null,
+    int? InstallmentTotal = null);

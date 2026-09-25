@@ -35,6 +35,27 @@ public class InterCsvStatementParserTests
     }
 
     [Fact]
+    public void Parse_LeAParcelaDaColunaTipo()
+    {
+        // Neste CSV a parcela não está na descrição: vem em "Tipo" como "Parcela 2/3".
+        var parcelada = _sut.Parse(StatementFixtures.InterCsv())
+            .Single(e => e.Description.StartsWith("LATAM AIR"));
+
+        Assert.Equal(2, parcelada.InstallmentNumber);
+        Assert.Equal(3, parcelada.InstallmentTotal);
+    }
+
+    [Fact]
+    public void Parse_CompraAVistaNaoTemParcela()
+    {
+        var aVista = _sut.Parse(StatementFixtures.InterCsv())
+            .Single(e => e.Description == "IFD*IFOOD CLUB");
+
+        Assert.Null(aVista.InstallmentNumber);
+        Assert.Null(aVista.InstallmentTotal);
+    }
+
+    [Fact]
     public void Parse_TrataCompraComoDespesa()
     {
         var compra = _sut.Parse(StatementFixtures.InterCsv())

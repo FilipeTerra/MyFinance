@@ -136,4 +136,29 @@ public class AnalyticsRepository : IAnalyticsRepository
             })
             .ToListAsync();
     }
+
+    public async Task<IEnumerable<InstallmentRowDto>> GetInstallmentsAsync(Guid userId, Guid? accountId, DateTime notOlderThan)
+    {
+        // Sem o BaseQuery de propósito: aqui não há período de análise, e o filtro por
+        // InstallmentTotal é o que faz esta consulta cair no índice parcial.
+        return await _context.Transactions
+            .Where(t => t.Account.UserId == userId
+                     && t.Type == TransactionType.Expense
+                     && t.InstallmentTotal != null
+                     && t.InstallmentNumber != null
+                     && t.Date >= notOlderThan.Date
+                     && (accountId == null || t.AccountId == accountId))
+            .Select(t => new InstallmentRowDto
+            {
+                Description = t.Description,
+                Amount = Math.Abs(t.Amount),
+                Date = t.Date,
+                AccountId = t.AccountId,
+                InstallmentNumber = t.InstallmentNumber!.Value,
+                InstallmentTotal = t.InstallmentTotal!.Value,
+                CategoryId = t.CategoryId,
+                CategoryName = t.Category.Name,
+            })
+            .ToListAsync();
+    }
 }
