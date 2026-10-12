@@ -152,143 +152,145 @@ export function TransactionFilter({ accounts, categories, selectedAccountId = ''
 
             {/* Collapsible form body */}
             <div className={`filter-body ${isOpen ? 'open' : ''}`}>
-                {chips.length > 0 && <div className="filter-divider" />}
-                <form onSubmit={handleFilterSubmit}>
-                    <div className="filter-grid">
+                <div className="filter-body-inner">
+                    {chips.length > 0 && <div className="filter-divider" />}
+                    <form onSubmit={handleFilterSubmit}>
+                        <div className="filter-grid">
 
-                        {/* Conta */}
-                        <div className="filter-group">
-                            <label htmlFor="account-filter">Conta</label>
-                            <select
-                                id="account-filter"
-                                value={selectedAccount}
-                                onChange={(e) => setSelectedAccount(e.target.value)}
-                                required
-                            >
-                                <option value="" disabled>Selecione...</option>
-                                {accounts.map(a => (
-                                    <option key={a.id} value={a.id}>{a.name}</option>
-                                ))}
-                            </select>
-                        </div>
-
-                        {/* Descrição */}
-                        <div className="filter-group">
-                            <label htmlFor="text-filter">Descrição</label>
-                            <div className="input-with-icon">
-                                <svg className="input-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                    <circle cx="11" cy="11" r="8" />
-                                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                                </svg>
-                                <input
-                                    type="text"
-                                    id="text-filter"
-                                    placeholder="Ex: Almoço"
-                                    value={searchText}
-                                    onChange={(e) => setSearchText(e.target.value)}
-                                />
+                            {/* Conta */}
+                            <div className="filter-group">
+                                <label htmlFor="account-filter">Conta</label>
+                                <select
+                                    id="account-filter"
+                                    value={selectedAccount}
+                                    onChange={(e) => setSelectedAccount(e.target.value)}
+                                    required
+                                >
+                                    <option value="" disabled>Selecione...</option>
+                                    {accounts.map(a => (
+                                        <option key={a.id} value={a.id}>{a.name}</option>
+                                    ))}
+                                </select>
                             </div>
-                        </div>
 
-                        {/* Período */}
-                        <div className="filter-group date-range">
-                            <label>Período</label>
-                            <div className="date-range-inputs">
-                                <input
-                                    type="date"
-                                    id="start-date-filter"
-                                    value={startDate}
-                                    max={endDate || undefined}
-                                    onChange={(e) => setStartDate(e.target.value)}
-                                />
-                                <span className="date-sep">→</span>
-                                <input
-                                    type="date"
-                                    id="end-date-filter"
-                                    value={endDate}
-                                    min={startDate || undefined}
-                                    onChange={(e) => setEndDate(e.target.value)}
-                                />
-                            </div>
-                        </div>
-
-                        {/* Valor */}
-                        <div className="filter-group">
-                            <label htmlFor="amount-filter">Valor</label>
-                            <input
-                                type="number"
-                                id="amount-filter"
-                                placeholder="Ex: 50,00"
-                                step="0.01"
-                                min="0"
-                                value={amount}
-                                onChange={(e) => setAmount(e.target.value)}
-                            />
-                        </div>
-
-                        {/* Tipo */}
-                        <div className="filter-group">
-                            <label htmlFor="type-filter">Tipo</label>
-                            <select
-                                id="type-filter"
-                                value={transactionType}
-                                onChange={(e) => setTransactionType(e.target.value)}
-                            >
-                                <option value="">Todos</option>
-                                <option value="1">Receita</option>
-                                <option value="2">Despesa</option>
-                                <option value="3">Investimento</option>
-                            </select>
-                        </div>
-
-                        {/* Categoria */}
-                        <div className="filter-group">
-                            <label htmlFor="category-filter">Categoria</label>
-                            <select
-                                id="category-filter"
-                                value={categoryId}
-                                onChange={(e) => setCategoryId(e.target.value)}
-                            >
-                                <option value="">Todas</option>
-                                {categories.map(c => (
-                                    <option key={c.id} value={c.id}>{c.name}</option>
-                                ))}
-                            </select>
-                        </div>
-
-                    </div>
-
-                    <div className="filter-actions">
-                        <button
-                            type="button"
-                            className="btn-filter-clear"
-                            onClick={handleClearAll}
-                            disabled={chips.length === 0}
-                        >
-                            Limpar
-                        </button>
-                        <button
-                            type="submit"
-                            className="btn-filter-submit"
-                            disabled={isLoading || !selectedAccount}
-                        >
-                            {isLoading ? (
-                                <>
-                                    <span className="btn-spinner" />
-                                    Buscando...
-                                </>
-                            ) : (
-                                <>
-                                    Buscar
-                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                        <line x1="5" y1="12" x2="19" y2="12" />
-                                        <polyline points="12 5 19 12 12 19" />
+                            {/* Descrição */}
+                            <div className="filter-group">
+                                <label htmlFor="text-filter">Descrição</label>
+                                <div className="input-with-icon">
+                                    <svg className="input-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                        <circle cx="11" cy="11" r="8" />
+                                        <line x1="21" y1="21" x2="16.65" y2="16.65" />
                                     </svg>
-                                </>
-                            )}
-                        </button>
-                    </div>
-                </form>
+                                    <input
+                                        type="text"
+                                        id="text-filter"
+                                        placeholder="Ex: Almoço"
+                                        value={searchText}
+                                        onChange={(e) => setSearchText(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Período */}
+                            <div className="filter-group date-range">
+                                <label>Período</label>
+                                <div className="date-range-inputs">
+                                    <input
+                                        type="date"
+                                        id="start-date-filter"
+                                        value={startDate}
+                                        max={endDate || undefined}
+                                        onChange={(e) => setStartDate(e.target.value)}
+                                    />
+                                    <span className="date-sep">→</span>
+                                    <input
+                                        type="date"
+                                        id="end-date-filter"
+                                        value={endDate}
+                                        min={startDate || undefined}
+                                        onChange={(e) => setEndDate(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Valor */}
+                            <div className="filter-group">
+                                <label htmlFor="amount-filter">Valor</label>
+                                <input
+                                    type="number"
+                                    id="amount-filter"
+                                    placeholder="Ex: 50,00"
+                                    step="0.01"
+                                    min="0"
+                                    value={amount}
+                                    onChange={(e) => setAmount(e.target.value)}
+                                />
+                            </div>
+
+                            {/* Tipo */}
+                            <div className="filter-group">
+                                <label htmlFor="type-filter">Tipo</label>
+                                <select
+                                    id="type-filter"
+                                    value={transactionType}
+                                    onChange={(e) => setTransactionType(e.target.value)}
+                                >
+                                    <option value="">Todos</option>
+                                    <option value="1">Receita</option>
+                                    <option value="2">Despesa</option>
+                                    <option value="3">Investimento</option>
+                                </select>
+                            </div>
+
+                            {/* Categoria */}
+                            <div className="filter-group">
+                                <label htmlFor="category-filter">Categoria</label>
+                                <select
+                                    id="category-filter"
+                                    value={categoryId}
+                                    onChange={(e) => setCategoryId(e.target.value)}
+                                >
+                                    <option value="">Todas</option>
+                                    {categories.map(c => (
+                                        <option key={c.id} value={c.id}>{c.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                        </div>
+
+                        <div className="filter-actions">
+                            <button
+                                type="button"
+                                className="btn-filter-clear"
+                                onClick={handleClearAll}
+                                disabled={chips.length === 0}
+                            >
+                                Limpar
+                            </button>
+                            <button
+                                type="submit"
+                                className="btn-filter-submit"
+                                disabled={isLoading || !selectedAccount}
+                            >
+                                {isLoading ? (
+                                    <>
+                                        <span className="btn-spinner" />
+                                        Buscando...
+                                    </>
+                                ) : (
+                                    <>
+                                        Buscar
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                            <line x1="5" y1="12" x2="19" y2="12" />
+                                            <polyline points="12 5 19 12 12 19" />
+                                        </svg>
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     );

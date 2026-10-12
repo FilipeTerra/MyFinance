@@ -21,6 +21,11 @@
 /* ── Card base ─────────────────────────────────────────────────────────── */
 .inv-card {
     position: relative;
+    /* O cartão é o container de consulta da seção de valores. A grade é
+       `minmax(300px, 1fr)`, então no desktop ele fica com ~340-384px — mais
+       estreito que o cartão de coluna única do celular (~343px). Qualquer
+       regra baseada na largura da viewport erra justamente o caso do desktop. */
+    container-type: inline-size;
     background: var(--white);
     border: 1px solid var(--slate-200);
     border-radius: var(--radius-2xl);
@@ -118,8 +123,10 @@
     min-width: 0;
 }
 
+/* Alinhamento à direita por tipografia, não por `align-items: flex-end`: em
+   flex-column `align-items` é o eixo transversal, e dimensionar o filho por
+   `fit-content` ali não acrescenta nada sobre o `stretch` padrão. */
 .inv-value-col--current {
-    align-items: flex-end;
     text-align: right;
 }
 
@@ -131,16 +138,36 @@
     color: var(--slate-500);
 }
 
+/* `cqi` = 1% da largura do cartão — do content box dele, não da borda, então
+   os coeficientes estão calibrados sobre os ~285px internos do cartão do
+   celular: ali os dois valores batem exatamente no teto do `clamp` (o tamanho
+   fixo que tinham antes), e só encolhem em cartão mais estreito que isso, no
+   lugar de quebrar em três linhas. */
 .inv-value-amount {
-    font-size: 1.2rem;
+    font-size: clamp(1rem, 6.8cqi, 1.2rem);
     font-weight: 700;
     color: var(--slate-500);
     line-height: 1.1;
     letter-spacing: -0.01em;
+    /* Esta é a correção da sobreposição relatada, e o `anywhere` (não
+       `break-word`) é o essencial: só ele reduz o min-content do elemento, que
+       é o que o flex consulta ao encolher.
+
+       Medido ao vivo, cartão a cartão: "R$ 1.489.203,55" só tem uma chance de
+       quebra (depois do "R$"), então seu min-content é os 170px de
+       "1.489.203,55". Abaixo de ~345px de cartão o box do valor travava nesses
+       170px enquanto a coluna continuava encolhendo (o `min-width: 0` acima
+       permite) — e o texto, ancorado à direita numa coluna menor que ele,
+       vazava para a ESQUERDA: 7px em 340px, 46px em 250px, por cima de "Total
+       aportado". Quebrável em qualquer ponto, a coluna pode encolher à
+       vontade e o número quebra por dentro em vez de invadir o vizinho. Na
+       prática o `clamp` acima e o empilhamento abaixo quase sempre evitam que
+       se chegue a quebrar. */
+    overflow-wrap: anywhere;
 }
 
 .inv-value-amount--current {
-    font-size: 1.9rem;
+    font-size: clamp(1.35rem, 10.7cqi, 1.9rem);
     font-weight: 800;
     color: var(--slate-800);
     letter-spacing: -0.02em;
@@ -149,7 +176,26 @@
 /* Medido com valores de 6 dígitos lado a lado num cartão de 288px: os dois
    quebravam em várias linhas dentro de ~115px cada, chegando a 67px de altura
    no valor atual (o triplo do normal). Empilhar dá a largura inteira do
-   cartão para cada valor, em vez de dividi-la ao meio. */
+   cartão para cada valor, em vez de dividi-la ao meio.
+
+   São dois gatilhos de propósito, e um não substitui o outro: medido ao vivo,
+   o cartão do celular tem ~285px internos e o do desktop em 3 colunas tem
+   ~307px — o desktop é o MAIS estreito dos dois, então nenhum limiar único
+   separa "celular" de "desktop". A consulta de container pega qualquer cartão
+   apertado de verdade (o degrau de 2 colunas em 768px, com ~277px internos), e
+   a consulta de viewport garante o empilhamento em todo celular, inclusive os
+   de 430px, onde o cartão é largo mas a tela não é. */
+@container (max-width: 300px) {
+    .inv-value-columns {
+        flex-direction: column;
+        gap: var(--space-6);
+    }
+
+    .inv-value-col--current {
+        text-align: left;
+    }
+}
+
 @media (max-width: 480px) {
     .inv-value-columns {
         flex-direction: column;
@@ -157,7 +203,6 @@
     }
 
     .inv-value-col--current {
-        align-items: flex-start;
         text-align: left;
     }
 }
@@ -166,7 +211,13 @@
     display: inline-flex;
     align-items: center;
     gap: var(--space-3);
+    /* `align-self` é eixo transversal e dimensiona o badge por `fit-content`,
+       que nunca fica abaixo do min-content dele. Ancorado à direita, o que não
+       couber sairia para a esquerda, por cima do conteúdo vizinho; com o teto
+       de largura o box fica contido e o excesso vaza para dentro do cartão,
+       onde o `overflow: hidden` dele resolve. */
     align-self: flex-end;
+    max-width: 100%;
     font-size: var(--text-sm);
     font-weight: 700;
     padding: var(--space-2) var(--space-4);
@@ -187,6 +238,7 @@
 
 .inv-auto-sync-badge {
     align-self: flex-end;
+    max-width: 100%;
     font-size: var(--text-2xs);
     font-weight: 600;
     color: var(--slate-500);

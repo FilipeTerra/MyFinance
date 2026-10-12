@@ -140,14 +140,31 @@
 
 /* ── Corpo colapsável ──────────────────────────────────────── */
 
+/* Animação por `grid-template-rows`, não por `max-height`. O par 0/350px que
+   existia aqui foi dimensionado para o grid de 4 colunas do desktop: em coluna
+   única (≤480px), com o piso de 16px de fonte e 44px de altura que index.css
+   impõe nos campos em touch, o corpo passa de 380px e os 350px cortavam o 4º
+   grupo ao meio — justamente o campo "Valor" — sem deixar rolagem, porque
+   `.transaction-filter` também tem `overflow: hidden`. De 0fr para 1fr não há
+   número a manter sincronizado com o conteúdo.
+
+   Exige um único filho de grid, daí o `.filter-body-inner`. Em navegador que
+   não anima `grid-template-rows` (anterior a Chrome 117 / Safari 17.2 /
+   Firefox 128) a seção abre e fecha sem transição — nunca cortada. O reset
+   global de `prefers-reduced-motion` em index.css já zera a transição. */
 .filter-body {
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.28s ease;
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.28s ease;
 }
 
 .filter-body.open {
-    max-height: 350px;
+    grid-template-rows: 1fr;
+}
+
+.filter-body-inner {
+    min-height: 0;
+    overflow: hidden;
 }
 
 /* ── Divisor ───────────────────────────────────────────────── */
@@ -196,6 +213,19 @@
     transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
     appearance: none;
     -webkit-appearance: none;
+}
+
+/* O `appearance: none` da regra acima não alcança os botões de incremento
+   nativos do WebKit, que encostam no placeholder ("Ex: 50,00") quando a célula
+   do grid fica estreita. O campo aceita digitação; as setinhas não agregam. */
+.filter-group input[type="number"] {
+    -moz-appearance: textfield;
+}
+
+.filter-group input[type="number"]::-webkit-outer-spin-button,
+.filter-group input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
 }
 
 /* Chevron personalizado nos selects */

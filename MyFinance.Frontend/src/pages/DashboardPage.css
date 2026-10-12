@@ -134,7 +134,6 @@
 .dashboard-summary {
     display: flex;
     align-items: center;
-    gap: 0;
     background: var(--white);
     border: 1px solid var(--slate-200);
     border-radius: var(--radius-xl);
@@ -142,7 +141,12 @@
     margin-bottom: var(--space-16);
     box-shadow: var(--shadow-sm);
     flex-wrap: wrap;
-    gap: var(--space-4);
+    /* Espaço de linha maior que o de coluna: entre 768px e ~1024px os quatro
+       KPIs não cabem numa linha e a faixa quebra em duas. Medido na faixa de
+       Gastos (rótulos longos), com os 10px uniformes de antes as duas fileiras
+       ficavam quase encostadas. Testado `nowrap` como alternativa e é pior:
+       comprime cada KPI e quebra os valores no meio dos dígitos. */
+    gap: var(--space-8) var(--space-4);
 }
 
 .summary-stat {
@@ -150,11 +154,21 @@
     flex-direction: column;
     gap: var(--space-1);
     padding: 0 var(--space-8);
+    /* Item flex não encolhe abaixo do próprio min-content sem isto
+       (`min-width: auto` é o padrão). Só entra em jogo quando um KPI sozinho é
+       mais largo que a faixa inteira — aí ele encolhe e quebra por dentro, em
+       vez de estourar a borda do cartão. Mesmo idioma de `.scroll-strip` em
+       index.css. */
+    min-width: 0;
 }
 
+/* `text-align` e não `align-items: flex-end`: em flex-column `align-items` é o
+   eixo transversal, e `fit-content` ali não acrescenta nada sobre o `stretch`
+   padrão. Quem garante que o valor não invada o KPI vizinho é o
+   `overflow-wrap` abaixo. */
 .summary-stat--right {
     margin-left: auto;
-    align-items: flex-end;
+    text-align: right;
     padding-right: 0;
 }
 
@@ -163,7 +177,14 @@
     font-weight: 800;
     color: var(--slate-800);
     letter-spacing: -0.02em;
-    line-height: 1;
+    /* Era `1`: a 1.375rem/800, um valor que quebrasse em duas linhas encostava
+       a ascendente de baixo na descendente de cima. */
+    line-height: var(--leading-tight);
+    /* Par obrigatório do `min-width: 0` acima: sem reduzir o min-content, o
+       valor em moeda (que só quebra depois do "R$") trava na largura do número
+       enquanto o item encolhe, e o excesso vaza por cima do KPI vizinho — o
+       mesmo defeito medido em InvestimentoCard.css. */
+    overflow-wrap: anywhere;
 }
 
 .summary-stat-value--green { color: var(--green-500); }
@@ -323,7 +344,7 @@
 
     .summary-stat,
     .summary-stat--right {
-        align-items: flex-start;
+        text-align: left;
         padding: 0;
         margin-left: 0;
     }
