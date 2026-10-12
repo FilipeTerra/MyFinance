@@ -16,11 +16,24 @@
     gap: var(--space-4);
 }
 
-.cmp-cenario-card label {
+/* O card já é flex-column com `gap`, então o `margin-bottom` de
+   `.campo-form-group` (campos.css) só empilha espaço morto em cima do gap.
+   Zerar aqui é o que compacta o card de verdade. Antes a compactação vinha
+   de um `margin-bottom: -0.25rem` no rótulo, que subia o `<select>` e o
+   `.seg-control` — ambos de fundo opaco — 4px por cima da metade inferior
+   do texto do label. */
+.cmp-cenario-card .campo-form-group {
+    margin-bottom: 0;
+}
+
+/* `.campo-form-group` no seletor só para somar especificidade: sem ele a
+   regra empata com `.campo-form-group label` de campos.css (0,1,1) e quem
+   ganha passa a depender da ordem de carga das duas folhas. */
+.cmp-cenario-card .campo-form-group label {
     font-size: var(--text-xs);
     font-weight: 600;
     color: var(--slate-500);
-    margin-bottom: -0.25rem;
+    margin-bottom: var(--space-3);
 }
 
 .cmp-cenario-card select {
