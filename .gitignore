@@ -79,6 +79,7 @@ htmlcov/
 tmp/
 temp/
 *.tmp
+docs/
 
 # Configurações de IDE e Sistema Operacional
 .vscode/
