@@ -1,11 +1,10 @@
-import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, ReferenceLine, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { ComposedChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import type { ExpenseTimelineResponseDto } from '../../types/ExpenseAnalytics';
 import { formatCurrency, formatMesLabel, formatMesLabelCompleto } from './gastosUtils';
 import {
     intervaloEixoX,
     COR_RECEITA,
     COR_DESPESA,
-    COR_SALDO,
     CHART_MARGIN,
     gridProps,
     xAxisProps,
@@ -22,14 +21,16 @@ interface GastosFluxoMensalProps {
     timeline: ExpenseTimelineResponseDto;
 }
 
-/** Cinza do eixo zero — `--slate-300`, repetido aqui porque o Recharts recebe prop, não CSS. */
-const COR_ZERO = '#cbd5e1';
-
 /**
- * Fluxo mensal de receitas x despesas com linha de saldo. Extraído do card
- * único que também continha a lista de maiores lançamentos (agora em
+ * Fluxo mensal de receitas x despesas. Extraído do card único que também
+ * continha a lista de maiores lançamentos (agora em
  * `GastosMaioresLancamentos`) — este componente é só o gráfico, montado
  * dentro do card do seletor de visão em `GastosEvolucao`.
+ *
+ * O saldo do mês não é plotado: como série sobre as barras ele não se
+ * sustentava (ver histórico deste arquivo) e, sendo derivado de receita menos
+ * despesa, as duas barras já contam a história. Continua disponível por mês na
+ * tabela que o `ChartFigure` gera para leitor de tela.
  */
 export function GastosFluxoMensal({ timeline }: GastosFluxoMensalProps) {
     const ehMobile = useIsMobile();
@@ -42,10 +43,8 @@ export function GastosFluxoMensal({ timeline }: GastosFluxoMensalProps) {
             mesCompleto: formatMesLabelCompleto(mes.label),
             receita: mes.totalIncome,
             despesa: mes.totalExpenses,
-            // Mês sem movimentação não tem saldo zero: não tem saldo. Plotá-lo
-            // como 0 fazia a linha mergulhar até o eixo e voltar, desenhando um
-            // vale que não corresponde a nenhuma medição. Como `null`, a linha
-            // simplesmente se interrompe ali.
+            // Mês sem movimentação não tem saldo zero: não tem saldo. Só a
+            // tabela acessível consome este campo, que ali vira "—".
             saldo: semMovimentacao ? null : mes.balance,
         };
     });
@@ -58,7 +57,7 @@ export function GastosFluxoMensal({ timeline }: GastosFluxoMensalProps) {
     return (
         <ChartFigure
             titulo="Fluxo mensal"
-            descricao="Receitas, despesas e saldo por mês no período selecionado"
+            descricao="Receitas e despesas por mês no período selecionado"
             altura={altura}
             dadosTabela={{
                 colunas: ['Mês', 'Receitas', 'Despesas', 'Saldo'],
@@ -80,25 +79,8 @@ export function GastosFluxoMensal({ timeline }: GastosFluxoMensalProps) {
                         labelFormatter={(_label, payload) => (payload?.[0]?.payload as { mesCompleto?: string })?.mesCompleto ?? ''}
                     />
                     <Legend />
-                    {/* Sem esta referência não há como ler o sinal do saldo quando ele fica negativo. */}
-                    <ReferenceLine y={0} stroke={COR_ZERO} />
                     <Bar dataKey="receita" name="Receitas" fill={COR_RECEITA} maxBarSize={MAX_BAR_SIZE} radius={BAR_RADIUS} />
                     <Bar dataKey="despesa" name="Despesas" fill={COR_DESPESA} maxBarSize={MAX_BAR_SIZE} radius={BAR_RADIUS} />
-                    {/* `linear` e não `monotone`: valores mensais são observações discretas e a
-                        spline inventava curvatura entre elas. Traço sólido com ponto em cada mês —
-                        tracejado, em gráfico financeiro, convenciona projeção ou meta, e saldo é
-                        dado medido. `connectNulls` explícito para a linha interromper no mês sem
-                        movimentação em vez de atravessá-lo. */}
-                    <Line
-                        type="linear"
-                        dataKey="saldo"
-                        name="Saldo"
-                        stroke={COR_SALDO}
-                        strokeWidth={2}
-                        connectNulls={false}
-                        dot={{ r: 3, fill: COR_SALDO, strokeWidth: 0 }}
-                        activeDot={{ r: 5 }}
-                    />
                 </ComposedChart>
             </ResponsiveContainer>
         </ChartFigure>

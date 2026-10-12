@@ -173,7 +173,13 @@
 }
 
 .summary-stat-value {
-    font-size: var(--text-xl);
+    /* Fluido só para baixo: o teto é o mesmo `--text-xl` de antes, alcançado a
+       partir de ~478px, então o desktop não muda nada. Abaixo disso encolhe,
+       porque a grade de 2 colunas do celular dá 148px por KPI e
+       "R$ 1.234.567,89" a 22px pede 160px — faltando 12px, o valor quebrava no
+       espaço depois do "R$" e deixava o símbolo órfão numa linha só dele,
+       desalinhando a fileira inteira. Medido em 320/375/430px. */
+    font-size: clamp(1rem, 4.6vw, var(--text-xl));
     font-weight: 800;
     color: var(--slate-800);
     letter-spacing: -0.02em;
@@ -378,5 +384,15 @@
 
     .dashboard-tab-icon {
         font-size: var(--text-lg);
+    }
+}
+
+/* Abaixo de 360px a grade de 2 colunas deixa 121px por KPI — medido, um valor
+   de 9 dígitos ("R$ 12.345.678,90") não cabe nisso em tamanho legível nem no
+   piso do `clamp`. Uma coluna dá 256px e resolve, ao custo de uma faixa mais
+   alta num aparelho que já rola bastante. */
+@media (max-width: 359.98px) {
+    .dashboard-summary {
+        grid-template-columns: 1fr;
     }
 }
